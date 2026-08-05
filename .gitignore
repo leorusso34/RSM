@@ -1,0 +1,7 @@
+# Database files
+*.db-wal
+*.db-shm
+__pycache__/
+*.pyc
+.vscode/
+.idea/
