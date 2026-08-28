@@ -12,6 +12,7 @@ from ..config import APP_NAME, APP_VERSION, DB_PATH, DARK_THEME, STATUS_PREORDER
 from ..database import InventoryDatabase
 from .dashboard_view import DashboardView
 from .dialogs import BulkStatusDialog, ProductDialog
+from .ai_dialog import AIDialog
 from .theme import setup_app_theme
 from ..utils import export_to_csv, money, parse_excel_file, parse_money, calculate_profit
 
@@ -142,7 +143,11 @@ class InventoryApp(tk.Tk):
         ttk.Button(actions, text="Importa Excel", command=self.import_excel).pack(side="left", padx=3)
         ttk.Button(actions, text="Esporta CSV", command=self.export_csv).pack(side="left", padx=3)
         ttk.Button(actions, text="Backup DB Sicuro", command=self.backup_database).pack(side="left", padx=3)
-        ttk.Button(actions, text="+ Nuovo Prodotto", style="Accent.TButton", command=self.add_product).pack(side="left", padx=(8, 0))
+        
+        # Pulsante AI, dello stesso colore ("Accent.TButton") ma piccolo, a sinistra di Nuovo Prodotto
+        ttk.Button(actions, text="✨ AI", style="Accent.TButton", width=5, command=self.open_ai_insert).pack(side="left", padx=(8, 0))
+        
+        ttk.Button(actions, text="+ Nuovo Prodotto", style="Accent.TButton", command=self.add_product).pack(side="left", padx=(4, 0))
 
         # Test Sfondo/Watermark rimosso via git
         
@@ -725,6 +730,30 @@ class InventoryApp(tk.Tk):
         self.lbl_selected_info.configure(
             text=f"{count} selezionati | Totale: {money(total_cost)} | Media: {money(avg_cost)}"
         )
+
+    def open_ai_insert(self) -> None:
+        dialog = AIDialog(self, self.db)
+        self.wait_window(dialog)
+        
+        if dialog.result:
+            # Apri il dialog del prodotto pre-compilato con i dati dell'AI
+            cur_st = self.current_status() or STATUS_STOCK
+            places = self.db.get_distinct_places()
+            prod_dialog = ProductDialog(self, cur_st, autocomplete_places=places, record=dialog.result)
+            self.wait_window(prod_dialog)
+            
+            if prod_dialog.result:
+                new_id = self.db.save(prod_dialog.result)
+                target = prod_dialog.result["status"]
+                self.refresh()
+                if target in self.status_tabs:
+                    self.notebook.select(self.status_tabs.index(target))
+                
+                tree = self.trees[target]
+                if tree.exists(str(new_id)):
+                    tree.selection_set(str(new_id))
+                    tree.see(str(new_id))
+                self.status_bar_var.set("Prodotto generato e aggiunto con successo")
 
     def add_product(self) -> None:
         cur_st = self.current_status() or STATUS_STOCK
