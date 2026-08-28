@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Definizione del tema grafico chiaro (Light Theme) per Tkinter / ttk."""
+"""Definizione del tema grafico scuro (Dark Theme) per Tkinter / ttk."""
 
 import tkinter as tk
 from tkinter import ttk
-from config import LIGHT_THEME
+from ..config import DARK_THEME
 
 def setup_app_theme(root: tk.Tk) -> None:
     """Configura gli stili ttk per l'interfaccia a tema chiaro."""
@@ -15,7 +15,7 @@ def setup_app_theme(root: tk.Tk) -> None:
     except tk.TclError:
         pass
 
-    c = LIGHT_THEME
+    c = DARK_THEME
 
     # Stile globale della finestra
     root.configure(bg=c["bg_main"])
@@ -41,14 +41,14 @@ def setup_app_theme(root: tk.Tk) -> None:
     # Bottoni
     style.configure(
         "TButton",
-        background="#e2e8f0",
+        background="#334155",
         foreground=c["fg_main"],
         borderwidth=0,
         focuscolor="none",
         padding=(12, 8),
         font=("Segoe UI", 9, "bold"),
     )
-    style.map("TButton", background=[("active", "#cbd5e1")])
+    style.map("TButton", background=[("active", "#475569")])
 
     style.configure("Accent.TButton", background=c["accent"], foreground="white")
     style.map("Accent.TButton", background=[("active", c["accent_hover"])])
@@ -59,13 +59,38 @@ def setup_app_theme(root: tk.Tk) -> None:
     style.configure("Danger.TButton", background=c["danger"], foreground="white")
     style.map("Danger.TButton", background=[("active", c["danger_hover"])])
 
-    style.configure("Secondary.TButton", background="#f1f5f9", foreground=c["fg_main"])
-    style.map("Secondary.TButton", background=[("active", "#e2e8f0")])
+    style.configure("Secondary.TButton", background="#374151", foreground=c["fg_main"])
+    style.map("Secondary.TButton", background=[("active", "#4b5563")])
 
-    # Campi di testo e Combobox
-    style.configure("TEntry", fieldbackground=c["bg_input"], foreground=c["fg_main"], borderwidth=1, padding=6)
+    # Personalizzazione listbox della combobox
+    root.option_add("*TCombobox*Listbox.background", c["bg_input"])
+    root.option_add("*TCombobox*Listbox.foreground", c["fg_main"])
+    root.option_add("*TCombobox*Listbox.selectBackground", c["accent"])
+    root.option_add("*TCombobox*Listbox.selectForeground", "#ffffff")
+    root.option_add("*TCombobox*Listbox.font", ("Segoe UI", 10))
+
+    # TEntry
+    style.configure("TEntry", fieldbackground=c["bg_input"], foreground=c["fg_main"], borderwidth=0, padding=4)
     style.configure("TCombobox", fieldbackground=c["bg_input"], background=c["bg_input"], foreground=c["fg_main"], padding=5)
     style.map("TCombobox", fieldbackground=[("readonly", c["bg_input"])], foreground=[("readonly", c["fg_main"])])
+
+    # Scrollbar compatta coerente con il tema scuro
+    style.configure(
+        "TScrollbar",
+        background="#3b4a60",
+        troughcolor=c["bg_main"],
+        bordercolor=c["bg_main"],
+        darkcolor="#263244",
+        lightcolor="#3b4a60",
+        arrowcolor=c["fg_muted"],
+        gripcount=0,
+        width=11,
+    )
+    style.map(
+        "TScrollbar",
+        background=[("active", c["accent"]), ("pressed", c["accent_hover"])],
+        arrowcolor=[("active", c["fg_main"])],
+    )
 
     # Schede (Notebook)
     style.configure("TNotebook", background=c["bg_main"], borderwidth=0)
@@ -93,6 +118,7 @@ def setup_app_theme(root: tk.Tk) -> None:
         relief="flat",
         font=("Segoe UI", 9),
     )
+    style.configure("Treeview", rowheight=34)
     style.map(
         "Treeview",
         background=[("selected", c["table_select"])],
@@ -106,4 +132,4 @@ def setup_app_theme(root: tk.Tk) -> None:
         padding=8,
         font=("Segoe UI", 9, "bold"),
     )
-    style.map("Treeview.Heading", background=[("active", "#cbd5e1")])
+    style.map("Treeview.Heading", background=[("active", "#3b4a60")])

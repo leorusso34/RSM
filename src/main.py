@@ -6,11 +6,22 @@ import sqlite3
 import tkinter as tk
 from tkinter import messagebox
 
-from config import APP_NAME
-from ui.main_window import InventoryApp
+import ctypes
+
+from .config import APP_NAME
+from .ui.main_window import InventoryApp
 
 
 def main() -> None:
+    # Abilita il supporto High DPI su Windows per testi nitidi (non sgranati)
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
     try:
         app = InventoryApp()
         app.mainloop()

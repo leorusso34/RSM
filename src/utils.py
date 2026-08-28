@@ -5,20 +5,25 @@
 import csv
 import re
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Optional, Tuple, List, Dict
 
-from config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
+from .config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
 
-def parse_money(value: Any, allow_empty: bool = False) -> Optional[float]:
-    """Converte valori monetari italiani/internazionali in float."""
+def parse_money(value: Any, allow_empty: bool = False) -> Optional[Decimal]:
+    """Converte un importo monetario valido in Decimal con due decimali."""
     if value is None or str(value).strip() == "":
         if allow_empty:
             return None
         raise ValueError("Valore monetario obbligatorio.")
 
-    text = str(value).strip()
-    text = re.sub(r"[^0-9,\.\-]", "", text)
+    text = str(value).strip().replace("€", "").replace("$", "").replace("£", "")
+    text = text.replace(" ", "")
+    if not re.fullmatch(r"-?\d+(?:[,.]\d{1,2}|[.]\d{3}(?:[,.]\d{1,2})?)?", text):
+        if allow_empty:
+            return None
+        raise ValueError("Inserisci un importo valido con massimo due decimali.")
+
     if not text or text in {"-", ".", ","}:
         if allow_empty:
             return None
@@ -29,6 +34,10 @@ def parse_money(value: Any, allow_empty: bool = False) -> Optional[float]:
             text = text.replace(".", "").replace(",", ".")
         else:
             text = text.replace(",", "")
+    elif "," in text and len(text.rsplit(",", 1)[1]) == 3:
+        text = text.replace(",", "")
+    elif "." in text and len(text.rsplit(".", 1)[1]) == 3:
+        text = text.replace(".", "")
     else:
         text = text.replace(",", ".")
 
@@ -40,7 +49,22 @@ def parse_money(value: Any, allow_empty: bool = False) -> Optional[float]:
     if amount < 0:
         raise ValueError("L'importo non può essere negativo.")
 
-    return float(amount.quantize(Decimal("0.01")))
+    return amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def money_to_cents(value: Optional[Any]) -> Optional[int]:
+    """Converte un importo Decimal in centesimi interi per SQLite."""
+    if value is None:
+        return None
+    amount = value if isinstance(value, Decimal) else Decimal(str(value))
+    return int((amount * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def cents_to_money(value: Optional[int]) -> Optional[Decimal]:
+    """Converte centesimi interi SQLite in un importo Decimal."""
+    if value is None:
+        return None
+    return (Decimal(value) / Decimal("100")).quantize(Decimal("0.01"))
 
 def money(value: Any) -> str:
     """Formatta un numero come importo monetario in Euro (€ 1.234,56)."""
@@ -54,29 +78,57 @@ def money(value: Any) -> str:
         return "€ 0,00"
 
 def parse_int(value: Any, default: int = 1) -> int:
-    """Converte un valore in intero positivo per la quantità."""
+    """Converte un valore in intero strettamente positivo."""
     if value is None or str(value).strip() == "":
         return default
     try:
         val = int(str(value).strip())
-        return val if val > 0 else default
+        if val <= 0:
+            raise ValueError("La quantità deve essere maggiore di zero.")
+        return val
     except ValueError:
-        return default
+        raise ValueError("La quantità deve essere un intero maggiore di zero.")
 
-def calculate_profit(purchased_price: float, sold_price: Optional[float], fees: float = 0.0, quantity: int = 1) -> Tuple[float, float]:
+
+def parse_date(value: Any, allow_empty: bool = True) -> str:
+    """Valida e normalizza una data convertendola sempre nel formato ISO YYYY-MM-DD."""
+    text = str(value or "").strip()
+    if not text and allow_empty:
+        return ""
+    
+    formats = [
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%Y/%m/%d",
+        "%d.%m.%Y"
+    ]
+    
+    for fmt in formats:
+        try:
+            return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+            
+    raise ValueError(f"Formato data non supportato: {text}")
+
+def calculate_profit(purchased_price: Any, sold_price: Optional[Any], fees: Any = Decimal("0"), quantity: int = 1) -> Tuple[Decimal, Decimal]:
     """
     Calcola il profitto totale netto e il ROI % per un articolo venduto.
     Profitto unitario = sold_price - purchased_price - fees
     Profitto totale = profitto unitario * quantity
     ROI % = (profitto unitario / purchased_price) * 100
     """
-    if sold_price is None or purchased_price <= 0:
-        return 0.0, 0.0
+    purchased = purchased_price if isinstance(purchased_price, Decimal) else Decimal(str(purchased_price))
+    sold = sold_price if isinstance(sold_price, Decimal) else (Decimal(str(sold_price)) if sold_price is not None else None)
+    fee_amount = fees if isinstance(fees, Decimal) else Decimal(str(fees))
+    if sold is None or purchased <= 0:
+        return Decimal("0"), Decimal("0")
 
-    unit_profit = sold_price - purchased_price - fees
+    unit_profit = sold - purchased - fee_amount
     total_profit = unit_profit * quantity
-    roi = (unit_profit / purchased_price) * 100 if purchased_price > 0 else 0.0
-    return round(total_profit, 2), round(roi, 2)
+    roi = (unit_profit / purchased) * 100 if purchased > 0 else Decimal("0")
+    return total_profit.quantize(Decimal("0.01")), roi.quantize(Decimal("0.01"))
 
 def normalize_header(value: Any) -> str:
     """Normalizza le intestazioni di tabelle o fogli Excel."""
@@ -210,17 +262,21 @@ def parse_excel_file(filepath: str) -> Tuple[List[Dict[str, Any]], int]:
             else:
                 status = current_section_status
 
-            release_raw = value("release_date")
-            if isinstance(release_raw, datetime):
-                release = release_raw.strftime("%Y-%m-%d")
-            else:
-                release = str(release_raw or "").strip()
+            try:
+                release_raw = value("release_date")
+                if isinstance(release_raw, datetime):
+                    release = release_raw.strftime("%Y-%m-%d")
+                else:
+                    release = parse_date(release_raw)
 
-            sold_date_raw = value("sold_date")
-            if isinstance(sold_date_raw, datetime):
-                sold_date = sold_date_raw.strftime("%Y-%m-%d")
-            else:
-                sold_date = str(sold_date_raw or "").strip()
+                sold_date_raw = value("sold_date")
+                if isinstance(sold_date_raw, datetime):
+                    sold_date = sold_date_raw.strftime("%Y-%m-%d")
+                else:
+                    sold_date = parse_date(sold_date_raw)
+            except ValueError:
+                skipped += 1
+                continue
 
             records.append({
                 "name": name,
@@ -239,3 +295,17 @@ def parse_excel_file(filepath: str) -> Tuple[List[Dict[str, Any]], int]:
             })
 
     return records, skipped
+
+def apply_dark_titlebar(window) -> None:
+    """Forza la titlebar di Windows 10/11 in modalità scura per matchare il tema."""
+    try:
+        import ctypes
+        window.update_idletasks()
+        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+        value = ctypes.c_int(1)
+        # Try Windows 11
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
+        # Try Windows 10
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
+    except Exception:
+        pass

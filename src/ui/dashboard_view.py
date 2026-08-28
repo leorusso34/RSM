@@ -3,12 +3,13 @@
 """Vista Dashboard e Grafici Statistici per Russo Stock Manager."""
 
 import tkinter as tk
+from decimal import Decimal
 from tkinter import ttk
 from typing import Dict, List, Any
 
-from config import LIGHT_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
-from database import InventoryDatabase
-from utils import money
+from ..config import DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
+from ..database import InventoryDatabase
+from ..utils import money
 
 
 class DashboardView(ttk.Frame):
@@ -21,7 +22,7 @@ class DashboardView(ttk.Frame):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        c = LIGHT_THEME
+        c = DARK_THEME
         container = ttk.Frame(self, padding=(16, 12))
         container.pack(fill="both", expand=True)
 
@@ -47,7 +48,7 @@ class DashboardView(ttk.Frame):
             card = tk.Frame(
                 kpis_frame,
                 bg=c["bg_card"],
-                highlightbackground="#e2e8f0",
+                highlightbackground=c["border"],
                 highlightthickness=1,
                 padx=16,
                 pady=14,
@@ -74,7 +75,7 @@ class DashboardView(ttk.Frame):
         charts_frame.rowconfigure(0, weight=1)
 
         # Grafico 1: Bar Chart Profitto Mensile
-        chart1_card = tk.Frame(charts_frame, bg=c["bg_card"], highlightbackground="#e2e8f0", highlightthickness=1, padx=16, pady=14)
+        chart1_card = tk.Frame(charts_frame, bg=c["bg_card"], highlightbackground=c["border"], highlightthickness=1, padx=16, pady=14)
         chart1_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
 
         tk.Label(chart1_card, text="ANDAMENTO PROFITTO MENSILE (€)", bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 11, "bold")).pack(anchor="w")
@@ -84,7 +85,7 @@ class DashboardView(ttk.Frame):
         self.canvas_monthly.pack(fill="both", expand=True)
 
         # Grafico 2: Distribution Bar / Pie per Stato Prodotti
-        chart2_card = tk.Frame(charts_frame, bg=c["bg_card"], highlightbackground="#e2e8f0", highlightthickness=1, padx=16, pady=14)
+        chart2_card = tk.Frame(charts_frame, bg=c["bg_card"], highlightbackground=c["border"], highlightthickness=1, padx=16, pady=14)
         chart2_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
 
         tk.Label(chart2_card, text="RIPARTIZIONE INVENTARIO (PEZZI)", bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 11, "bold")).pack(anchor="w")
@@ -120,7 +121,7 @@ class DashboardView(ttk.Frame):
             canvas.create_text(
                 width / 2, height / 2,
                 text="Nessuna vendita registrata con data di vendita.",
-                fill=LIGHT_THEME["fg_muted"],
+                fill=DARK_THEME["fg_muted"],
                 font=("Segoe UI", 10),
             )
             return
@@ -133,8 +134,11 @@ class DashboardView(ttk.Frame):
         plot_width = width - margin_left - margin_right
         plot_height = height - margin_top - margin_bottom
 
-        max_profit = max((s["profit"] for s in sales), default=1.0)
-        max_profit = max(max_profit, 10.0)
+        max_profit = max((s["profit"] for s in sales), default=Decimal("0"))
+        min_profit = min((s["profit"] for s in sales), default=Decimal("0"))
+        max_profit = max(max_profit, Decimal("10"))
+        min_profit = min(min_profit, Decimal("0"))
+        profit_range = max_profit - min_profit
 
         num_bars = len(sales)
         bar_gap = 12
@@ -143,28 +147,31 @@ class DashboardView(ttk.Frame):
         # Griglia orizzontale
         for i in range(4):
             y_val = margin_top + plot_height * (i / 3)
-            profit_val = max_profit * (1 - i / 3)
-            canvas.create_line(margin_left, y_val, width - margin_right, y_val, fill="#e2e8f0", dash=(2, 2))
+            profit_val = max_profit - profit_range * (Decimal(i) / Decimal("3"))
+            canvas.create_line(margin_left, y_val, width - margin_right, y_val, fill=DARK_THEME["border"], dash=(2, 2))
             canvas.create_text(
                 margin_left - 8, y_val,
                 text=f"€{int(profit_val)}",
                 anchor="e",
-                fill=LIGHT_THEME["fg_muted"],
+                fill=DARK_THEME["fg_muted"],
                 font=("Segoe UI", 8),
             )
+
+        zero_y = margin_top + float(max_profit / profit_range) * plot_height
 
         # Disegno barre
         for idx, item in enumerate(sales):
             x0 = margin_left + bar_gap + idx * (bar_width + bar_gap)
             x1 = x0 + bar_width
 
-            profit = max(0, item["profit"])
-            bar_h = (profit / max_profit) * plot_height
-            y1 = margin_top + plot_height
-            y0 = y1 - bar_h
+            profit = item["profit"]
+            y_profit = margin_top + float((max_profit - profit) / profit_range) * plot_height
+            y0 = min(zero_y, y_profit)
+            y1 = max(zero_y, y_profit)
+            bar_color = "#10b981" if profit >= 0 else "#ef4444"
 
             # Barra profitto
-            canvas.create_rectangle(x0, y0, x1, y1, fill="#10b981", outline="#059669", width=1)
+            canvas.create_rectangle(x0, y0, x1, y1, fill=bar_color, outline=bar_color, width=1)
 
             # Etichetta mese
             month_label = item["month"]
@@ -173,7 +180,7 @@ class DashboardView(ttk.Frame):
             canvas.create_text(
                 (x0 + x1) / 2, y1 + 14,
                 text=month_label,
-                fill=LIGHT_THEME["fg_muted"],
+                fill=DARK_THEME["fg_muted"],
                 font=("Segoe UI", 8, "bold"),
             )
 
@@ -182,7 +189,7 @@ class DashboardView(ttk.Frame):
                 canvas.create_text(
                     (x0 + x1) / 2, y0 - 8,
                     text=f"€{int(profit)}",
-                    fill=LIGHT_THEME["fg_main"],
+                    fill=DARK_THEME["fg_main"],
                     font=("Segoe UI", 8, "bold"),
                 )
 
@@ -205,7 +212,7 @@ class DashboardView(ttk.Frame):
             canvas.create_text(
                 width / 2, height / 2,
                 text="Nessun articolo presente nel database.",
-                fill=LIGHT_THEME["fg_muted"],
+                fill=DARK_THEME["fg_muted"],
                 font=("Segoe UI", 10),
             )
             return
@@ -213,7 +220,8 @@ class DashboardView(ttk.Frame):
         categories = [
             ("In Magazzino", stock_c, "#059669"),
             ("Pre-ordini", pre_c, "#d97706"),
-            ("Venduti", sold_c, "#2563eb"),
+            ("Vendite Attive", totals.get("sold_count_active", 0), "#2563eb"),
+            ("Completate", totals.get("sold_count_completed", 0), "#db2777"),
         ]
 
         # Ripartizione visuale a barre orizzontali ed etichette eleganti
@@ -238,7 +246,7 @@ class DashboardView(ttk.Frame):
                 margin_x + 26, start_y + 8,
                 text=f"{label}: {count} pz ({pct:.1f}%)",
                 anchor="w",
-                fill=LIGHT_THEME["fg_main"],
+                fill=DARK_THEME["fg_main"],
                 font=("Segoe UI", 10, "bold"),
             )
             start_y += 35

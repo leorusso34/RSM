@@ -3,5 +3,19 @@
 *.db-shm
 __pycache__/
 *.pyc
+.pytest_cache/
+.venv/
 .vscode/
 .idea/
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Data (il DB è locale, non va nel repo)
+data/
+
+# Script di fix temporanei
+fix_*.py
+test.py
