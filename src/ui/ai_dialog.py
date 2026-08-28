@@ -112,35 +112,39 @@ class AIDialog(tk.Toplevel):
         except Exception as e:
             self.after(0, lambda: self._on_ai_error(str(e)))
             
-    def _on_ai_success(self, parsed_data):
-        self.status_lbl.configure(text="Prodotto estratto con successo!", fg=DARK_THEME["fg_main"])
-        
-        try:
-            pp = float(parsed_data.get("purchased_price", 0.0))
-        except (ValueError, TypeError):
-            pp = 0.0
-            
-        try:
-            qty = int(parsed_data.get("quantity", 1))
-        except (ValueError, TypeError):
-            qty = 1
-            
-        record = {
-            "name": parsed_data.get("name", ""),
-            "size": parsed_data.get("size", ""),
-            "quantity": qty,
-            "purchased_price": pp,
-            "purchased_place": parsed_data.get("purchased_place", ""),
-            "selling_place": "",
-            "selling_price": None,
-            "sold_price": None,
-            "fees": 0.0,
-            "status": parsed_data.get("status", STATUS_STOCK),
-            "release_date": parsed_data.get("release_date", ""),
-            "notes": "Generato automaticamente tramite AI."
-        }
-        
-        self.result = record
+    def _on_ai_success(self, parsed_list):
+        count = len(parsed_list)
+        label = "prodotto estratto" if count == 1 else f"{count} prodotti estratti"
+        self.status_lbl.configure(text=f"{label.capitalize()} con successo!", fg=DARK_THEME["fg_main"])
+
+        records = []
+        for parsed_data in parsed_list:
+            try:
+                pp = float(parsed_data.get("purchased_price", 0.0))
+            except (ValueError, TypeError):
+                pp = 0.0
+
+            try:
+                qty = int(parsed_data.get("quantity", 1))
+            except (ValueError, TypeError):
+                qty = 1
+
+            records.append({
+                "name": parsed_data.get("name", ""),
+                "size": parsed_data.get("size", ""),
+                "quantity": qty,
+                "purchased_price": pp,
+                "purchased_place": parsed_data.get("purchased_place", ""),
+                "selling_place": "",
+                "selling_price": None,
+                "sold_price": None,
+                "fees": 0.0,
+                "status": parsed_data.get("status", STATUS_STOCK),
+                "release_date": parsed_data.get("release_date", ""),
+                "notes": "Generato automaticamente tramite AI."
+            })
+
+        self.result = records
         self.destroy()
         
     def _on_ai_error(self, error_msg):

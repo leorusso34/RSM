@@ -734,26 +734,34 @@ class InventoryApp(tk.Tk):
     def open_ai_insert(self) -> None:
         dialog = AIDialog(self, self.db)
         self.wait_window(dialog)
-        
-        if dialog.result:
-            # Apri il dialog del prodotto pre-compilato con i dati dell'AI
-            cur_st = self.current_status() or STATUS_STOCK
-            places = self.db.get_distinct_places()
-            prod_dialog = ProductDialog(self, cur_st, autocomplete_places=places, record=dialog.result)
+
+        if not dialog.result:
+            return
+
+        places = self.db.get_distinct_places()
+        cur_st = self.current_status() or STATUS_STOCK
+        last_target = None
+
+        # Apri un ProductDialog pre-compilato per ogni prodotto estratto dall'AI
+        for record in dialog.result:
+            prod_dialog = ProductDialog(self, cur_st, autocomplete_places=places, record=record)
             self.wait_window(prod_dialog)
-            
+
             if prod_dialog.result:
                 new_id = self.db.save(prod_dialog.result)
-                target = prod_dialog.result["status"]
-                self.refresh()
-                if target in self.status_tabs:
-                    self.notebook.select(self.status_tabs.index(target))
-                
-                tree = self.trees[target]
-                if tree.exists(str(new_id)):
-                    tree.selection_set(str(new_id))
-                    tree.see(str(new_id))
-                self.status_bar_var.set("Prodotto generato e aggiunto con successo")
+                last_target = prod_dialog.result["status"]
+
+        # Dopo aver chiuso tutti i dialog, aggiorna la vista e seleziona l'ultimo prodotto inserito
+        if last_target:
+            self.refresh()
+            if last_target in self.status_tabs:
+                self.notebook.select(self.status_tabs.index(last_target))
+            tree = self.trees[last_target]
+            if tree.exists(str(new_id)):
+                tree.selection_set(str(new_id))
+                tree.see(str(new_id))
+            n = len(dialog.result)
+            self.status_bar_var.set(f"{n} prodott{'o' if n == 1 else 'i'} generati e aggiunti con successo")
 
     def add_product(self) -> None:
         cur_st = self.current_status() or STATUS_STOCK
