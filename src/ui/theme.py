@@ -93,7 +93,14 @@ def setup_app_theme(root: tk.Tk) -> None:
     )
 
     # Schede (Notebook)
-    style.configure("TNotebook", background=c["bg_main"], borderwidth=0)
+    style.configure(
+        "TNotebook", 
+        background=c["bg_main"], 
+        borderwidth=0,
+        lightcolor=c["bg_main"],
+        darkcolor=c["bg_main"],
+        bordercolor=c["bg_main"]
+    )
     style.configure(
         "TNotebook.Tab",
         background=c["bg_main"],
@@ -113,12 +120,14 @@ def setup_app_theme(root: tk.Tk) -> None:
         background=c["bg_card"],
         fieldbackground=c["bg_card"],
         foreground=c["fg_main"],
-        rowheight=32,
-        borderwidth=1,
+        rowheight=34,
+        borderwidth=0,
+        lightcolor=c["bg_main"],
+        darkcolor=c["bg_main"],
+        bordercolor=c["bg_main"],
         relief="flat",
         font=("Segoe UI", 9),
     )
-    style.configure("Treeview", rowheight=34)
     style.map(
         "Treeview",
         background=[("selected", c["table_select"])],
@@ -129,6 +138,7 @@ def setup_app_theme(root: tk.Tk) -> None:
         background=c["table_header"],
         foreground=c["fg_main"],
         relief="flat",
+        borderwidth=1,
         padding=8,
         font=("Segoe UI", 9, "bold"),
     )
