@@ -379,6 +379,9 @@ class BulkStatusDialog(tk.Toplevel):
         self.transient(parent)
         self.grab_set()
 
+        from ..utils import apply_dark_titlebar
+        apply_dark_titlebar(self)
+
         self.var_sold_price = tk.StringVar()
         self.var_fees = tk.StringVar(value="0,00")
         self.var_sold_date = tk.StringVar(value=datetime.now().strftime("%Y-%m-%d"))
@@ -476,6 +479,9 @@ class ManagePlacesDialog(tk.Toplevel):
         self.configure(bg=c["bg_card"])
         self.transient(parent)
         self.grab_set()
+
+        from ..utils import apply_dark_titlebar
+        apply_dark_titlebar(self)
 
         self._build()
 

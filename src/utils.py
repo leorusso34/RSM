@@ -301,7 +301,7 @@ def apply_dark_titlebar(window) -> None:
     try:
         import ctypes
         window.update_idletasks()
-        hwnd = ctypes.windll.user32.GetParent(window.winfo_id())
+        hwnd = ctypes.windll.user32.GetAncestor(window.winfo_id(), 2) # GA_ROOT = 2
         value = ctypes.c_int(1)
         # Try Windows 11
         ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))

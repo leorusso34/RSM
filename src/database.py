@@ -57,6 +57,15 @@ class InventoryDatabase:
             );
             """
         )
+        
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+            """
+        )
 
         if existing_columns and "bundle_id" not in existing_columns:
             cursor.execute("ALTER TABLE products ADD COLUMN bundle_id TEXT NOT NULL DEFAULT ''")
@@ -266,6 +275,21 @@ class InventoryDatabase:
                 values + (product_id,),
             )
             return product_id
+        
+    def get_setting(self, key: str, default_value: str = "") -> str:
+        """Recupera un'impostazione dal database."""
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        row = cursor.fetchone()
+        return row["value"] if row else default_value
+        
+    def set_setting(self, key: str, value: str) -> None:
+        """Salva un'impostazione nel database."""
+        with self.connection:
+            self.connection.execute(
+                "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (key, value)
+            )
 
     def delete(self, product_id: int) -> None:
         """Elimina un singolo prodotto."""

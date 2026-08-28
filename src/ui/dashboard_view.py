@@ -26,12 +26,6 @@ class DashboardView(ttk.Frame):
         container = ttk.Frame(self, padding=(16, 12))
         container.pack(fill="both", expand=True)
 
-        # Intestazione Dashboard
-        head_frame = ttk.Frame(container)
-        head_frame.pack(fill="x", pady=(0, 16))
-        ttk.Label(head_frame, text="Dashboard & Analisi Finanziaria", style="Section.TLabel").pack(anchor="w")
-        ttk.Label(head_frame, text="Panoramica completa dei profitti, del capitale investito e dell'andamento vendite", style="Muted.TLabel").pack(anchor="w")
-
         # Griglia Carte KPI (4 schede)
         kpis_frame = ttk.Frame(container)
         kpis_frame.pack(fill="x", pady=(0, 16))
@@ -48,8 +42,7 @@ class DashboardView(ttk.Frame):
             card = tk.Frame(
                 kpis_frame,
                 bg=c["bg_card"],
-                highlightbackground=c["border"],
-                highlightthickness=1,
+                highlightthickness=0,
                 padx=16,
                 pady=14,
             )
@@ -68,31 +61,212 @@ class DashboardView(ttk.Frame):
             tk.Label(card, textvariable=var_sub, bg=c["bg_card"], fg=c["fg_subtle"], font=("Segoe UI", 8)).pack(anchor="w")
 
         # Area dei Grafici (due colonne)
-        charts_frame = ttk.Frame(container)
-        charts_frame.pack(fill="both", expand=True)
-        charts_frame.columnconfigure(0, weight=3)
-        charts_frame.columnconfigure(1, weight=2)
-        charts_frame.rowconfigure(0, weight=1)
+        self.charts_frame = ttk.Frame(container)
+        self.charts_frame.pack(fill="both", expand=True)
+        self.charts_frame.columnconfigure(0, weight=3)
+        self.charts_frame.columnconfigure(1, weight=2)
+        self.charts_frame.rowconfigure(0, weight=1)
 
         # Grafico 1: Bar Chart Profitto Mensile
-        chart1_card = tk.Frame(charts_frame, bg=c["bg_card"], highlightbackground=c["border"], highlightthickness=1, padx=16, pady=14)
-        chart1_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        self.chart1_card = tk.Frame(self.charts_frame, bg=c["bg_card"], highlightthickness=0, padx=16, pady=14)
 
-        tk.Label(chart1_card, text="ANDAMENTO PROFITTO MENSILE (€)", bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        tk.Label(chart1_card, text="Utili netti generati per ciascun mese di vendita", bg=c["bg_card"], fg=c["fg_muted"], font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
+        tk.Label(self.chart1_card, text="ANDAMENTO PROFITTO MENSILE (€)", bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 11, "bold")).pack(anchor="w")
+        tk.Label(self.chart1_card, text="Utili netti generati per ciascun mese di vendita", bg=c["bg_card"], fg=c["fg_muted"], font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
 
-        self.canvas_monthly = tk.Canvas(chart1_card, bg=c["bg_card"], highlightthickness=0)
+        self.canvas_monthly = tk.Canvas(self.chart1_card, bg=c["bg_card"], highlightthickness=0)
         self.canvas_monthly.pack(fill="both", expand=True)
 
         # Grafico 2: Distribution Bar / Pie per Stato Prodotti
-        chart2_card = tk.Frame(charts_frame, bg=c["bg_card"], highlightbackground=c["border"], highlightthickness=1, padx=16, pady=14)
-        chart2_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        self.chart2_card = tk.Frame(self.charts_frame, bg=c["bg_card"], highlightthickness=0, padx=16, pady=14)
 
-        tk.Label(chart2_card, text="RIPARTIZIONE INVENTARIO (PEZZI)", bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        tk.Label(chart2_card, text="Distribuzione volumi per stato", bg=c["bg_card"], fg=c["fg_muted"], font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
+        tk.Label(self.chart2_card, text="RIPARTIZIONE INVENTARIO (PEZZI)", bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 11, "bold")).pack(anchor="w")
+        tk.Label(self.chart2_card, text="Distribuzione volumi per stato", bg=c["bg_card"], fg=c["fg_muted"], font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
 
-        self.canvas_dist = tk.Canvas(chart2_card, bg=c["bg_card"], highlightthickness=0)
+        self.canvas_dist = tk.Canvas(self.chart2_card, bg=c["bg_card"], highlightthickness=0)
         self.canvas_dist.pack(fill="both", expand=True)
+
+        self.chart_cards = {
+            "monthly": self.chart1_card,
+            "dist": self.chart2_card
+        }
+        
+        # Inizializza i menu a tendina
+        self._bind_context_menu(self.chart1_card, "monthly")
+        self._bind_context_menu(self.canvas_monthly, "monthly")
+        self._bind_context_menu(self.chart2_card, "dist")
+        self._bind_context_menu(self.canvas_dist, "dist")
+
+        # Menu globale (per quando i grafici sono nascosti)
+        self._bind_global_context_menu(self.charts_frame)
+        self._bind_global_context_menu(container)
+        self._bind_global_context_menu(self)
+
+        self._apply_layout()
+        
+    def _bind_global_context_menu(self, widget: tk.Widget):
+        menu = tk.Menu(self, tearoff=0, bg=DARK_THEME["bg_card"], fg=DARK_THEME["fg_main"], activebackground=DARK_THEME["accent"])
+        menu.add_command(label="Personalizza layout...", command=self._open_layout_settings)
+        
+        def show_menu(event):
+            menu.tk_popup(event.x_root, event.y_root)
+            
+        widget.bind("<Button-3>", show_menu)
+
+    def _bind_context_menu(self, widget: tk.Widget, chart_id: str):
+        menu = tk.Menu(self, tearoff=0, bg=DARK_THEME["bg_card"], fg=DARK_THEME["fg_main"], activebackground=DARK_THEME["accent"])
+        menu.add_command(label="Nascondi grafico", command=lambda: self._hide_chart(chart_id))
+        menu.add_separator()
+        menu.add_command(label="Personalizza layout...", command=self._open_layout_settings)
+        
+        def show_menu(event):
+            menu.tk_popup(event.x_root, event.y_root)
+            
+        widget.bind("<Button-3>", show_menu)
+        
+    def _hide_chart(self, chart_id: str):
+        import json
+        layout_str = self.db.get_setting("dashboard_layout", '["monthly", "dist"]')
+        try:
+            layout = json.loads(layout_str)
+        except Exception:
+            layout = ["monthly", "dist"]
+            
+        if chart_id in layout:
+            layout.remove(chart_id)
+            self.db.set_setting("dashboard_layout", json.dumps(layout))
+            self._apply_layout()
+            
+    def _apply_layout(self):
+        import json
+        layout_str = self.db.get_setting("dashboard_layout", '["monthly", "dist"]')
+        try:
+            layout = json.loads(layout_str)
+        except Exception:
+            layout = ["monthly", "dist"]
+            
+        # Rimuovi tutti
+        for card in self.chart_cards.values():
+            card.grid_remove()
+            
+        # Riapplica
+        col = 0
+        for chart_id in layout:
+            if chart_id in self.chart_cards:
+                self.charts_frame.columnconfigure(col, weight=1)
+                padx = (0, 8) if col == 0 and len(layout) > 1 else (8, 0) if col > 0 else (0, 0)
+                self.chart_cards[chart_id].grid(row=0, column=col, sticky="nsew", padx=padx)
+                col += 1
+                
+        # Forza ridisegno
+        self.charts_frame.update_idletasks()
+        self.after(100, self.refresh)
+
+    def _open_layout_settings(self):
+        import json
+        top = tk.Toplevel(self)
+        top.title("Personalizza Dashboard")
+        
+        # Dimensioni e posizionamento al centro
+        w, h = 400, 420
+        top.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (w // 2)
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (h // 2)
+        top.geometry(f"{w}x{h}+{x}+{y}")
+        
+        top.configure(bg=DARK_THEME["bg_main"])
+        top.transient(self.winfo_toplevel())
+        top.grab_set()
+        
+        # Applica barra scura
+        from ..utils import apply_dark_titlebar
+        apply_dark_titlebar(top)
+        
+        tk.Label(top, text="Seleziona e riordina i grafici da visualizzare.", bg=DARK_THEME["bg_main"], fg=DARK_THEME["fg_main"], pady=10).pack()
+        
+        list_frame = tk.Frame(top, bg=DARK_THEME["bg_card"])
+        list_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        layout_str = self.db.get_setting("dashboard_layout", '["monthly", "dist"]')
+        try:
+            current_layout = json.loads(layout_str)
+        except:
+            current_layout = ["monthly", "dist"]
+            
+        all_charts = {
+            "monthly": "Grafico: Andamento Profitto Mensile",
+            "dist": "Grafico: Ripartizione Inventario"
+        }
+        
+        self._temp_layout = current_layout.copy()
+        for c in all_charts:
+            if c not in self._temp_layout:
+                self._temp_layout.append(c)
+                
+        self._chart_vars = {}
+        for c in all_charts:
+            var = tk.BooleanVar(value=(c in current_layout))
+            self._chart_vars[c] = var
+            
+        listbox = tk.Listbox(list_frame, bg=DARK_THEME["bg_card"], fg=DARK_THEME["fg_main"], selectbackground=DARK_THEME["accent"], font=("Segoe UI", 10), bd=0, highlightthickness=0)
+        listbox.pack(side="left", fill="both", expand=True)
+        
+        for c in self._temp_layout:
+            prefix = "☑  " if self._chart_vars[c].get() else "☐  "
+            listbox.insert(tk.END, prefix + all_charts[c])
+            
+        def toggle_item(event):
+            idx = listbox.curselection()
+            if not idx: return
+            idx = idx[0]
+            cid = self._temp_layout[idx]
+            self._chart_vars[cid].set(not self._chart_vars[cid].get())
+            prefix = "☑  " if self._chart_vars[cid].get() else "☐  "
+            listbox.delete(idx)
+            listbox.insert(idx, prefix + all_charts[cid])
+            listbox.selection_set(idx)
+            
+        listbox.bind("<Double-Button-1>", toggle_item)
+        
+        btn_frame = tk.Frame(top, bg=DARK_THEME["bg_main"])
+        btn_frame.pack(fill="x", padx=20, pady=(0, 10))
+        
+        def move_up():
+            idx = listbox.curselection()
+            if not idx or idx[0] == 0: return
+            idx = idx[0]
+            
+            # Scambia nella lista
+            self._temp_layout[idx-1], self._temp_layout[idx] = self._temp_layout[idx], self._temp_layout[idx-1]
+            
+            # Scambia nella UI
+            val = listbox.get(idx)
+            listbox.delete(idx)
+            listbox.insert(idx-1, val)
+            listbox.selection_set(idx-1)
+            
+        def move_down():
+            idx = listbox.curselection()
+            if not idx or idx[0] == len(self._temp_layout)-1: return
+            idx = idx[0]
+            
+            self._temp_layout[idx+1], self._temp_layout[idx] = self._temp_layout[idx], self._temp_layout[idx+1]
+            
+            val = listbox.get(idx)
+            listbox.delete(idx)
+            listbox.insert(idx+1, val)
+            listbox.selection_set(idx+1)
+            
+        ttk.Button(btn_frame, text="Spunta/Nascondi", command=lambda: toggle_item(None)).pack(side="left", fill="x", expand=True, padx=(0, 5))
+        ttk.Button(btn_frame, text="▲", command=move_up).pack(side="left", fill="x", expand=True, padx=5)
+        ttk.Button(btn_frame, text="▼", command=move_down).pack(side="left", fill="x", expand=True, padx=(5, 0))
+        
+        def save():
+            final_layout = [c for c in self._temp_layout if self._chart_vars[c].get()]
+            self.db.set_setting("dashboard_layout", json.dumps(final_layout))
+            self._apply_layout()
+            top.destroy()
+            
+        ttk.Button(top, text="Salva Layout", style="Accent.TButton", command=save).pack(pady=10)
 
     def refresh(self) -> None:
         """Aggiorna i dati KPI e ridisegna i grafici."""

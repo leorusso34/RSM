@@ -226,9 +226,18 @@ class InventoryApp(tk.Tk):
         entry_max.grid(row=0, column=7, sticky="w", padx=(0, 12))
         self.filter_max_price_var.trace_add("write", lambda *_a: self.refresh_tables())
 
-        # 4. Notebook con Schede Tabellari e Dashboard
+        # 4. Barra azioni di massa e status bar inferiore (CREATA PRIMA DEL NOTEBOOK PER PREVENIRE TAGLI)
+        bottom = ttk.Frame(container, padding=(0, 8, 0, 0))
+        bottom.pack(side="bottom", fill="x")
+
+        self.lbl_selected_info = ttk.Label(bottom, text="0 prodotti selezionati", style="Muted.TLabel")
+        self.lbl_selected_info.pack(side="left", padx=(0, 12))
+
+        ttk.Label(bottom, textvariable=self.status_bar_var, style="Muted.TLabel").pack(side="right")
+
+        # 5. Notebook con Schede Tabellari e Dashboard
         self.notebook = ttk.Notebook(container)
-        self.notebook.pack(fill="both", expand=True)
+        self.notebook.pack(side="top", fill="both", expand=True)
 
         self._create_tab(STATUS_STOCK, "Magazzino")
         self._create_tab(STATUS_PREORDER, "Pre-ordini")
@@ -241,27 +250,6 @@ class InventoryApp(tk.Tk):
         self.notebook.add(self.dashboard_view, text="Dashboard & Grafici")
 
         self.notebook.bind("<<NotebookTabChanged>>", lambda _e: self._on_tab_changed())
-
-        # 5. Barra azioni di massa e status bar inferiore
-        bottom = ttk.Frame(container, padding=(0, 8, 0, 0))
-        bottom.pack(fill="x")
-
-        self.lbl_selected_info = ttk.Label(bottom, text="0 prodotti selezionati", style="Muted.TLabel")
-        self.lbl_selected_info.pack(side="left", padx=(0, 12))
-
-        self.btn_edit = ttk.Button(bottom, text="Modifica", command=self.edit_selected)
-        self.btn_edit.pack(side="left", padx=4)
-
-        self.btn_delete = ttk.Button(bottom, text="Elimina Prodotto/i", style="Danger.TButton", command=self.delete_selected)
-        self.btn_delete.pack(side="left", padx=4)
-
-        self.btn_move_stock = ttk.Button(bottom, text="Sposta in Magazzino", style="Accent.TButton", command=self.move_selected_to_stock)
-        self.btn_move_stock.pack(side="left", padx=4)
-
-        self.btn_move_sold = ttk.Button(bottom, text="Segna come Venduto...", style="Success.TButton", command=self.move_selected_to_sold)
-        self.btn_move_sold.pack(side="left", padx=4)
-
-        ttk.Label(bottom, textvariable=self.status_bar_var, style="Muted.TLabel").pack(side="right")
 
         # Context Menu (Menu a tendina)
         self.context_menu = tk.Menu(self, tearoff=0, bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 9))
@@ -719,17 +707,24 @@ class InventoryApp(tk.Tk):
         ids = self.selected_ids()
         count = len(ids)
 
-        self.lbl_selected_info.configure(text=f"{count} prodotti selezionati")
+        if count == 0:
+            self.lbl_selected_info.configure(text="0 prodotti selezionati")
+            return
 
-        has_selection = count > 0
-        state = "normal" if has_selection else "disabled"
-
-        self.btn_edit.configure(state="normal" if count == 1 else "disabled")
-        self.btn_delete.configure(state=state)
-
-        cur_st = self.current_status()
-        self.btn_move_stock.configure(state=state if cur_st != STATUS_STOCK else "disabled")
-        self.btn_move_sold.configure(state=state if cur_st != STATUS_SOLD else "disabled")
+        from decimal import Decimal
+        total_cost = Decimal("0")
+        
+        for item_id in ids:
+            prod = self.db.get(item_id)
+            if prod:
+                total_cost += prod["purchased_price"]
+                
+        avg_cost = total_cost / count
+        from ..utils import money
+        
+        self.lbl_selected_info.configure(
+            text=f"{count} selezionati | Costo Acquisto: {money(total_cost)} | Media: {money(avg_cost)}"
+        )
 
     def add_product(self) -> None:
         cur_st = self.current_status() or STATUS_STOCK
