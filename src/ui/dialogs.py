@@ -119,7 +119,10 @@ class ProductDialog(tk.Toplevel):
         form_scroll = ttk.Scrollbar(form_area, orient="vertical", command=form_canvas.yview)
         form_canvas.configure(yscrollcommand=form_scroll.set)
         form_scroll.pack(side="right", fill="y")
-        form_canvas.pack(side="left", fill="both", expand=True)
+        
+        # Aggiunto padx per stringere i campi centrali e lasciare spazio vuoto ai lati per lo scroll sicuro
+        form_canvas.pack(side="left", fill="both", expand=True, padx=80)
+        
         form = tk.Frame(form_canvas, bg=c["bg_card"])
         form_window = form_canvas.create_window((0, 0), window=form, anchor="nw")
         form.bind("<Configure>", lambda _e: form_canvas.configure(scrollregion=form_canvas.bbox("all")))
@@ -145,20 +148,21 @@ class ProductDialog(tk.Toplevel):
         self._field_entry(form, "PREZZO ACQUISTO (€) *", "purchased_price", 2, 0)
         self._field_combo(form, "LUOGO ACQUISTO", "purchased_place", self.purchased_places, 2, 1)
 
-        # Selling place with Edit Button
-        tk.Label(form, text="LUOGO VENDITA", bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 9, "bold")).grid(
-            row=6, column=0, sticky="w", padx=(0, 6), pady=(8, 2)
-        )
+        # Selling place with Settings Gear
+        lbl_frame = tk.Frame(form, bg=c["bg_card"])
+        lbl_frame.grid(row=6, column=0, sticky="w", padx=(0, 6), pady=(8, 2))
         
-        selling_frame = tk.Frame(form, bg=c["bg_card"])
-        selling_frame.grid(row=7, column=0, sticky="ew", padx=(0, 6))
-        selling_frame.columnconfigure(0, weight=1)
+        tk.Label(lbl_frame, text="LUOGO VENDITA", bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 9, "bold")).pack(side="left")
         
-        self.selling_place_combo = ttk.Combobox(selling_frame, textvariable=self.vars["selling_place"], values=self.selling_places, state="readonly", font=("Segoe UI", 10))
-        self.selling_place_combo.grid(row=0, column=0, sticky="ew", ipady=4)
+        # Aggiustato il font e aggiunto un piccolo padding inferiore (pady=(0,2)) per alzare la rotellina e allinearla al testo
+        gear_lbl = tk.Label(lbl_frame, text="⚙", bg=c["bg_card"], fg=c["fg_muted"], font=("Segoe UI", 10), cursor="hand2")
+        gear_lbl.pack(side="left", padx=(6, 0), pady=(0, 2))
+        gear_lbl.bind("<Button-1>", lambda _e: self._open_manage_places())
+        gear_lbl.bind("<Enter>", lambda _e: gear_lbl.configure(fg=c["fg_main"]))
+        gear_lbl.bind("<Leave>", lambda _e: gear_lbl.configure(fg=c["fg_muted"]))
         
-        btn_edit_place = ttk.Button(selling_frame, text="✎", width=3, command=self._open_manage_places)
-        btn_edit_place.grid(row=0, column=1, sticky="w", padx=(4, 0))
+        self.selling_place_combo = ttk.Combobox(form, textvariable=self.vars["selling_place"], values=self.selling_places, state="readonly", font=("Segoe UI", 10))
+        self.selling_place_combo.grid(row=7, column=0, sticky="ew", padx=(0, 6), ipady=4)
 
         self._field_entry(form, "PREZZO VENDITA (€)", "selling_price", 3, 1)
 

@@ -155,7 +155,7 @@ class InventoryApp(tk.Tk):
             ("stock_total", "STOCK TOTALE (€)", "#2563eb"),
             ("stock_count", "IN MAGAZZINO", "#3b82f6"),
             ("sold_profit_active", "PROFITTO VENDITE ATTIVE", "#10b981"),
-            ("sold_profit_completed", "PROFITTO STORICO COMPLETATE", "#059669"),
+            ("sold_profit_completed", "PROFITTO STORICO VENDITE COMPLETATE", "#059669"),
             ("all_count", "PEZZI TOTALI GESTITI", "#7c3aed"),
         ]
 
@@ -231,7 +231,7 @@ class InventoryApp(tk.Tk):
         bottom.pack(side="bottom", fill="x")
 
         self.lbl_selected_info = ttk.Label(bottom, text="0 prodotti selezionati", style="Muted.TLabel")
-        self.lbl_selected_info.pack(side="left", padx=(0, 12))
+        self.lbl_selected_info.pack(side="left", padx=(0, 7))
 
         ttk.Label(bottom, textvariable=self.status_bar_var, style="Muted.TLabel").pack(side="right")
 
@@ -723,7 +723,7 @@ class InventoryApp(tk.Tk):
         from ..utils import money
         
         self.lbl_selected_info.configure(
-            text=f"{count} selezionati | Costo Acquisto: {money(total_cost)} | Media: {money(avg_cost)}"
+            text=f"{count} selezionati | Totale: {money(total_cost)} | Media: {money(avg_cost)}"
         )
 
     def add_product(self) -> None:
