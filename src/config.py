@@ -34,23 +34,23 @@ DB_PATH = DATA_DIR / "russo_stock.db"
 
 # Palette colori - Tema scuro moderno
 DARK_THEME = {
-    "bg_main": "#111827",          # Sfondo principale
-    "bg_card": "#1f2937",          # Sfondo carte e contenitori
-    "bg_sidebar": "#182230",       # Sfondo eventuale sidebar
-    "bg_input": "#273449",         # Sfondo campi di testo
-    "fg_main": "#f3f4f6",          # Testo principale
-    "fg_muted": "#a7b0c0",         # Testo secondario
-    "fg_subtle": "#7f8ba0",        # Testo discreto
-    "border": "#374151",           # Bordi soft
-    "accent": "#2563eb",           # Blu accent (bottoni primari, selezionato)
-    "accent_hover": "#1d4ed8",     # Blu hover
-    "success": "#10b981",          # Verde (guadagni, magazzino)
+    "bg_main": "#0e131f",        # Sfondo principale più profondo (stile Antigravity)
+    "bg_card": "#151b2b",        # Sfondo contenitori molto simile allo sfondo (basso contrasto)
+    "bg_input": "#1d2538",       # Sfondo input
+    "fg_main": "#f1f5f9",        # Testo primario morbido
+    "fg_muted": "#8b9bb4",       # Testo secondario integrato
+    "fg_subtle": "#475569",      # Testo molto discreto
+    "bg_sidebar": "#151b2b",     # Sfondo eventuale sidebar
+    "accent": "#3b82f6",
+    "accent_hover": "#2563eb",
+    "success": "#10b981",
     "success_hover": "#059669",
-    "warning": "#f59e0b",          # Arancione/Giallo (pre-ordini)
-    "danger": "#ef4444",           # Rosso (elimina, perdite)
+    "danger": "#ef4444",
     "danger_hover": "#dc2626",
-    "table_header": "#263244",     # Intestazione tabella
-    "table_alt_row": "#202b3c",    # Righe alternate
-    "table_select": "#1d4ed8",     # Riga selezionata
+    "warning": "#f59e0b",
+    "border": "#1d2538",           # Bordo fuso con lo sfondo
+    "table_header": "#151b2b",     # Intestazione tabella uguale alla card
+    "table_alt_row": "#121825",    # Righe alternate invisibili
+    "table_select": "#2563eb",     # Riga selezionata
     "table_select_fg": "#ffffff",  # Testo riga selezionata
 }

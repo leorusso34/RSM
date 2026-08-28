@@ -105,7 +105,7 @@ class InventoryApp(tk.Tk):
         # Ripristiniamo la barra nativa scura (permette lo snap ai bordi, e riduci a icona)
         self._apply_dark_titlebar()
         
-        container = ttk.Frame(self, padding=20)
+        container = ttk.Frame(self, padding=12)
         container.pack(fill="both", expand=True)
 
         # 1. Header superiore
@@ -120,12 +120,11 @@ class InventoryApp(tk.Tk):
         try:
             from PIL import Image, ImageTk
             import sys
-            from ..config import PROJECT_DIR
-            icon_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "app_icon.ico"
-            if not icon_path.exists():
-                icon_path = PROJECT_DIR / "app_icon.ico"
+            w_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "app_icon.ico"
+            if not w_path.exists():
+                w_path = PROJECT_DIR / "app_icon.ico"
                 
-            img = Image.open(icon_path).resize((32, 32), Image.Resampling.LANCZOS)
+            img = Image.open(w_path).resize((32, 32), Image.Resampling.LANCZOS)
             self._header_logo = ImageTk.PhotoImage(img)
             lbl_logo = tk.Label(title_box, image=self._header_logo, bg=c["bg_card"])
             lbl_logo.pack(side="left", padx=(0, 10))
@@ -145,6 +144,8 @@ class InventoryApp(tk.Tk):
         ttk.Button(actions, text="Backup DB Sicuro", command=self.backup_database).pack(side="left", padx=3)
         ttk.Button(actions, text="+ Nuovo Prodotto", style="Accent.TButton", command=self.add_product).pack(side="left", padx=(8, 0))
 
+        # Test Sfondo/Watermark rimosso via git
+        
         # 2. Barra Carte KPI
         kpis = ttk.Frame(container)
         kpis.pack(fill="x", pady=(0, 14))
@@ -163,10 +164,9 @@ class InventoryApp(tk.Tk):
             card = tk.Frame(
                 kpis,
                 bg=c["bg_card"],
-                highlightbackground=c["border"],
-                highlightthickness=1,
-                padx=14,
-                pady=10,
+                highlightthickness=0,  # RIMOSSO BORDO DURO!
+                padx=16,
+                pady=12,
             )
             card.grid(
                 row=0,
