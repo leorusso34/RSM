@@ -46,8 +46,7 @@ def main():
         "--windowed",
         "--name=Russo Stock Manager",
         "--clean",
-        "--icon=app_icon.ico",
-        "--add-data=app_icon.ico;.",
+        "--icon=assets/app_icon.ico",
         "--add-data=assets;assets",
         "--collect-all=customtkinter",
         str(main_script)

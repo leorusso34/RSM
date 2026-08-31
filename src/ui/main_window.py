@@ -83,13 +83,11 @@ class InventoryApp(ctk.CTk):
 
         try:
             import sys
-            icon_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "app_icon.ico"
+            icon_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_icon.ico"
+            if not icon_path.exists():
+                icon_path = PROJECT_DIR / "assets" / "app_icon.ico"
             if icon_path.exists():
                 self.iconbitmap(str(icon_path))
-            else:
-                fallback_path = PROJECT_DIR / "app_icon.ico"
-                if fallback_path.exists():
-                    self.iconbitmap(str(fallback_path))
         except Exception as e:
             print(f"Icona non caricata: {e}")
 
@@ -125,28 +123,25 @@ class InventoryApp(ctk.CTk):
         container.pack(fill="both", expand=True, padx=12, pady=12)
 
         # 1. Header superiore
-        header = ctk.CTkFrame(container, fg_color=c["bg_card"], corner_radius=10)
+        header = ctk.CTkFrame(container, fg_color=c["bg_card"], corner_radius=10, border_width=1, border_color=c["border"])
         header.pack(fill="x", pady=(0, 14))
 
-        title_box = ctk.CTkFrame(header, fg_color="transparent")
-        title_box.pack(side="left", padx=16, pady=12)
+        logo_box = ctk.CTkFrame(header, fg_color="transparent")
+        logo_box.pack(side="left", padx=16, pady=8)
 
         try:
             from PIL import Image
             import sys
-            w_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "app_icon.ico"
-            if not w_path.exists():
-                w_path = PROJECT_DIR / "app_icon.ico"
-            img = Image.open(w_path).resize((32, 32), Image.Resampling.LANCZOS)
-            self._header_logo = ctk.CTkImage(light_image=img, dark_image=img, size=(32, 32))
-            ctk.CTkLabel(title_box, image=self._header_logo, text="").pack(side="left", padx=(0, 10))
+            logo_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_logo.png"
+            if not logo_path.exists():
+                logo_path = PROJECT_DIR / "assets" / "app_logo.png"
+            if not logo_path.exists():
+                logo_path = PROJECT_DIR / "assets" / "app_icon.ico"
+            img = Image.open(logo_path)
+            self._header_logo = ctk.CTkImage(light_image=img, dark_image=img, size=(48, 48))
+            ctk.CTkLabel(logo_box, image=self._header_logo, text="").pack(side="left")
         except Exception:
             pass
-
-        text_box = ctk.CTkFrame(title_box, fg_color="transparent")
-        text_box.pack(side="left")
-        ctk.CTkLabel(text_box, text=APP_NAME.upper(), font=("Segoe UI", 22, "bold")).pack(anchor="w")
-        ctk.CTkLabel(text_box, text="Gestione Magazzino, Pre-ordini, Vendite e Profitto Netto", font=("Segoe UI", 10), text_color=c["fg_muted"]).pack(anchor="w")
 
         actions = ctk.CTkFrame(header, fg_color="transparent")
         actions.pack(side="right", padx=16, pady=12)

@@ -297,11 +297,13 @@ def parse_excel_file(filepath: str) -> Tuple[List[Dict[str, Any]], int]:
     return records, skipped
 
 def apply_window_icon(window: Any) -> None:
-    """Imposta l'icona personalizzata app_icon.ico su qualsiasi finestra (CTk o CTkToplevel)."""
+    """Imposta l'icona personalizzata assets/app_icon.ico su qualsiasi finestra (CTk o CTkToplevel)."""
     try:
         import sys
         from pathlib import Path
-        icon_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "app_icon.ico"
+        icon_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_icon.ico"
+        if not icon_path.exists():
+            icon_path = PROJECT_DIR / "assets" / "app_icon.ico"
         if not icon_path.exists():
             icon_path = PROJECT_DIR / "app_icon.ico"
         if icon_path.exists():
