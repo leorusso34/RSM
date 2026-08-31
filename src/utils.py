@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Optional, Tuple, List, Dict
 
-from .config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
+from .config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK, PROJECT_DIR
 
 def parse_money(value: Any, allow_empty: bool = False) -> Optional[Decimal]:
     """Converte un importo monetario valido in Decimal con due decimali."""
@@ -296,6 +296,20 @@ def parse_excel_file(filepath: str) -> Tuple[List[Dict[str, Any]], int]:
 
     return records, skipped
 
+def apply_window_icon(window: Any) -> None:
+    """Imposta l'icona personalizzata app_icon.ico su qualsiasi finestra (CTk o CTkToplevel)."""
+    try:
+        import sys
+        from pathlib import Path
+        icon_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "app_icon.ico"
+        if not icon_path.exists():
+            icon_path = PROJECT_DIR / "app_icon.ico"
+        if icon_path.exists():
+            window.iconbitmap(str(icon_path))
+    except Exception:
+        pass
+
+
 def apply_dark_titlebar(window) -> None:
     """Forza la titlebar di Windows 10/11 in modalità scura per matchare il tema."""
     try:
@@ -312,7 +326,7 @@ def apply_dark_titlebar(window) -> None:
 
 
 def center_window(window: Any, width: int, height: int) -> None:
-    """Centra una finestra (CTkToplevel o CTk) perfettamente allo schermo su Windows, gestendo correttamente il DPI scaling."""
+    """Centra una finestra (CTkToplevel o CTk) perfettamente allo schermo su qualsiasi monitor Windows, gestendo correttamente il DPI scaling."""
     try:
         import ctypes
         screen_w = ctypes.windll.user32.GetSystemMetrics(0)
@@ -329,4 +343,6 @@ def center_window(window: Any, width: int, height: int) -> None:
     y = max(0, (screen_h - h_physical) // 2)
 
     window.geometry(f"{width}x{height}+{x}+{y}")
+    apply_window_icon(window)
+    apply_dark_titlebar(window)
 
