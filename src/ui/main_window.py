@@ -168,39 +168,44 @@ class InventoryApp(ctk.CTk):
             ctk.CTkLabel(card, text=label, font=("Segoe UI", 11, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(6, 0))
             ctk.CTkLabel(card, textvariable=var, font=("Segoe UI", 18, "bold")).pack(anchor="w", padx=16, pady=(2, 12))
 
-        # 3. Toolbar Ricerca e Filtri
+        # 3. Toolbar Ricerca e Filtri (Perfettamente centrata)
         toolbar_card = ctk.CTkFrame(container, fg_color=c["bg_card"], corner_radius=10, border_width=1, border_color=c["border"])
         toolbar_card.pack(fill="x", pady=(0, 10))
 
         r1 = ctk.CTkFrame(toolbar_card, fg_color="transparent")
-        r1.pack(fill="x", padx=14, pady=(10, 0))
+        r1.pack(fill="x", padx=14, pady=10)
 
-        ctk.CTkLabel(r1, text="Cerca:", font=("Segoe UI", 12, "bold")).pack(side="left")
-        self.search_entry = ctk.CTkEntry(r1, textvariable=self.search_var, width=280, font=("Segoe UI", 12))
-        self.search_entry.pack(side="left", padx=(6, 8))
+        search_center_box = ctk.CTkFrame(r1, fg_color="transparent")
+        search_center_box.pack(anchor="center")
+
+        ctk.CTkLabel(search_center_box, text="Cerca:", font=("Segoe UI", 12, "bold")).pack(side="left", padx=(0, 8))
+        self.search_entry = ctk.CTkEntry(search_center_box, textvariable=self.search_var, width=320, font=("Segoe UI", 12))
+        self.search_entry.pack(side="left", padx=(0, 10))
         self.search_var.trace_add("write", self._on_search_changed)
 
-        self.btn_toggle_filters = ctk.CTkButton(r1, text="Filtri Avanzati \u25bc", command=self._toggle_filter_panel, fg_color="#374151", hover_color="#4b5563", width=130, font=("Segoe UI", 12))
-        self.btn_toggle_filters.pack(side="left", padx=4)
-        ctk.CTkButton(r1, text="Azzera Filtri", command=self._reset_filters, fg_color="#374151", hover_color="#4b5563", font=("Segoe UI", 12)).pack(side="left", padx=4)
-        ctk.CTkLabel(r1, text="Suggerimento: usa Ctrl+Click o Shift+Click per selezione multipla", font=("Segoe UI", 11), text_color=c["fg_muted"]).pack(side="right")
+        self.btn_toggle_filters = ctk.CTkButton(search_center_box, text="Filtri Avanzati \u25bc", command=self._toggle_filter_panel, fg_color="#374151", hover_color="#4b5563", width=140, font=("Segoe UI", 12))
+        self.btn_toggle_filters.pack(side="left", padx=(0, 6))
+        ctk.CTkButton(search_center_box, text="Azzera Filtri", command=self._reset_filters, fg_color="#374151", hover_color="#4b5563", width=110, font=("Segoe UI", 12)).pack(side="left")
 
         self.filter_panel = ctk.CTkFrame(toolbar_card, fg_color="transparent")
 
-        ctk.CTkLabel(self.filter_panel, text="Luogo Acquisto:", font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w", padx=(0, 4), pady=6)
-        self.combo_filter_purchased = ctk.CTkComboBox(self.filter_panel, variable=self.filter_purchased_place_var, width=160, font=("Segoe UI", 12), command=lambda v: self.refresh_tables())
-        self.combo_filter_purchased.grid(row=0, column=1, sticky="w", padx=(0, 12))
+        filter_center_box = ctk.CTkFrame(self.filter_panel, fg_color="transparent")
+        filter_center_box.pack(anchor="center")
 
-        ctk.CTkLabel(self.filter_panel, text="Luogo Vendita:", font=("Segoe UI", 11, "bold")).grid(row=0, column=2, sticky="w", padx=(0, 4))
-        self.combo_filter_selling = ctk.CTkComboBox(self.filter_panel, variable=self.filter_selling_place_var, width=160, font=("Segoe UI", 12), command=lambda v: self.refresh_tables())
-        self.combo_filter_selling.grid(row=0, column=3, sticky="w", padx=(0, 12))
+        ctk.CTkLabel(filter_center_box, text="Luogo Acquisto:", font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w", padx=(0, 4), pady=6)
+        self.combo_filter_purchased = ctk.CTkComboBox(filter_center_box, variable=self.filter_purchased_place_var, width=160, font=("Segoe UI", 12), command=lambda v: self.refresh_tables())
+        self.combo_filter_purchased.grid(row=0, column=1, sticky="w", padx=(0, 14))
 
-        ctk.CTkLabel(self.filter_panel, text="Prezzo Min (\u20ac):", font=("Segoe UI", 11, "bold")).grid(row=0, column=4, sticky="w", padx=(0, 4))
-        ctk.CTkEntry(self.filter_panel, textvariable=self.filter_min_price_var, width=90, font=("Segoe UI", 12)).grid(row=0, column=5, sticky="w", padx=(0, 12))
+        ctk.CTkLabel(filter_center_box, text="Luogo Vendita:", font=("Segoe UI", 11, "bold")).grid(row=0, column=2, sticky="w", padx=(0, 4))
+        self.combo_filter_selling = ctk.CTkComboBox(filter_center_box, variable=self.filter_selling_place_var, width=160, font=("Segoe UI", 12), command=lambda v: self.refresh_tables())
+        self.combo_filter_selling.grid(row=0, column=3, sticky="w", padx=(0, 14))
+
+        ctk.CTkLabel(filter_center_box, text="Prezzo Min (\u20ac):", font=("Segoe UI", 11, "bold")).grid(row=0, column=4, sticky="w", padx=(0, 4))
+        ctk.CTkEntry(filter_center_box, textvariable=self.filter_min_price_var, width=90, font=("Segoe UI", 12)).grid(row=0, column=5, sticky="w", padx=(0, 14))
         self.filter_min_price_var.trace_add("write", lambda *_a: self.refresh_tables())
 
-        ctk.CTkLabel(self.filter_panel, text="Prezzo Max (\u20ac):", font=("Segoe UI", 11, "bold")).grid(row=0, column=6, sticky="w", padx=(0, 4))
-        ctk.CTkEntry(self.filter_panel, textvariable=self.filter_max_price_var, width=90, font=("Segoe UI", 12)).grid(row=0, column=7, sticky="w", padx=(0, 12))
+        ctk.CTkLabel(filter_center_box, text="Prezzo Max (\u20ac):", font=("Segoe UI", 11, "bold")).grid(row=0, column=6, sticky="w", padx=(0, 4))
+        ctk.CTkEntry(filter_center_box, textvariable=self.filter_max_price_var, width=90, font=("Segoe UI", 12)).grid(row=0, column=7, sticky="w", padx=(0, 14))
         self.filter_max_price_var.trace_add("write", lambda *_a: self.refresh_tables())
 
         # 4. Status bar (CREATA PRIMA DEL NOTEBOOK)
@@ -211,7 +216,7 @@ class InventoryApp(ctk.CTk):
         self.lbl_selected_info.pack(side="left", padx=(0, 7))
         ctk.CTkLabel(bottom, textvariable=self.status_bar_var, font=("Segoe UI", 11), text_color=c["fg_muted"]).pack(side="right")
 
-        # 5. Barra di Navigazione Pillole a Sinistra (Opzione 1)
+        # 5. Barra di Navigazione Pillole a Sinistra (Senza Emoji, Font più grande e chiaro)
         self.nav_bar = ctk.CTkFrame(container, fg_color="transparent")
         self.nav_bar.pack(side="top", fill="x", pady=(0, 10))
 
@@ -223,11 +228,11 @@ class InventoryApp(ctk.CTk):
         self.current_tab_name = "Magazzino"
 
         tabs_info = [
-            ("Magazzino", "📦 Magazzino", STATUS_STOCK),
-            ("Pre-ordini", "⏳ Pre-ordini", STATUS_PREORDER),
-            ("Vendite Attive", "🏷️ Vendite Attive", STATUS_SOLD),
-            ("Vendite Completate", "✅ Vendite Completate", STATUS_COMPLETED),
-            ("Dashboard & Grafici", "📊 Dashboard & Grafici", None),
+            ("Magazzino", "Magazzino", STATUS_STOCK),
+            ("Pre-ordini", "Pre-ordini", STATUS_PREORDER),
+            ("Vendite Attive", "Vendite Attive", STATUS_SOLD),
+            ("Vendite Completate", "Vendite Completate", STATUS_COMPLETED),
+            ("Dashboard & Grafici", "Dashboard & Grafici", None),
         ]
 
         for key, label, status in tabs_info:
@@ -237,11 +242,11 @@ class InventoryApp(ctk.CTk):
             btn = ctk.CTkButton(
                 self.nav_bar,
                 text=label,
-                font=("Segoe UI", 12, "bold"),
+                font=("Segoe UI", 13, "bold"),
                 height=36,
                 corner_radius=8,
                 fg_color="#2563eb" if key == "Magazzino" else "transparent",
-                text_color="#ffffff" if key == "Magazzino" else c["fg_muted"],
+                text_color="#ffffff" if key == "Magazzino" else "#e2e8f0",
                 hover_color="#1d4ed8" if key == "Magazzino" else "#1e293b",
                 command=lambda k=key: self.set_tab(k),
             )
@@ -283,7 +288,7 @@ class InventoryApp(ctk.CTk):
             if key == name:
                 btn.configure(fg_color="#2563eb", text_color="#ffffff", hover_color="#1d4ed8")
             else:
-                btn.configure(fg_color="transparent", text_color=c["fg_muted"], hover_color="#1e293b")
+                btn.configure(fg_color="transparent", text_color="#e2e8f0", hover_color="#1e293b")
 
         if name == "Dashboard & Grafici" and hasattr(self, "dashboard_view"):
             self.dashboard_view.refresh()
