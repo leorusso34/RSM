@@ -32,19 +32,18 @@ class DashboardView(ctk.CTkFrame):
         kpis_frame.pack(fill="x", pady=(0, 16))
 
         cards_data = [
-            ("invested", "CAPITALE INVESTITO", "#2563eb", "Magazzino + Pre-ordini"),
-            ("stock_val", "VALORE MAGAZZINO", "#059669", "Pezzi in magazzino"),
-            ("profit_tot", "PROFITTO NETTO GENERATO", "#10b981", "Incassi - Costi - Spese"),
-            ("roi_avg", "ROI MEDIO REALE", "#7c3aed", "Ritorno sull'investimento"),
+            ("invested", "CAPITALE INVESTITO", "#2563eb"),
+            ("stock_val", "VALORE MAGAZZINO", "#059669"),
+            ("profit_tot", "PROFITTO NETTO GENERATO", "#10b981"),
+            ("roi_avg", "ROI MEDIO REALE", "#7c3aed"),
         ]
 
-        for idx, (key, label, accent_color, subtext) in enumerate(cards_data):
+        for idx, (key, label, accent_color) in enumerate(cards_data):
             kpis_frame.columnconfigure(idx, weight=1)
             card = ctk.CTkFrame(kpis_frame, fg_color=c["bg_card"], corner_radius=10)
             card.grid(row=0, column=idx, sticky="nsew", padx=(0 if idx == 0 else 6, 0 if idx == len(cards_data)-1 else 6))
 
             var_val = tk.StringVar(value="-")
-            var_sub = tk.StringVar(value=subtext)
             self.kpi_vars[key] = var_val
 
             # Linea accento in alto
@@ -52,8 +51,7 @@ class DashboardView(ctk.CTkFrame):
             accent_bar.pack(fill="x")
 
             ctk.CTkLabel(card, text=label, font=("Segoe UI", 11, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(8, 0))
-            ctk.CTkLabel(card, textvariable=var_val, font=("Segoe UI", 18, "bold")).pack(anchor="w", padx=16, pady=(4, 2))
-            ctk.CTkLabel(card, textvariable=var_sub, font=("Segoe UI", 10), text_color=c.get("fg_subtle", c["fg_muted"])).pack(anchor="w", padx=16, pady=(0, 14))
+            ctk.CTkLabel(card, textvariable=var_val, font=("Segoe UI", 18, "bold")).pack(anchor="w", padx=16, pady=(4, 12))
 
         # Area dei Grafici (due colonne)
         self.charts_frame = ctk.CTkFrame(container, fg_color="transparent")

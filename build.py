@@ -49,6 +49,7 @@ def main():
         "--icon=app_icon.ico",
         "--add-data=app_icon.ico;.",
         "--add-data=assets;assets",
+        "--collect-all=customtkinter",
         str(main_script)
     ]
     
