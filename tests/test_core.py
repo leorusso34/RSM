@@ -108,3 +108,32 @@ def test_table_shows_only_compact_columns():
     assert "release_date" not in InventoryApp.COLUMNS
     assert "sale_price" in InventoryApp.COLUMNS
     assert len(InventoryApp.COLUMNS) == 11
+
+
+def test_email_sync_html_stripper():
+    from src.email_sync import _strip_html
+    raw_html = "<html><body><h1>Conferma Ordine Nike</h1><p>Hai acquistato <b>Dunk Low</b> a &euro; 120,00.</p></body></html>"
+    clean = _strip_html(raw_html)
+    assert "Conferma Ordine Nike" in clean
+    assert "Dunk Low" in clean
+    assert "120,00" in clean
+    assert "<" not in clean
+
+
+def test_email_sync_dialog_initialization(tmp_path):
+    from src.ui.email_sync_dialog import EmailSyncDialog
+    db = InventoryDatabase(tmp_path / "test_email.db")
+    db.set_setting("email_sync_address", "test@gmail.com")
+    db.set_setting("email_sync_app_password", "abcdefghijklmnop")
+    
+    app = InventoryApp()
+    app.update_idletasks()
+    
+    dialog = EmailSyncDialog(app, db, lambda: None)
+    dialog.update_idletasks()
+    assert dialog.var_email.get() == "test@gmail.com"
+    assert dialog.var_password.get() == "abcdefghijklmnop"
+    
+    dialog.destroy()
+    app.destroy()
+    db.close()

@@ -15,6 +15,7 @@ from ..database import InventoryDatabase
 from .dashboard_view import DashboardView
 from .dialogs import BulkStatusDialog, ProductDialog
 from .ai_dialog import AIDialog
+from .email_sync_dialog import EmailSyncDialog
 from .theme import setup_app_theme
 from ..utils import export_to_csv, money, parse_excel_file, parse_money, calculate_profit, center_window, apply_window_icon
 
@@ -148,7 +149,8 @@ class InventoryApp(ctk.CTk):
         ctk.CTkButton(actions, text="Importa Excel", command=self.import_excel, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=3)
         ctk.CTkButton(actions, text="Esporta CSV", command=self.export_csv, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=3)
         ctk.CTkButton(actions, text="Backup DB Sicuro", command=self.backup_database, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=3)
-        ctk.CTkButton(actions, text="✨ AI", width=60, command=self.open_ai_insert).pack(side="left", padx=(8, 0))
+        ctk.CTkButton(actions, text="Sincronizza Email", command=self.open_email_sync, fg_color="#2563eb", hover_color="#1d4ed8").pack(side="left", padx=(8, 0))
+        ctk.CTkButton(actions, text="✨ AI", width=60, command=self.open_ai_insert).pack(side="left", padx=(4, 0))
         ctk.CTkButton(actions, text="+ Nuovo Prodotto", command=self.add_product).pack(side="left", padx=(4, 0))
 
         # 2. KPI Cards
@@ -733,6 +735,15 @@ class InventoryApp(ctk.CTk):
         avg_cost = total_cost / count
         from ..utils import money
         self.lbl_selected_info.configure(text=f"{count} selezionati | Totale: {money(total_cost)} | Media: {money(avg_cost)}")
+
+    def open_email_sync(self) -> None:
+        dialog = EmailSyncDialog(self, self.db, on_success_callback=self._on_email_sync_success)
+        self.wait_window(dialog)
+
+    def _on_email_sync_success(self) -> None:
+        self.refresh()
+        self.set_tab("Pre-ordini")
+        self.status_bar_var.set("Pre-ordini importati con successo dalle email!")
 
     def open_ai_insert(self) -> None:
         dialog = AIDialog(self, self.db)
