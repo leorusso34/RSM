@@ -27,6 +27,9 @@ def setup_app_theme(root) -> None:
     except tk.TclError:
         pass
 
+    # Rimuovi completamente il bordo di focus attorno alla tabella
+    style.layout("Treeview", [("Treeview.treearea", {"sticky": "nswe"})])
+
     style.configure(
         "Treeview",
         background=c["bg_card"],
@@ -34,9 +37,10 @@ def setup_app_theme(root) -> None:
         foreground=c["fg_main"],
         rowheight=34,
         borderwidth=0,
-        lightcolor=c["bg_main"],
-        darkcolor=c["bg_main"],
-        bordercolor=c["bg_main"],
+        highlightthickness=0,
+        lightcolor=c["bg_card"],
+        darkcolor=c["bg_card"],
+        bordercolor=c["bg_card"],
         relief="flat",
         font=("Segoe UI", 9),
     )
@@ -44,6 +48,9 @@ def setup_app_theme(root) -> None:
         "Treeview",
         background=[("selected", c["table_select"])],
         foreground=[("selected", c["table_select_fg"])],
+        bordercolor=[("focus", c["bg_card"]), ("!focus", c["bg_card"])],
+        lightcolor=[("focus", c["bg_card"]), ("!focus", c["bg_card"])],
+        darkcolor=[("focus", c["bg_card"]), ("!focus", c["bg_card"])],
     )
     style.configure(
         "Treeview.Heading",
