@@ -48,7 +48,7 @@ class InventoryApp(ctk.CTk):
         self.title(f"{APP_NAME} v{APP_VERSION}")
         self.geometry("1440x860")
         self.minsize(1080, 680)
-        self.state("zoomed")
+        self.after(100, lambda: self.state("zoomed"))
 
         self.search_var = tk.StringVar()
         self.status_bar_var = tk.StringVar(value="Pronto")
