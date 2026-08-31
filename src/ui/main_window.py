@@ -211,27 +211,87 @@ class InventoryApp(ctk.CTk):
         self.lbl_selected_info.pack(side="left", padx=(0, 7))
         ctk.CTkLabel(bottom, textvariable=self.status_bar_var, font=("Segoe UI", 11), text_color=c["fg_muted"]).pack(side="right")
 
-        # 5. CTkTabview (sostituisce ttk.Notebook)
-        self.notebook = ctk.CTkTabview(container, command=self._on_tab_changed)
-        self.notebook.pack(side="top", fill="both", expand=True)
-        # Allinea a sinistra e aumenta il font per replicare il vecchio look
-        self.notebook._segmented_button.grid(row=1, column=0, sticky="w", padx=10)
-        self.notebook._segmented_button.configure(font=("Segoe UI", 13, "bold"))
+        # 5. Barra di Navigazione Pillole a Sinistra (Opzione 1)
+        self.nav_bar = ctk.CTkFrame(container, fg_color="transparent")
+        self.nav_bar.pack(side="top", fill="x", pady=(0, 10))
 
-        self._create_tab(STATUS_STOCK, "Magazzino")
-        self._create_tab(STATUS_PREORDER, "Pre-ordini")
-        self._create_tab(STATUS_SOLD, "Vendite Attive")
-        self._create_tab(STATUS_COMPLETED, "Vendite Completate")
+        self.tab_container = ctk.CTkFrame(container, fg_color=c["bg_card"], corner_radius=10, border_width=1, border_color=c["border"])
+        self.tab_container.pack(side="top", fill="both", expand=True)
 
-        dash_tab = self.notebook.add("Dashboard & Grafici")
-        self.dashboard_view = DashboardView(dash_tab, self.db)
-        self.dashboard_view.pack(fill="both", expand=True)
+        self.tab_frames: Dict[str, ctk.CTkFrame] = {}
+        self.tab_buttons: Dict[str, ctk.CTkButton] = {}
+        self.current_tab_name = "Magazzino"
+
+        tabs_info = [
+            ("Magazzino", "📦 Magazzino", STATUS_STOCK),
+            ("Pre-ordini", "⏳ Pre-ordini", STATUS_PREORDER),
+            ("Vendite Attive", "🏷️ Vendite Attive", STATUS_SOLD),
+            ("Vendite Completate", "✅ Vendite Completate", STATUS_COMPLETED),
+            ("Dashboard & Grafici", "📊 Dashboard & Grafici", None),
+        ]
+
+        for key, label, status in tabs_info:
+            frame = ctk.CTkFrame(self.tab_container, fg_color="transparent")
+            self.tab_frames[key] = frame
+
+            btn = ctk.CTkButton(
+                self.nav_bar,
+                text=label,
+                font=("Segoe UI", 12, "bold"),
+                height=36,
+                corner_radius=8,
+                fg_color="#2563eb" if key == "Magazzino" else "transparent",
+                text_color="#ffffff" if key == "Magazzino" else c["fg_muted"],
+                hover_color="#1d4ed8" if key == "Magazzino" else "#1e293b",
+                command=lambda k=key: self.set_tab(k),
+            )
+            btn.pack(side="left", padx=(0, 6))
+            self.tab_buttons[key] = btn
+
+            if status is not None:
+                self._create_tree_in_frame(status, frame)
+            else:
+                self.dashboard_view = DashboardView(frame, self.db)
+                self.dashboard_view.pack(fill="both", expand=True)
+
+        class _NotebookAdapter:
+            def __init__(self, app):
+                self._app = app
+            def get(self) -> str:
+                return self._app.current_tab_name
+            def set(self, name: str) -> None:
+                self._app.set_tab(name)
+
+        self.notebook = _NotebookAdapter(self)
+        self.set_tab("Magazzino")
 
         self.context_menu = tk.Menu(self, tearoff=0, bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 10))
 
-    def _create_tab(self, status: str, title: str) -> None:
+    def set_tab(self, name: str) -> None:
+        if name not in self.tab_frames:
+            return
+        self.current_tab_name = name
         c = DARK_THEME
-        frame = self.notebook.add(title)
+
+        for key, frame in self.tab_frames.items():
+            if key == name:
+                frame.pack(fill="both", expand=True, padx=2, pady=2)
+            else:
+                frame.pack_forget()
+
+        for key, btn in self.tab_buttons.items():
+            if key == name:
+                btn.configure(fg_color="#2563eb", text_color="#ffffff", hover_color="#1d4ed8")
+            else:
+                btn.configure(fg_color="transparent", text_color=c["fg_muted"], hover_color="#1e293b")
+
+        if name == "Dashboard & Grafici" and hasattr(self, "dashboard_view"):
+            self.dashboard_view.refresh()
+
+        self._update_action_states()
+
+    def _create_tree_in_frame(self, status: str, frame: ctk.CTkFrame) -> None:
+        c = DARK_THEME
 
         tree_frame = ctk.CTkFrame(frame, fg_color=c["bg_card"], corner_radius=0)
         tree_frame.pack(fill="both", expand=True)
@@ -591,8 +651,7 @@ class InventoryApp(ctk.CTk):
                 tree.config(cursor="")
                 x_root, y_root = event.x_root, event.y_root
                 try:
-                    seg_btn = self.notebook._segmented_button
-                    for name, btn in seg_btn._buttons_dict.items():
+                    for name, btn in self.tab_buttons.items():
                         bx, by = btn.winfo_rootx(), btn.winfo_rooty()
                         bw, bh = btn.winfo_width(), btn.winfo_height()
                         if bx <= x_root <= bx + bw and by <= y_root <= by + bh:
