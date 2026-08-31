@@ -149,7 +149,7 @@ class InventoryApp(ctk.CTk):
         ctk.CTkButton(actions, text="Importa Excel", command=self.import_excel, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=3)
         ctk.CTkButton(actions, text="Esporta CSV", command=self.export_csv, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=3)
         ctk.CTkButton(actions, text="Backup DB Sicuro", command=self.backup_database, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=3)
-        ctk.CTkButton(actions, text="Sincronizza Email", command=self.open_email_sync, fg_color="#2563eb", hover_color="#1d4ed8").pack(side="left", padx=(8, 0))
+        ctk.CTkButton(actions, text="Sincronizza Email", command=self.open_email_sync).pack(side="left", padx=(8, 0))
         ctk.CTkButton(actions, text="✨ AI", width=60, command=self.open_ai_insert).pack(side="left", padx=(4, 0))
         ctk.CTkButton(actions, text="+ Nuovo Prodotto", command=self.add_product).pack(side="left", padx=(4, 0))
 

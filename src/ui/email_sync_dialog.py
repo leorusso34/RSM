@@ -102,8 +102,6 @@ class EmailSyncDialog(ctk.CTkToplevel):
             scan_bar,
             text="Avvia Scansione Email Non Lette",
             command=self._start_email_scan,
-            fg_color="#2563eb",
-            hover_color="#1d4ed8",
             font=("Segoe UI", 12, "bold"),
             height=34,
         )
@@ -112,7 +110,7 @@ class EmailSyncDialog(ctk.CTkToplevel):
         self.lbl_status = ctk.CTkLabel(scan_bar, textvariable=self.var_status_msg, font=("Segoe UI", 11), text_color=c["fg_muted"])
         self.lbl_status.pack(side="left", fill="x", expand=True)
 
-        self.progress_bar = ctk.CTkProgressBar(container, height=6, mode="indeterminate", progress_color="#2563eb")
+        self.progress_bar = ctk.CTkProgressBar(container, height=6, mode="indeterminate")
 
         # Tabella Anteprima Prodotti Trovati
         table_card = ctk.CTkFrame(container, fg_color=c["bg_card"], corner_radius=10, border_width=1, border_color=c["border"])
@@ -229,47 +227,47 @@ class EmailSyncDialog(ctk.CTkToplevel):
         self.progress_bar.pack(fill="x", pady=(0, 8), before=self.tree.master)
         self.progress_bar.start()
 
-        self.tree.delete(*self.tree.get_children())
-        self.extracted_products.clear()
-        self.processed_uids.clear()
-        self.var_status_msg.set("Connessione a Gmail e ricerca email non lette...")
+        self.var_status_msg.set("Connessione a Gmail e ricerca nuove email non lette...")
 
         def _scan_thread():
             try:
                 emails = fetch_unread_order_emails(email_val, pass_val)
-                if not emails:
+                # Filtra le email già elaborate in questa sessione
+                new_emails = [e for e in emails if e.get("uid") not in self.processed_uids]
+                if not new_emails:
                     self.after(0, lambda: self._on_scan_finished(0, "Nessuna nuova email non letta trovata nella casella INBOX."))
                     return
 
-                total_emails = len(emails)
-                all_found_products = []
-                uids = []
+                total_emails = len(new_emails)
+                new_found_products = []
+                new_uids = []
 
-                for idx, em in enumerate(emails, 1):
+                for idx, em in enumerate(new_emails, 1):
                     self.after(0, lambda i=idx, t=total_emails, s=em.get('subject', ''): self.var_status_msg.set(
                         f"Analisi con AI ({i}/{t}): {s[:35]}..."
                     ))
                     try:
                         prods = parse_order_email_with_gemini(em, api_key)
                         if prods:
-                            all_found_products.extend(prods)
-                            uids.append(em["uid"])
+                            new_found_products.extend(prods)
+                            new_uids.append(em["uid"])
                     except Exception as err:
                         print(f"Errore parsing email UID {em.get('uid')}: {err}")
 
-                self.after(0, lambda: self._on_scan_success(all_found_products, uids))
+                self.after(0, lambda: self._on_scan_success(new_found_products, new_uids))
 
             except Exception as exc:
                 self.after(0, lambda: self._on_scan_error(str(exc)))
 
         threading.Thread(target=_scan_thread, daemon=True).start()
 
-    def _on_scan_success(self, products: List[Dict[str, Any]], uids: List[str]) -> None:
+    def _on_scan_success(self, new_products: List[Dict[str, Any]], new_uids: List[str]) -> None:
         self._stop_progress()
-        self.extracted_products = products
-        self.processed_uids = uids
+        added_count = 0
 
-        for p in products:
+        for p in new_products:
+            self.extracted_products.append(p)
+            added_count += 1
             try:
                 price_dec = parse_money(p.get("purchased_price", 0))
                 price_str = money(price_dec)
@@ -285,21 +283,35 @@ class EmailSyncDialog(ctk.CTkToplevel):
                 p.get("release_date", ""),
             ))
 
-        n = len(products)
-        if n > 0:
-            self.var_status_msg.set(f"Scansione completata: trovati {n} prodotti in {len(uids)} email!")
-            self.lbl_count_info.configure(text=f"{n} prodotti pronti per essere salvati nei Pre-ordini.")
+        for uid in new_uids:
+            if uid not in self.processed_uids:
+                self.processed_uids.append(uid)
+
+        total_n = len(self.extracted_products)
+        if added_count > 0:
+            self.var_status_msg.set(f"Scansione completata: aggiunti {added_count} nuovi prodotti! (Totale in lista: {total_n})")
+            self.lbl_count_info.configure(text=f"{total_n} prodotti pronti per essere salvati nei Pre-ordini.")
             self.btn_save.configure(state="normal")
         else:
-            self.var_status_msg.set("Nessun prodotto rilevato nelle email analizzate.")
-            self.lbl_count_info.configure(text="Nessun prodotto trovato.")
-            self.btn_save.configure(state="disabled")
+            if total_n > 0:
+                self.var_status_msg.set(f"Nessun nuovo prodotto rilevato. Rimangono {total_n} prodotti in lista.")
+                self.btn_save.configure(state="normal")
+            else:
+                self.var_status_msg.set("Nessun prodotto rilevato nelle email analizzate.")
+                self.lbl_count_info.configure(text="Nessun prodotto trovato.")
+                self.btn_save.configure(state="disabled")
 
     def _on_scan_finished(self, count: int, msg: str) -> None:
         self._stop_progress()
-        self.var_status_msg.set(msg)
-        self.lbl_count_info.configure(text=msg)
-        self.btn_save.configure(state="disabled")
+        total_n = len(self.extracted_products)
+        if total_n > 0:
+            self.var_status_msg.set(f"{msg} (Rimangono {total_n} prodotti pronti da salvare).")
+            self.lbl_count_info.configure(text=f"{total_n} prodotti pronti per essere salvati nei Pre-ordini.")
+            self.btn_save.configure(state="normal")
+        else:
+            self.var_status_msg.set(msg)
+            self.lbl_count_info.configure(text=msg)
+            self.btn_save.configure(state="disabled")
 
     def _on_scan_error(self, err_msg: str) -> None:
         self._stop_progress()
