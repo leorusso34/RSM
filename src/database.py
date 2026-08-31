@@ -479,7 +479,7 @@ class InventoryDatabase:
         }
 
     def get_monthly_sales(self) -> List[Dict[str, Any]]:
-        """Restituisce i dati delle vendite raggruppati per mese."""
+        """Restituisce i dati delle vendite completate raggruppati per mese."""
         query = """
             SELECT
                 SUBSTR(sold_date, 1, 7) as month_key,
@@ -488,7 +488,7 @@ class InventoryDatabase:
                 SUM(quantity * COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
                 SUM(quantity * fees_cents) as total_fees
             FROM products
-            WHERE status = ? AND sold_date != ''
+            WHERE status = ? AND is_completed = 1 AND sold_date != ''
             GROUP BY month_key
             ORDER BY month_key ASC
         """

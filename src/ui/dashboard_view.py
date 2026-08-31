@@ -260,7 +260,7 @@ class DashboardView(ctk.CTkFrame):
             canvas.create_text(width / 2, height / 2, text="Nessuna vendita registrata con data di vendita.", fill=DARK_THEME["fg_muted"], font=("Segoe UI", 10))
             return
         margin_left = 50
-        margin_bottom = 35
+        margin_bottom = 40
         margin_top = 20
         margin_right = 20
         plot_width = width - margin_left - margin_right
@@ -271,13 +271,13 @@ class DashboardView(ctk.CTkFrame):
         min_profit = min(min_profit, Decimal("0"))
         profit_range = max_profit - min_profit
         num_bars = len(sales)
-        bar_gap = 12
-        bar_width = max(15, min(50, (plot_width - (num_bars + 1) * bar_gap) / max(num_bars, 1)))
+        bar_gap = 14
+        bar_width = max(20, min(70, (plot_width - (num_bars + 1) * bar_gap) / max(num_bars, 1)))
         for i in range(4):
             y_val = margin_top + plot_height * (i / 3)
             profit_val = max_profit - profit_range * (Decimal(i) / Decimal("3"))
             canvas.create_line(margin_left, y_val, width - margin_right, y_val, fill=DARK_THEME["border"], dash=(2, 2))
-            canvas.create_text(margin_left - 8, y_val, text=f"€{int(profit_val)}", anchor="e", fill=DARK_THEME["fg_muted"], font=("Segoe UI", 8))
+            canvas.create_text(margin_left - 8, y_val, text=f"\u20ac{int(profit_val)}", anchor="e", fill=DARK_THEME["fg_muted"], font=("Segoe UI", 8))
         zero_y = margin_top + float(max_profit / profit_range) * plot_height
         for idx, item in enumerate(sales):
             x0 = margin_left + bar_gap + idx * (bar_width + bar_gap)
@@ -288,12 +288,29 @@ class DashboardView(ctk.CTkFrame):
             y1 = max(zero_y, y_profit)
             bar_color = "#10b981" if profit >= 0 else "#ef4444"
             canvas.create_rectangle(x0, y0, x1, y1, fill=bar_color, outline=bar_color, width=1)
-            month_label = item["month"]
-            if len(month_label) >= 7:
-                month_label = month_label[5:7] + "/" + month_label[2:4]
-            canvas.create_text((x0 + x1) / 2, y1 + 14, text=month_label, fill=DARK_THEME["fg_muted"], font=("Segoe UI", 8, "bold"))
+            
+            month_key = item["month"]
+            month_label = month_key
+            if len(month_key) >= 7 and "-" in month_key:
+                year_part, month_part = month_key[:4], month_key[5:7]
+                months_it = {
+                    "01": "Gen", "02": "Feb", "03": "Mar", "04": "Apr",
+                    "05": "Mag", "06": "Giu", "07": "Lug", "08": "Ago",
+                    "09": "Set", "10": "Ott", "11": "Nov", "12": "Dic"
+                }
+                months_full = {
+                    "01": "Gennaio", "02": "Febbraio", "03": "Marzo", "04": "Aprile",
+                    "05": "Maggio", "06": "Giugno", "07": "Luglio", "08": "Agosto",
+                    "09": "Settembre", "10": "Ottobre", "11": "Novembre", "12": "Dicembre"
+                }
+                if bar_width >= 55:
+                    month_label = f"{months_full.get(month_part, month_part)} {year_part}"
+                else:
+                    month_label = f"{months_it.get(month_part, month_part)} '{year_part[2:]}"
+
+            canvas.create_text((x0 + x1) / 2, y1 + 16, text=month_label, fill=DARK_THEME["fg_main"], font=("Segoe UI", 9, "bold"))
             if bar_width >= 25:
-                canvas.create_text((x0 + x1) / 2, y0 - 8, text=f"€{int(profit)}", fill=DARK_THEME["fg_main"], font=("Segoe UI", 8, "bold"))
+                canvas.create_text((x0 + x1) / 2, y0 - 8, text=f"\u20ac{int(profit)}", fill=DARK_THEME["fg_main"], font=("Segoe UI", 8, "bold"))
 
     def _draw_distribution_chart(self, totals: Dict[str, Any]) -> None:
         canvas = self.canvas_dist
