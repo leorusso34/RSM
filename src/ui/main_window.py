@@ -65,10 +65,6 @@ class InventoryApp(ctk.CTk):
             "Nome (Z-A)",
             "Prezzo acquisto (Min-Max)",
             "Prezzo acquisto (Max-Min)",
-            "Prezzo vendita (Min-Max)",
-            "Prezzo vendita (Max-Min)",
-            "Profitto (Max-Min)",
-            "Profitto (Min-Max)",
         ]
         self.sort_var = tk.StringVar(value=self.sort_options[0])
 
@@ -203,12 +199,15 @@ class InventoryApp(ctk.CTk):
         ctk.CTkButton(search_center_box, text="Azzera Filtri", command=self._reset_filters, fg_color="#374151", hover_color="#4b5563", width=100, font=("Segoe UI", 12)).pack(side="left", padx=(0, 10))
 
         ctk.CTkLabel(search_center_box, text="Ordina:", font=("Segoe UI", 12, "bold")).pack(side="left", padx=(0, 6))
-        self.sort_combo = ctk.CTkComboBox(
+        self.sort_combo = ctk.CTkOptionMenu(
             search_center_box,
             variable=self.sort_var,
             values=self.sort_options,
-            width=220,
+            width=225,
             font=("Segoe UI", 12),
+            fg_color="#374151",
+            button_color="#4b5563",
+            button_hover_color="#64748b",
             command=lambda _v: self.refresh_tables(),
         )
         self.sort_combo.pack(side="left")
@@ -591,24 +590,6 @@ class InventoryApp(ctk.CTk):
                 normal_rows.sort(key=lambda r: r.get("purchased_price", Decimal("0")) or Decimal("0"))
             elif sort_mode == "Prezzo acquisto (Max-Min)":
                 normal_rows.sort(key=lambda r: r.get("purchased_price", Decimal("0")) or Decimal("0"), reverse=True)
-            elif sort_mode == "Prezzo vendita (Min-Max)":
-                normal_rows.sort(key=lambda r: ((r.get("sold_price") if r.get("sold_price") is not None else r.get("selling_price")) or Decimal("0")))
-            elif sort_mode == "Prezzo vendita (Max-Min)":
-                normal_rows.sort(key=lambda r: ((r.get("sold_price") if r.get("sold_price") is not None else r.get("selling_price")) or Decimal("0")), reverse=True)
-            elif sort_mode == "Profitto (Max-Min)":
-                def _get_p(r):
-                    sp = r.get("sold_price") if r.get("sold_price") is not None else r.get("selling_price")
-                    sp = sp if sp is not None else Decimal("0")
-                    p, _ = calculate_profit(r.get("purchased_price", Decimal("0")), sp, r.get("fees", Decimal("0")), r.get("quantity", 1))
-                    return p
-                normal_rows.sort(key=_get_p, reverse=True)
-            elif sort_mode == "Profitto (Min-Max)":
-                def _get_p(r):
-                    sp = r.get("sold_price") if r.get("sold_price") is not None else r.get("selling_price")
-                    sp = sp if sp is not None else Decimal("0")
-                    p, _ = calculate_profit(r.get("purchased_price", Decimal("0")), sp, r.get("fees", Decimal("0")), r.get("quantity", 1))
-                    return p
-                normal_rows.sort(key=_get_p)
 
             for row in normal_rows:
                 qty = row["quantity"] or 1
