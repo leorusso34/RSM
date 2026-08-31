@@ -109,7 +109,7 @@ class InventoryApp(ctk.CTk):
     def _build_ui(self) -> None:
         c = DARK_THEME
 
-        container = ctk.CTkFrame(self, fg_color="transparent")
+        self.configure(fg_color=DARK_THEME["bg_main"]); container = ctk.CTkFrame(self, fg_color="transparent")
         container.pack(fill="both", expand=True, padx=12, pady=12)
 
         # 1. Header superiore
@@ -134,7 +134,7 @@ class InventoryApp(ctk.CTk):
         text_box = ctk.CTkFrame(title_box, fg_color="transparent")
         text_box.pack(side="left")
         ctk.CTkLabel(text_box, text=APP_NAME.upper(), font=("Segoe UI", 22, "bold")).pack(anchor="w")
-        ctk.CTkLabel(text_box, text="Gestione Magazzino, Pre-ordini, Vendite e Profitto Netto", font=("Segoe UI", 9), text_color=c["fg_muted"]).pack(anchor="w")
+        ctk.CTkLabel(text_box, text="Gestione Magazzino, Pre-ordini, Vendite e Profitto Netto", font=("Segoe UI", 10), text_color=c["fg_muted"]).pack(anchor="w")
 
         actions = ctk.CTkFrame(header, fg_color="transparent")
         actions.pack(side="right", padx=16, pady=12)
@@ -164,7 +164,7 @@ class InventoryApp(ctk.CTk):
             var = tk.StringVar(value="-")
             self.kpi_vars[key] = var
             ctk.CTkFrame(card, fg_color=color, height=4, corner_radius=0).pack(fill="x")
-            ctk.CTkLabel(card, text=label, font=("Segoe UI", 8, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(6, 0))
+            ctk.CTkLabel(card, text=label, font=("Segoe UI", 9, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(6, 0))
             ctk.CTkLabel(card, textvariable=var, font=("Segoe UI", 16, "bold")).pack(anchor="w", padx=16, pady=(2, 12))
 
         # 3. Toolbar Ricerca e Filtri
@@ -174,7 +174,7 @@ class InventoryApp(ctk.CTk):
         r1 = ctk.CTkFrame(toolbar_card, fg_color="transparent")
         r1.pack(fill="x", padx=14, pady=(10, 0))
 
-        ctk.CTkLabel(r1, text="Cerca:", font=("Segoe UI", 9, "bold")).pack(side="left")
+        ctk.CTkLabel(r1, text="Cerca:", font=("Segoe UI", 11, "bold")).pack(side="left")
         self.search_entry = ctk.CTkEntry(r1, textvariable=self.search_var, width=280)
         self.search_entry.pack(side="left", padx=(6, 8))
         self.search_var.trace_add("write", self._on_search_changed)
@@ -182,23 +182,23 @@ class InventoryApp(ctk.CTk):
         self.btn_toggle_filters = ctk.CTkButton(r1, text="Filtri Avanzati \u25bc", command=self._toggle_filter_panel, fg_color="#374151", hover_color="#4b5563", width=130)
         self.btn_toggle_filters.pack(side="left", padx=4)
         ctk.CTkButton(r1, text="Azzera Filtri", command=self._reset_filters, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=4)
-        ctk.CTkLabel(r1, text="Suggerimento: usa Ctrl+Click o Shift+Click per selezione multipla", font=("Segoe UI", 9), text_color=c["fg_muted"]).pack(side="right")
+        ctk.CTkLabel(r1, text="Suggerimento: usa Ctrl+Click o Shift+Click per selezione multipla", font=("Segoe UI", 10), text_color=c["fg_muted"]).pack(side="right")
 
         self.filter_panel = ctk.CTkFrame(toolbar_card, fg_color="transparent")
 
-        ctk.CTkLabel(self.filter_panel, text="Luogo Acquisto:", font=("Segoe UI", 9)).grid(row=0, column=0, sticky="w", padx=(0, 4), pady=6)
+        ctk.CTkLabel(self.filter_panel, text="Luogo Acquisto:", font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", padx=(0, 4), pady=6)
         self.combo_filter_purchased = ctk.CTkComboBox(self.filter_panel, variable=self.filter_purchased_place_var, width=160, command=lambda v: self.refresh_tables())
         self.combo_filter_purchased.grid(row=0, column=1, sticky="w", padx=(0, 12))
 
-        ctk.CTkLabel(self.filter_panel, text="Luogo Vendita:", font=("Segoe UI", 9)).grid(row=0, column=2, sticky="w", padx=(0, 4))
+        ctk.CTkLabel(self.filter_panel, text="Luogo Vendita:", font=("Segoe UI", 10)).grid(row=0, column=2, sticky="w", padx=(0, 4))
         self.combo_filter_selling = ctk.CTkComboBox(self.filter_panel, variable=self.filter_selling_place_var, width=160, command=lambda v: self.refresh_tables())
         self.combo_filter_selling.grid(row=0, column=3, sticky="w", padx=(0, 12))
 
-        ctk.CTkLabel(self.filter_panel, text="Prezzo Min (\u20ac):", font=("Segoe UI", 9)).grid(row=0, column=4, sticky="w", padx=(0, 4))
+        ctk.CTkLabel(self.filter_panel, text="Prezzo Min (\u20ac):", font=("Segoe UI", 10)).grid(row=0, column=4, sticky="w", padx=(0, 4))
         ctk.CTkEntry(self.filter_panel, textvariable=self.filter_min_price_var, width=90).grid(row=0, column=5, sticky="w", padx=(0, 12))
         self.filter_min_price_var.trace_add("write", lambda *_a: self.refresh_tables())
 
-        ctk.CTkLabel(self.filter_panel, text="Prezzo Max (\u20ac):", font=("Segoe UI", 9)).grid(row=0, column=6, sticky="w", padx=(0, 4))
+        ctk.CTkLabel(self.filter_panel, text="Prezzo Max (\u20ac):", font=("Segoe UI", 10)).grid(row=0, column=6, sticky="w", padx=(0, 4))
         ctk.CTkEntry(self.filter_panel, textvariable=self.filter_max_price_var, width=90).grid(row=0, column=7, sticky="w", padx=(0, 12))
         self.filter_max_price_var.trace_add("write", lambda *_a: self.refresh_tables())
 
@@ -206,13 +206,16 @@ class InventoryApp(ctk.CTk):
         bottom = ctk.CTkFrame(container, fg_color="transparent")
         bottom.pack(side="bottom", fill="x", pady=(8, 0))
 
-        self.lbl_selected_info = ctk.CTkLabel(bottom, text="0 prodotti selezionati", font=("Segoe UI", 9), text_color=c["fg_muted"])
+        self.lbl_selected_info = ctk.CTkLabel(bottom, text="0 prodotti selezionati", font=("Segoe UI", 10), text_color=c["fg_muted"])
         self.lbl_selected_info.pack(side="left", padx=(0, 7))
-        ctk.CTkLabel(bottom, textvariable=self.status_bar_var, font=("Segoe UI", 9), text_color=c["fg_muted"]).pack(side="right")
+        ctk.CTkLabel(bottom, textvariable=self.status_bar_var, font=("Segoe UI", 10), text_color=c["fg_muted"]).pack(side="right")
 
         # 5. CTkTabview (sostituisce ttk.Notebook)
         self.notebook = ctk.CTkTabview(container, command=self._on_tab_changed)
         self.notebook.pack(side="top", fill="both", expand=True)
+        # Allinea a sinistra e aumenta il font per replicare il vecchio look
+        self.notebook._segmented_button.grid(row=1, column=0, sticky="w", padx=10)
+        self.notebook._segmented_button.configure(font=("Segoe UI", 13, "bold"))
 
         self._create_tab(STATUS_STOCK, "Magazzino")
         self._create_tab(STATUS_PREORDER, "Pre-ordini")
@@ -223,7 +226,7 @@ class InventoryApp(ctk.CTk):
         self.dashboard_view = DashboardView(dash_tab, self.db)
         self.dashboard_view.pack(fill="both", expand=True)
 
-        self.context_menu = tk.Menu(self, tearoff=0, bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 9))
+        self.context_menu = tk.Menu(self, tearoff=0, bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 10))
 
     def _create_tab(self, status: str, title: str) -> None:
         c = DARK_THEME

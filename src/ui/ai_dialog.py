@@ -8,20 +8,33 @@ from ..ai_agent import parse_product_with_ai
 
 
 class AIDialog(ctk.CTkToplevel):
+    def _apply_dark_titlebar(self) -> None:
+        try:
+            import ctypes
+            self.attributes('-alpha', 0.0); self.update_idletasks()
+            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+            value = ctypes.c_int(1)
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
+        except Exception:
+            pass
+
     def __init__(self, parent, db) -> None:
-        super().__init__(parent)
+        super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.db = db
         self.result = None
         self.title("Inserimento Rapido con AI")
-        parent.update_idletasks()
+        self.attributes('-alpha', 0.0); parent.update_idletasks()
         pw, ph = parent.winfo_width(), parent.winfo_height()
         px, py = parent.winfo_rootx(), parent.winfo_rooty()
         w, h = 600, 520
-        x, y = px + (pw - w) // 2, py + (ph - h) // 2
+        sw = self.winfo_screenwidth(); sh = self.winfo_screenheight(); x, y = (sw - w) // 2, (sh - h) // 2
         self.geometry(f"{w}x{h}+{x}+{y}")
         self.minsize(500, 420)
         self.transient(parent)
         self.grab_set()
+        self._apply_dark_titlebar()
+        self.attributes('-alpha', 1.0)
         self.api_key_var = tk.StringVar(value=self.db.get_setting("gemini_api_key", ""))
         self._build_ui()
 
@@ -34,15 +47,15 @@ class AIDialog(ctk.CTkToplevel):
         ctk.CTkLabel(header, text="Inserimento Rapido AI", font=("Segoe UI", 16, "bold")).pack(side="left")
         api_frame = ctk.CTkFrame(main_frame, corner_radius=10, border_width=1, border_color=c["border"], fg_color=c["bg_input"])
         api_frame.pack(fill="x", pady=(0, 15))
-        ctk.CTkLabel(api_frame, text="Gemini API Key:", font=("Segoe UI", 9, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=12, pady=(10, 0))
+        ctk.CTkLabel(api_frame, text="Gemini API Key:", font=("Segoe UI", 11, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=12, pady=(10, 0))
         api_input_frame = ctk.CTkFrame(api_frame, fg_color="transparent")
         api_input_frame.pack(fill="x", padx=12, pady=(5, 10))
-        self.api_entry = ctk.CTkEntry(api_input_frame, textvariable=self.api_key_var, font=("Segoe UI", 10), show="*")
+        self.api_entry = ctk.CTkEntry(api_input_frame, textvariable=self.api_key_var, font=("Segoe UI", 12), show="*")
         self.api_entry.pack(side="left", fill="x", expand=True)
         ctk.CTkButton(api_input_frame, text="Salva Chiave", command=self._save_api_key, width=120).pack(side="left", padx=(10, 0))
         prompt_header = ctk.CTkFrame(main_frame, fg_color="transparent")
         prompt_header.pack(fill="x", pady=(10, 5))
-        ctk.CTkLabel(prompt_header, text="Cosa vuoi aggiungere?", font=("Segoe UI", 10, "bold")).pack(side="left")
+        ctk.CTkLabel(prompt_header, text="Cosa vuoi aggiungere?", font=("Segoe UI", 12, "bold")).pack(side="left")
         import os, sys
         from PIL import Image
         def get_asset_path(filename):
@@ -59,11 +72,11 @@ class AIDialog(ctk.CTkToplevel):
         except Exception:
             self.btn_mic = ctk.CTkButton(prompt_header, text="Mic", command=self._start_listening, width=40)
             self.btn_mic.pack(side="right")
-        self.prompt_text = ctk.CTkTextbox(main_frame, font=("Segoe UI", 10), wrap="word", height=120)
+        self.prompt_text = ctk.CTkTextbox(main_frame, font=("Segoe UI", 12), wrap="word", height=120)
         self.prompt_text.pack(fill="both", expand=True)
         bottom_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         bottom_frame.pack(fill="x", pady=(15, 0))
-        self.status_lbl = ctk.CTkLabel(bottom_frame, text="", font=("Segoe UI", 9), text_color=c["fg_muted"])
+        self.status_lbl = ctk.CTkLabel(bottom_frame, text="", font=("Segoe UI", 11), text_color=c["fg_muted"])
         self.status_lbl.pack(side="left")
         ctk.CTkButton(bottom_frame, text="Annulla", command=self.destroy, fg_color="#374151", hover_color="#4b5563").pack(side="right", padx=(10, 0))
         self.btn_generate = ctk.CTkButton(bottom_frame, text="Analizza e Crea", command=self._generate)

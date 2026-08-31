@@ -14,6 +14,17 @@ from ..utils import calculate_profit, money, parse_date, parse_int, parse_money
 
 
 class ProductDialog(ctk.CTkToplevel):
+    def _apply_dark_titlebar(self) -> None:
+        try:
+            import ctypes
+            self.attributes('-alpha', 0.0); self.update_idletasks()
+            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+            value = ctypes.c_int(1)
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
+        except Exception:
+            pass
+
     """Finestra di dialogo per la creazione o modifica di un singolo prodotto."""
 
     def __init__(
@@ -23,13 +34,13 @@ class ProductDialog(ctk.CTkToplevel):
         autocomplete_places: Tuple[List[str], List[str]] = ([], []),
         record: Optional[sqlite3.Row] = None,
     ) -> None:
-        super().__init__(parent)
+        super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.result: Optional[Dict[str, Any]] = None
         self.record = record
         self.purchased_places, self.selling_places = autocomplete_places
 
         self.title("Modifica prodotto" if record else "Nuovo prodotto")
-        parent.update_idletasks()
+        self.attributes('-alpha', 0.0); parent.update_idletasks()
         pw = parent.winfo_width()
         ph = parent.winfo_height()
         px = parent.winfo_rootx()
@@ -37,13 +48,21 @@ class ProductDialog(ctk.CTkToplevel):
 
         w = max(750, int(pw * 2 / 3))
         h = max(550, int(ph * 0.5))
-        x = px + (pw - w) // 2
-        y = py + (ph - h) // 2
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
 
         self.geometry(f"{w}x{h}+{x}+{y}")
         self.minsize(650, 500)
         self.transient(parent)
         self.grab_set()
+        self._apply_dark_titlebar()
+        self.attributes('-alpha', 1.0)
+        self._apply_dark_titlebar()
+        self.attributes('-alpha', 1.0)
+        self._apply_dark_titlebar()
+        self.attributes('-alpha', 1.0)
 
         rec = record
         self.vars = {
@@ -91,7 +110,7 @@ class ProductDialog(ctk.CTkToplevel):
         ctk.CTkLabel(
             outer,
             text="Compila i dati del prodotto (* indica i campi obbligatori)",
-            font=("Segoe UI", 9),
+            font=("Segoe UI", 13),
             text_color=c["fg_muted"],
             anchor="w",
         ).pack(fill="x", pady=(2, 14))
@@ -116,20 +135,20 @@ class ProductDialog(ctk.CTkToplevel):
         lbl_frame = ctk.CTkFrame(form, fg_color="transparent")
         lbl_frame.grid(row=6, column=0, sticky="w", padx=(0, 6), pady=(8, 2))
 
-        ctk.CTkLabel(lbl_frame, text="LUOGO VENDITA", font=("Segoe UI", 9, "bold")).pack(side="left")
-        gear_lbl = ctk.CTkLabel(lbl_frame, text="⚙", font=("Segoe UI", 10), text_color=c["fg_muted"], cursor="hand2")
+        ctk.CTkLabel(lbl_frame, text="LUOGO VENDITA", font=("Segoe UI", 11, "bold")).pack(side="left")
+        gear_lbl = ctk.CTkLabel(lbl_frame, text="⚙", font=("Segoe UI", 12), text_color=c["fg_muted"], cursor="hand2")
         gear_lbl.pack(side="left", padx=(6, 0), pady=(0, 2))
         gear_lbl.bind("<Button-1>", lambda _e: self._open_manage_places())
         gear_lbl.bind("<Enter>", lambda _e: gear_lbl.configure(text_color=c["fg_main"]))
         gear_lbl.bind("<Leave>", lambda _e: gear_lbl.configure(text_color=c["fg_muted"]))
 
-        self.selling_place_combo = ctk.CTkComboBox(form, variable=self.vars["selling_place"], values=self.selling_places, font=("Segoe UI", 10))
+        self.selling_place_combo = ctk.CTkComboBox(form, variable=self.vars["selling_place"], values=self.selling_places, font=("Segoe UI", 12))
         self.selling_place_combo.grid(row=7, column=0, sticky="ew", padx=(0, 6))
 
         self._field_entry(form, "PREZZO VENDITA (euro)", "selling_price", 3, 1)
 
         # Stato
-        self.lbl_status_lbl = ctk.CTkLabel(form, text="STATO PRODOTTO *", font=("Segoe UI", 9, "bold"))
+        self.lbl_status_lbl = ctk.CTkLabel(form, text="STATO PRODOTTO *", font=("Segoe UI", 11, "bold"))
         self.lbl_status_lbl.grid(row=8, column=0, columnspan=2, sticky="w", pady=(12, 4))
 
         status_box = ctk.CTkComboBox(
@@ -137,30 +156,30 @@ class ProductDialog(ctk.CTkToplevel):
             variable=self.vars["status"],
             values=(STATUS_STOCK, STATUS_PREORDER, STATUS_SOLD),
             command=lambda v: self._on_status_changed(),
-            font=("Segoe UI", 10),
+            font=("Segoe UI", 12),
         )
         status_box.grid(row=9, column=0, columnspan=2, sticky="ew")
 
         # Commissioni e data vendita
-        self.lbl_fees = ctk.CTkLabel(form, text="COMMISSIONI / SPESE (euro)", font=("Segoe UI", 9, "bold"))
+        self.lbl_fees = ctk.CTkLabel(form, text="COMMISSIONI / SPESE (euro)", font=("Segoe UI", 11, "bold"))
         self.lbl_fees.grid(row=10, column=0, sticky="w", pady=(10, 4))
-        self.entry_fees = ctk.CTkEntry(form, textvariable=self.vars["fees"], font=("Segoe UI", 10))
+        self.entry_fees = ctk.CTkEntry(form, textvariable=self.vars["fees"], font=("Segoe UI", 12))
         self.entry_fees.grid(row=11, column=0, sticky="ew", padx=(0, 6))
 
-        self.lbl_sold_date = ctk.CTkLabel(form, text="DATA VENDITA (AAAA-MM-GG)", font=("Segoe UI", 9, "bold"))
+        self.lbl_sold_date = ctk.CTkLabel(form, text="DATA VENDITA (AAAA-MM-GG)", font=("Segoe UI", 11, "bold"))
         self.lbl_sold_date.grid(row=10, column=1, sticky="w", pady=(10, 4))
-        self.entry_sold_date = ctk.CTkEntry(form, textvariable=self.vars["sold_date"], font=("Segoe UI", 10))
+        self.entry_sold_date = ctk.CTkEntry(form, textvariable=self.vars["sold_date"], font=("Segoe UI", 12))
         self.entry_sold_date.grid(row=11, column=1, sticky="ew", padx=(6, 0))
 
         # Card profitto con angoli arrotondati
         self.profit_card = ctk.CTkFrame(form, corner_radius=10, border_width=1, border_color=c["border"], fg_color=c["bg_input"])
         self.profit_card.grid(row=14, column=0, columnspan=2, sticky="ew", pady=(14, 4))
-        ctk.CTkLabel(self.profit_card, text="CALCOLO PROFITTO NETTO E ROI", font=("Segoe UI", 8, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=12, pady=(10, 0))
+        ctk.CTkLabel(self.profit_card, text="CALCOLO PROFITTO NETTO E ROI", font=("Segoe UI", 10, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=12, pady=(10, 0))
         ctk.CTkLabel(self.profit_card, textvariable=self.profit_info_var, font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=12, pady=(2, 10))
 
         # Note
-        ctk.CTkLabel(form, text="NOTE", font=("Segoe UI", 9, "bold")).grid(row=15, column=0, columnspan=2, sticky="w", pady=(10, 4))
-        self.notes = ctk.CTkTextbox(form, height=80, font=("Segoe UI", 10), wrap="word")
+        ctk.CTkLabel(form, text="NOTE", font=("Segoe UI", 11, "bold")).grid(row=15, column=0, columnspan=2, sticky="w", pady=(10, 4))
+        self.notes = ctk.CTkTextbox(form, height=80, font=("Segoe UI", 12), wrap="word")
         self.notes.grid(row=16, column=0, columnspan=2, sticky="nsew")
         if self.record:
             self.notes.insert("1.0", self.record["notes"])
@@ -181,10 +200,10 @@ class ProductDialog(ctk.CTkToplevel):
         l_row = group_row * 2
         e_row = l_row + 1
         px = (0, 6) if column == 0 and span == 1 else ((6, 0) if column == 1 else 0)
-        ctk.CTkLabel(parent, text=label, font=("Segoe UI", 9, "bold")).grid(
+        ctk.CTkLabel(parent, text=label, font=("Segoe UI", 11, "bold")).grid(
             row=l_row, column=column, columnspan=span, sticky="w", padx=px, pady=(8, 2)
         )
-        entry = ctk.CTkEntry(parent, textvariable=self.vars[key], font=("Segoe UI", 10))
+        entry = ctk.CTkEntry(parent, textvariable=self.vars[key], font=("Segoe UI", 12))
         entry.grid(row=e_row, column=column, columnspan=span, sticky="ew", padx=px)
         return entry
 
@@ -192,10 +211,10 @@ class ProductDialog(ctk.CTkToplevel):
         l_row = group_row * 2
         e_row = l_row + 1
         px = (0, 6) if column == 0 else (6, 0)
-        ctk.CTkLabel(parent, text=label, font=("Segoe UI", 9, "bold")).grid(
+        ctk.CTkLabel(parent, text=label, font=("Segoe UI", 11, "bold")).grid(
             row=l_row, column=column, sticky="w", padx=px, pady=(8, 2)
         )
-        combo = ctk.CTkComboBox(parent, variable=self.vars[key], values=values, font=("Segoe UI", 10))
+        combo = ctk.CTkComboBox(parent, variable=self.vars[key], values=values, font=("Segoe UI", 12))
         combo.grid(row=e_row, column=column, sticky="ew", padx=px)
         return combo
 
@@ -289,16 +308,27 @@ class ProductDialog(ctk.CTkToplevel):
 
 
 class BulkStatusDialog(ctk.CTkToplevel):
+    def _apply_dark_titlebar(self) -> None:
+        try:
+            import ctypes
+            self.attributes('-alpha', 0.0); self.update_idletasks()
+            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+            value = ctypes.c_int(1)
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
+        except Exception:
+            pass
+
     """Finestra di dialogo per la modifica di massa dello stato dei prodotti selezionati."""
 
     def __init__(self, parent: tk.Misc, count: int, target_status: str) -> None:
-        super().__init__(parent)
+        super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.result: Optional[Dict[str, Any]] = None
         self.count = count
         self.target_status = target_status
 
         self.title("Spostamento di massa")
-        self.update_idletasks()
+        self.attributes('-alpha', 0.0); self.update_idletasks()
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
         w, h = 520, 460
@@ -308,6 +338,12 @@ class BulkStatusDialog(ctk.CTkToplevel):
         self.minsize(500, 440)
         self.transient(parent)
         self.grab_set()
+        self._apply_dark_titlebar()
+        self.attributes('-alpha', 1.0)
+        self._apply_dark_titlebar()
+        self.attributes('-alpha', 1.0)
+        self._apply_dark_titlebar()
+        self.attributes('-alpha', 1.0)
 
         self.var_sold_price = tk.StringVar()
         self.var_fees = tk.StringVar(value="0,00")
@@ -330,7 +366,7 @@ class BulkStatusDialog(ctk.CTkToplevel):
         ctk.CTkLabel(
             outer,
             text=f"Stai per convertire {self.count} prodotti selezionati.",
-            font=("Segoe UI", 10),
+            font=("Segoe UI", 12),
             text_color=c["fg_muted"],
         ).pack(anchor="w", pady=(2, 16))
 
@@ -338,16 +374,16 @@ class BulkStatusDialog(ctk.CTkToplevel):
             form = ctk.CTkFrame(outer, fg_color="transparent")
             form.pack(fill="x", pady=6)
 
-            ctk.CTkLabel(form, text="Prezzo vendita TOTALE (euro):", font=("Segoe UI", 9, "bold")).pack(anchor="w")
-            ent_price = ctk.CTkEntry(form, textvariable=self.var_sold_price, font=("Segoe UI", 10))
+            ctk.CTkLabel(form, text="Prezzo vendita TOTALE (euro):", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+            ent_price = ctk.CTkEntry(form, textvariable=self.var_sold_price, font=("Segoe UI", 12))
             ent_price.pack(fill="x", pady=(2, 10))
             ent_price.focus_set()
 
-            ctk.CTkLabel(form, text="Commissioni/Spese TOTALI (euro):", font=("Segoe UI", 9, "bold")).pack(anchor="w")
-            ctk.CTkEntry(form, textvariable=self.var_fees, font=("Segoe UI", 10)).pack(fill="x", pady=(2, 10))
+            ctk.CTkLabel(form, text="Commissioni/Spese TOTALI (euro):", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+            ctk.CTkEntry(form, textvariable=self.var_fees, font=("Segoe UI", 12)).pack(fill="x", pady=(2, 10))
 
-            ctk.CTkLabel(form, text="Data di vendita (AAAA-MM-GG):", font=("Segoe UI", 9, "bold")).pack(anchor="w")
-            ctk.CTkEntry(form, textvariable=self.var_sold_date, font=("Segoe UI", 10)).pack(fill="x", pady=(2, 10))
+            ctk.CTkLabel(form, text="Data di vendita (AAAA-MM-GG):", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+            ctk.CTkEntry(form, textvariable=self.var_sold_date, font=("Segoe UI", 12)).pack(fill="x", pady=(2, 10))
 
         buttons = ctk.CTkFrame(outer, fg_color="transparent")
         buttons.pack(fill="x", side="bottom", pady=(20, 0))
@@ -377,16 +413,27 @@ class BulkStatusDialog(ctk.CTkToplevel):
 
 
 class ManagePlacesDialog(ctk.CTkToplevel):
+    def _apply_dark_titlebar(self) -> None:
+        try:
+            import ctypes
+            self.attributes('-alpha', 0.0); self.update_idletasks()
+            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+            value = ctypes.c_int(1)
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
+        except Exception:
+            pass
+
     """Finestra per la gestione dei luoghi di vendita."""
 
     def __init__(self, parent: tk.Misc, db: Any, current_places: List[str], on_update: callable) -> None:
-        super().__init__(parent)
+        super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.db = db
         self.current_places = current_places
         self.on_update = on_update
 
         self.title("Gestione Luoghi di Vendita")
-        self.update_idletasks()
+        self.attributes('-alpha', 0.0); self.update_idletasks()
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
         w, h = 550, 650
@@ -396,6 +443,12 @@ class ManagePlacesDialog(ctk.CTkToplevel):
         self.minsize(450, 600)
         self.transient(parent)
         self.grab_set()
+        self._apply_dark_titlebar()
+        self.attributes('-alpha', 1.0)
+        self._apply_dark_titlebar()
+        self.attributes('-alpha', 1.0)
+        self._apply_dark_titlebar()
+        self.attributes('-alpha', 1.0)
 
         self._build()
 
@@ -405,19 +458,19 @@ class ManagePlacesDialog(ctk.CTkToplevel):
         outer.pack(fill="both", expand=True, padx=24, pady=24)
 
         ctk.CTkLabel(outer, text="Luoghi di Vendita", font=("Segoe UI", 16, "bold")).pack(anchor="w")
-        ctk.CTkLabel(outer, text="Aggiungi nuovi luoghi o elimina quelli che non usi piu.", font=("Segoe UI", 10), text_color=c["fg_muted"]).pack(anchor="w", pady=(2, 14))
+        ctk.CTkLabel(outer, text="Aggiungi nuovi luoghi o elimina quelli che non usi piu.", font=("Segoe UI", 12), text_color=c["fg_muted"]).pack(anchor="w", pady=(2, 14))
 
         # Frame aggiungi con angoli arrotondati
         add_frame = ctk.CTkFrame(outer, corner_radius=10, border_width=1, border_color=c["border"], fg_color=c["bg_input"])
         add_frame.pack(fill="x", pady=(0, 16))
 
-        ctk.CTkLabel(add_frame, text="INSERISCI NUOVO LUOGO:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=12, pady=(12, 6))
+        ctk.CTkLabel(add_frame, text="INSERISCI NUOVO LUOGO:", font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=12, pady=(12, 6))
 
         input_frame = ctk.CTkFrame(add_frame, fg_color="transparent")
         input_frame.pack(fill="x", padx=12, pady=(0, 12))
 
         self.var_new = tk.StringVar()
-        entry = ctk.CTkEntry(input_frame, textvariable=self.var_new, font=("Segoe UI", 11))
+        entry = ctk.CTkEntry(input_frame, textvariable=self.var_new, font=("Segoe UI", 13))
         entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
         entry.bind("<Return>", lambda _e: self._add_place())
         entry.focus_set()
@@ -425,7 +478,7 @@ class ManagePlacesDialog(ctk.CTkToplevel):
         ctk.CTkButton(input_frame, text="Aggiungi (Invio)", command=self._add_place).pack(side="right")
 
         # Lista luoghi esistenti
-        ctk.CTkLabel(outer, text="LUOGHI ESISTENTI:", font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        ctk.CTkLabel(outer, text="LUOGHI ESISTENTI:", font=("Segoe UI", 11, "bold")).pack(anchor="w")
 
         list_frame = tk.Frame(outer, bg=c["bg_card"])
         list_frame.pack(fill="both", expand=True, pady=(4, 10))
@@ -435,7 +488,7 @@ class ManagePlacesDialog(ctk.CTkToplevel):
             bg=c["bg_input"],
             fg=c["fg_main"],
             selectbackground=c["accent"],
-            font=("Segoe UI", 11),
+            font=("Segoe UI", 13),
             activestyle="none",
             highlightthickness=1,
             highlightbackground=c["border"],
