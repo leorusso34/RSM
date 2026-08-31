@@ -16,12 +16,12 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
         "type": "OBJECT",
         "properties": {
             "name": {"type": "STRING"},
-            "size": {"type": "STRING"},
-            "quantity": {"type": "INTEGER"},
+            "size": {"type": "STRING", "description": "A meno che non venga scritto diversamente metti rigorosamente UNI come valore di default."},
+            "quantity": {"type": "INTEGER", "description": "Non ci sono limiti di quantità, e il valore di default è sempre 1, ma se viene scritto un numero subito dopo una x, allora la quantità sarà quel numero."},
             "purchased_price": {"type": "NUMBER"},
             "purchased_place": {"type": "STRING"},
             "status": {"type": "STRING", "description": "Scegli rigorosamente tra: 'In Stock', 'Pre-ordine', 'Venduto', o 'Completato'. Default: 'In Stock'."},
-            "release_date": {"type": "STRING"}
+            "release_date": {"type": "STRING", "description": "Se non inserita la data inserire la data di oggi. Formato: AAAA-MM-GG."}
         },
         "required": ["name", "quantity", "purchased_price", "status"]
     }

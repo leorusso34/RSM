@@ -20,7 +20,7 @@ class AIDialog(tk.Toplevel):
         parent.update_idletasks()
         pw, ph = parent.winfo_width(), parent.winfo_height()
         px, py = parent.winfo_rootx(), parent.winfo_rooty()
-        w, h = 600, 450
+        w, h = 600, 500
         x, y = px + (pw - w) // 2, py + (ph - h) // 2
         self.geometry(f"{w}x{h}+{x}+{y}")
         self.minsize(500, 400)
@@ -63,9 +63,32 @@ class AIDialog(tk.Toplevel):
         ttk.Button(api_input_frame, text="Salva Chiave", command=self._save_api_key).pack(side="left", padx=(10, 0))
 
         # Prompt Section
-        tk.Label(main_frame, text="Cosa vuoi aggiungere?", bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 5))
-        tk.Label(main_frame, text="Es: aggiungi il prodotto Dragon Ball FB10 ENG al magazzino, pagato 402€ preso da Vinted.", bg=c["bg_card"], fg=c["fg_muted"], font=("Segoe UI", 9)).pack(anchor="w", pady=(0, 10))
+        prompt_header = tk.Frame(main_frame, bg=c["bg_card"])
+        prompt_header.pack(fill="x", pady=(10, 5))
+        
+        tk.Label(prompt_header, text="Cosa vuoi aggiungere?", bg=c["bg_card"], fg=c["fg_main"], font=("Segoe UI", 10, "bold")).pack(side="left")
+        
+        import os
+        import sys
+        from PIL import Image, ImageTk
 
+        def get_asset_path(filename):
+            if hasattr(sys, '_MEIPASS'):
+                return os.path.join(sys._MEIPASS, 'assets', filename)
+            return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'assets', filename)
+
+        try:
+            mic_path = get_asset_path("mic_icon.png")
+            img = Image.open(mic_path)
+            img = img.resize((20, 20), Image.Resampling.LANCZOS)
+            self.mic_img = ImageTk.PhotoImage(img)
+            self.btn_mic = tk.Label(prompt_header, image=self.mic_img, bg=c["bg_card"], cursor="hand2")
+            self.btn_mic.bind("<Button-1>", lambda e: self._start_listening())
+            self.btn_mic.pack(side="right", padx=(5, 0))
+        except Exception:
+            self.btn_mic = ttk.Button(prompt_header, text="🎙️", command=self._start_listening, width=3)
+            self.btn_mic.pack(side="right")
+    
         self.prompt_text = tk.Text(main_frame, height=5, wrap="word", bg=c["bg_input"], fg=c["fg_main"], insertbackground=c["fg_main"], relief="flat", padx=10, pady=10, font=("Segoe UI", 10))
         self.prompt_text.pack(fill="both", expand=True)
 
@@ -151,3 +174,40 @@ class AIDialog(tk.Toplevel):
         self.btn_generate.configure(state="normal")
         self.status_lbl.configure(text="Errore durante l'analisi.", fg="red")
         messagebox.showerror("Errore AI", error_msg, parent=self)
+
+    def _start_listening(self):
+        if getattr(self, 'is_listening', False): return
+        self.is_listening = True
+        
+        # Non modifichiamo più il bottone visto che ora è solo un'icona
+        self.status_lbl.configure(text="Inizializzazione microfono...", fg=DARK_THEME["fg_muted"])
+        
+        from ..speech_helper import transcribe_from_microphone
+        transcribe_from_microphone(
+            on_result=self._on_speech_result,
+            on_error=self._on_speech_error,
+            on_listening=self._on_listening
+        )
+        
+    def _on_listening(self):
+        def update_ui():
+            self.status_lbl.configure(text="🔴 Parla ora (max 6s)...", fg=DARK_THEME["fg_main"])
+        self.after(0, update_ui)
+        
+    def _on_speech_result(self, text):
+        def update_ui():
+            self.is_listening = False
+            self.status_lbl.configure(text="Trascrizione completata.", fg=DARK_THEME["fg_main"])
+            current = self.prompt_text.get("1.0", tk.END).strip()
+            if current:
+                self.prompt_text.insert(tk.END, " " + text)
+            else:
+                self.prompt_text.insert(tk.END, text)
+        self.after(0, update_ui)
+        
+    def _on_speech_error(self, error_msg):
+        def update_ui():
+            self.is_listening = False
+            self.status_lbl.configure(text="Errore microfono.", fg="red")
+            messagebox.showerror("Errore Microfono", error_msg, parent=self)
+        self.after(0, update_ui)

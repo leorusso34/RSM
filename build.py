@@ -48,6 +48,7 @@ def main():
         "--clean",
         "--icon=app_icon.ico",
         "--add-data=app_icon.ico;.",
+        "--add-data=assets;assets",
         str(main_script)
     ]
     
