@@ -28,7 +28,7 @@ class AIDialog(ctk.CTkToplevel):
         pw, ph = parent.winfo_width(), parent.winfo_height()
         px, py = parent.winfo_rootx(), parent.winfo_rooty()
         w, h = 600, 520
-        sw = self.winfo_screenwidth(); sh = self.winfo_screenheight(); x, y = (sw - w) // 2, (sh - h) // 2
+        x, y = px + (pw - w) // 2, py + (ph - h) // 2
         self.geometry(f"{w}x{h}+{x}+{y}")
         self.minsize(500, 420)
         self.transient(parent)

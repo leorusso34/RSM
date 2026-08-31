@@ -48,10 +48,8 @@ class ProductDialog(ctk.CTkToplevel):
 
         w = max(750, int(pw * 2 / 3))
         h = max(550, int(ph * 0.5))
-        sw = self.winfo_screenwidth()
-        sh = self.winfo_screenheight()
-        x = (sw - w) // 2
-        y = (sh - h) // 2
+        x = px + (pw - w) // 2
+        y = py + (ph - h) // 2
 
         self.geometry(f"{w}x{h}+{x}+{y}")
         self.minsize(650, 500)
@@ -329,11 +327,13 @@ class BulkStatusDialog(ctk.CTkToplevel):
 
         self.title("Spostamento di massa")
         self.attributes('-alpha', 0.0); self.update_idletasks()
-        sw = self.winfo_screenwidth()
-        sh = self.winfo_screenheight()
+        pw = parent.winfo_width()
+        ph = parent.winfo_height()
+        px = parent.winfo_rootx()
+        py = parent.winfo_rooty()
         w, h = 520, 460
-        x = (sw - w) // 2
-        y = (sh - h) // 2
+        x = px + (pw - w) // 2
+        y = py + (ph - h) // 2
         self.geometry(f"{w}x{h}+{x}+{y}")
         self.minsize(500, 440)
         self.transient(parent)
@@ -434,11 +434,13 @@ class ManagePlacesDialog(ctk.CTkToplevel):
 
         self.title("Gestione Luoghi di Vendita")
         self.attributes('-alpha', 0.0); self.update_idletasks()
-        sw = self.winfo_screenwidth()
-        sh = self.winfo_screenheight()
+        pw = parent.winfo_width()
+        ph = parent.winfo_height()
+        px = parent.winfo_rootx()
+        py = parent.winfo_rooty()
         w, h = 550, 650
-        x = (sw - w) // 2
-        y = (sh - h) // 2
+        x = px + (pw - w) // 2
+        y = py + (ph - h) // 2
         self.geometry(f"{w}x{h}+{x}+{y}")
         self.minsize(450, 600)
         self.transient(parent)
