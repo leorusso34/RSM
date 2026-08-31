@@ -483,11 +483,11 @@ class InventoryApp(ctk.CTk):
         self._update_action_states()
 
     def _switch_tab(self, direction: int) -> str:
-        names = self.TAB_NAMES
+        names = list(self.tab_frames.keys())
         current = self.notebook.get()
         if current in names:
             next_idx = (names.index(current) + direction) % len(names)
-            self.notebook.set(names[next_idx])
+            self.set_tab(names[next_idx])
         return "break"
 
     def refresh(self) -> None:

@@ -1,6 +1,7 @@
 # Database files
 *.db-wal
 *.db-shm
+*.db-journal
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -8,14 +9,22 @@ __pycache__/
 .vscode/
 .idea/
 
+# OS and system files
+desktop.ini
+Thumbs.db
+.DS_Store
+
 # Build artifacts
 build/
 dist/
 *.spec
+data_backup_temp/
 
-# Data (il DB è locale, non va nel repo)
+# Environment and Data (il DB è locale, non va nel repo)
+.env
 data/
 
-# Script di fix temporanei
+# Temporary and test scripts
 fix_*.py
 test.py
+test_*.py

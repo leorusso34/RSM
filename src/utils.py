@@ -136,7 +136,7 @@ def normalize_header(value: Any) -> str:
     return re.sub(r"\s+", " ", text)
 
 def export_to_csv(filepath: str, products: List[dict]) -> int:
-    """Esporta una lista di prodotti in un file CSV."""
+    """Esporta una lista di prodotti in un file CSV formattato per Excel."""
     headers = [
         "ID", "NOME", "TAGLIA", "QUANTITÀ", "PREZZO ACQUISTO", "LUOGO ACQUISTO",
         "LUOGO VENDITA", "PREZZO VENDITA ESTIMATO", "PREZZO VENDITA EFFETTIVO",
@@ -146,17 +146,26 @@ def export_to_csv(filepath: str, products: List[dict]) -> int:
         writer = csv.writer(handle, delimiter=";")
         writer.writerow(headers)
         for row in products:
+            p_price = row.get("purchased_price", 0.0)
+            p_str = f"{p_price:.2f}".replace(".", ",") if p_price is not None else ""
+            s_price = row.get("selling_price")
+            s_str = f"{s_price:.2f}".replace(".", ",") if s_price is not None else ""
+            sold_price = row.get("sold_price")
+            sold_str = f"{sold_price:.2f}".replace(".", ",") if sold_price is not None else ""
+            fees = row.get("fees", 0.0)
+            fees_str = f"{fees:.2f}".replace(".", ",") if fees is not None else "0,00"
+
             writer.writerow([
                 row.get("id", ""),
                 row.get("name", ""),
                 row.get("size", ""),
                 row.get("quantity", 1),
-                f'{row.get("purchased_price", 0.0):.2f}',
+                p_str,
                 row.get("purchased_place", ""),
                 row.get("selling_place", ""),
-                "" if row.get("selling_price") is None else f'{row.get("selling_price"):.2f}',
-                "" if row.get("sold_price") is None else f'{row.get("sold_price"):.2f}',
-                f'{row.get("fees", 0.0):.2f}',
+                s_str,
+                sold_str,
+                fees_str,
                 row.get("sold_date", ""),
                 row.get("status", ""),
                 row.get("release_date", ""),

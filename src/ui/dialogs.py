@@ -5,6 +5,7 @@
 import sqlite3
 import tkinter as tk
 from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional, Tuple
 from tkinter import ttk, messagebox
 import customtkinter as ctk
@@ -344,13 +345,14 @@ class BulkStatusDialog(ctk.CTkToplevel):
         if self.target_status == STATUS_SOLD:
             try:
                 sp_total = parse_money(self.var_sold_price.get(), allow_empty=True)
-                fees_total = parse_money(self.var_fees.get(), allow_empty=True) or 0.0
+                fees_total = parse_money(self.var_fees.get(), allow_empty=True) or Decimal("0")
                 dt = self.var_sold_date.get().strip()
                 if sp_total is None:
                     raise ValueError("Per i prodotti venduti e obbligatorio il prezzo di vendita totale.")
                 dt = parse_date(dt)
-                extra["sold_price"] = round(sp_total / self.count, 2) if self.count > 0 else sp_total
-                extra["fees"] = round(fees_total / self.count, 2) if self.count > 0 else fees_total
+                count_dec = Decimal(str(self.count))
+                extra["sold_price"] = (sp_total / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if self.count > 0 else sp_total
+                extra["fees"] = (fees_total / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if self.count > 0 else fees_total
                 extra["sold_date"] = dt
                 import uuid
                 extra["bundle_id"] = str(uuid.uuid4())
