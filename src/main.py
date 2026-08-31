@@ -24,6 +24,7 @@ def main() -> None:
 
     try:
         app = InventoryApp()
+        app.state("zoomed")
         app.mainloop()
     except sqlite3.Error as exc:
         root = tk.Tk()

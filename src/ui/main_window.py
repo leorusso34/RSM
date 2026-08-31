@@ -93,7 +93,7 @@ class InventoryApp(ctk.CTk):
         self.bind("<Control-Tab>", lambda _e: self._switch_tab(1))
         self.bind("<Control-Shift-Tab>", lambda _e: self._switch_tab(-1))
         self.search_entry.focus_set()
-        self.state("zoomed")
+        
 
     def _apply_dark_titlebar(self) -> None:
         """Forza la titlebar di Windows 10/11 in modalita scura."""
