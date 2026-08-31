@@ -2,13 +2,14 @@
 # -*- coding: utf-8 -*-
 """Gestione database SQLite e migrazioni per Russo Stock Manager."""
 
+import json
 import os
 import sqlite3
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from .config import DB_PATH, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK, DEFAULT_SELLING_PLACES
+from .config import DB_PATH, CONFIG_JSON_PATH, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK, DEFAULT_SELLING_PLACES
 from .types import ProductRecord
 from .utils import calculate_profit, cents_to_money, money_to_cents
 
@@ -276,20 +277,63 @@ class InventoryDatabase:
             )
             return product_id
         
+    def _read_config_json(self) -> Dict[str, str]:
+        """Legge il file config.json esterno se presente."""
+        if not CONFIG_JSON_PATH.exists():
+            return {}
+        try:
+            with open(CONFIG_JSON_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return {str(k): str(v) for k, v in data.items()}
+        except Exception:
+            pass
+        return {}
+
+    def _write_config_json(self, key: str, value: str) -> None:
+        """Aggiorna il file config.json mantenendo sincronizzate le impostazioni."""
+        try:
+            current_data = {
+                "gemini_api_key": "",
+                "email_sync_address": "",
+                "email_sync_app_password": ""
+            }
+            if CONFIG_JSON_PATH.exists():
+                try:
+                    with open(CONFIG_JSON_PATH, "r", encoding="utf-8") as f:
+                        loaded = json.load(f)
+                        if isinstance(loaded, dict):
+                            current_data.update(loaded)
+                except Exception:
+                    pass
+            current_data[key] = value
+            with open(CONFIG_JSON_PATH, "w", encoding="utf-8") as f:
+                json.dump(current_data, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
     def get_setting(self, key: str, default_value: str = "") -> str:
-        """Recupera un'impostazione dal database."""
+        """
+        Recupera un'impostazione dando precedenza assoluta al file config.json esterno.
+        Se non presente o vuoto nel JSON, fa fallback sul database SQLite locale.
+        """
+        json_cfg = self._read_config_json()
+        if key in json_cfg and json_cfg[key].strip() != "":
+            return json_cfg[key].strip()
+
         cursor = self.connection.cursor()
         cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
         row = cursor.fetchone()
         return row["value"] if row else default_value
         
     def set_setting(self, key: str, value: str) -> None:
-        """Salva un'impostazione nel database."""
+        """Salva un'impostazione nel database SQLite e la sincronizza nel file config.json."""
         with self.connection:
             self.connection.execute(
                 "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
                 (key, value)
             )
+        self._write_config_json(key, value)
 
     def delete(self, product_id: int) -> None:
         """Elimina un singolo prodotto."""

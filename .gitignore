@@ -20,8 +20,9 @@ dist/
 *.spec
 data_backup_temp/
 
-# Environment and Data (il DB è locale, non va nel repo)
+# Environment, Credentials and Data (il DB e le credenziali sono locali, non vanno nel repo)
 .env
+config.json
 data/
 
 # Temporary and test scripts

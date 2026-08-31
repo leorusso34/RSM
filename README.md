@@ -10,12 +10,30 @@ Applicazione desktop moderna in **CustomTkinter** per la gestione di inventario,
 - **🏷️ Gestione Vendite & Vendite Multiple**: Conversione rapida, supporto per vendite in blocco (bundle) e drag & drop tra schede.
 - **✅ Storico Vendite Completate**: Archiviazione permanente delle vendite concluse con calcolo esatto di ricavi, commissioni, profitto netto e ROI reale.
 - **📊 Dashboard & Grafici**: Indicatori KPI in tempo reale, andamento del profitto mensile (€) e ripartizione volumi inventario per stato.
+- **📬 Sincronizzazione Email Ordini (Gmail + Gemini AI)**: Scansione automatica delle conferme d'ordine da Gmail tramite IMAP e inserimento istantaneo nei Pre-ordini con intelligenza artificiale.
 - **✨ Assistente AI con Riconoscimento Vocale**: Estrazione rapida e strutturata dei prodotti tramite Google Gemini e trascrizione vocale in italiano.
+- **🔑 Configurazione Rapida via `config.json`**: Possibilità di impostare API key e credenziali direttamente dal file esterno `config.json` nella cartella principale (con precedenza sui dati salvati in app).
 - **📁 Import / Export & Backup**:
   - Importazione automatica da fogli **Excel** (`.xlsx`).
   - Esportazione **CSV** formattata per Excel italiano.
   - Backup istantaneo e sicuro del database SQLite.
 - **🎨 Interfaccia Dark Professionale**: Supporto nativo High-DPI su Windows, titlebar scura integrata, pill-navigation e finestre sempre perfettamente centrate.
+
+---
+
+## ⚙️ Configurazione Credenziali (`config.json`)
+
+Nella cartella principale dell'applicazione puoi modificare o inserire direttamente i tuoi parametri nel file `config.json`:
+
+```json
+{
+  "gemini_api_key": "LA_TUA_CHIAVE_API_GEMINI",
+  "email_sync_address": "tuo_indirizzo@gmail.com",
+  "email_sync_app_password": "abcd efgh ijkl mnop"
+}
+```
+
+> **Nota**: I valori inseriti in `config.json` hanno la **precedenza assoluta** su qualsiasi dato salvato in-app. Se modifichi i parametri all'interno dell'applicazione, anche `config.json` verrà sincronizzato automaticamente.
 
 ---
 

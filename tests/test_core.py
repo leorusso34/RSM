@@ -137,3 +137,20 @@ def test_email_sync_dialog_initialization(tmp_path):
     dialog.destroy()
     app.destroy()
     db.close()
+
+
+def test_external_config_json_priority(tmp_path, monkeypatch):
+    import json
+    from src import database
+    fake_config = tmp_path / "config.json"
+    fake_config.write_text(json.dumps({"gemini_api_key": "KEY_FROM_JSON"}), encoding="utf-8")
+    monkeypatch.setattr(database, "CONFIG_JSON_PATH", fake_config)
+    
+    db = InventoryDatabase(tmp_path / "test.db")
+    # DB has another value
+    with db.connection:
+        db.connection.execute("INSERT INTO settings (key, value) VALUES ('gemini_api_key', 'KEY_FROM_DB')")
+    
+    # JSON has priority!
+    assert db.get_setting("gemini_api_key") == "KEY_FROM_JSON"
+    db.close()

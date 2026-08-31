@@ -69,6 +69,15 @@ def main():
         shutil.rmtree(dist_data, ignore_errors=True)
         shutil.copytree(source_data, dist_data)
     
+    # 3. Copia o creazione di config.json nella cartella dist
+    dist_config = dist_folder / "config.json"
+    source_config = project_root / "config.json"
+    if source_config.exists():
+        shutil.copy(source_config, dist_config)
+    elif not dist_config.exists():
+        with open(dist_config, "w", encoding="utf-8") as f:
+            json.dump({"gemini_api_key": "", "email_sync_address": "", "email_sync_app_password": ""}, f, indent=2)
+    
     print("Build completata con successo! Troverai l'eseguibile nella cartella 'dist/Russo Stock Manager/'.")
 
 if __name__ == "__main__":

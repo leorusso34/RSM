@@ -31,6 +31,7 @@ PROJECT_DIR = BASE_DIR.parent if BASE_DIR.name == "src" else BASE_DIR
 DATA_DIR = PROJECT_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 DB_PATH = DATA_DIR / "russo_stock.db"
+CONFIG_JSON_PATH = PROJECT_DIR / "config.json"
 
 # Palette colori - Tema scuro moderno
 DARK_THEME = {
