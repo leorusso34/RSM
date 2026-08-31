@@ -49,12 +49,21 @@ class AIDialog(ctk.CTkToplevel):
         try:
             mic_path = get_asset_path("mic_icon.png")
             img = Image.open(mic_path)
-            self.mic_img = ctk.CTkImage(light_image=img, dark_image=img, size=(20, 20))
-            self.btn_mic = ctk.CTkLabel(prompt_header, image=self.mic_img, text="", cursor="hand2")
-            self.btn_mic.bind("<Button-1>", lambda e: self._start_listening())
+            self.mic_img = ctk.CTkImage(light_image=img, dark_image=img, size=(10, 26))
+            self.btn_mic = ctk.CTkButton(
+                prompt_header,
+                image=self.mic_img,
+                text="",
+                width=36,
+                height=32,
+                corner_radius=6,
+                fg_color="#374151",
+                hover_color="#4b5563",
+                command=self._start_listening,
+            )
             self.btn_mic.pack(side="right", padx=(5, 0))
         except Exception:
-            self.btn_mic = ctk.CTkButton(prompt_header, text="Mic", command=self._start_listening, width=40)
+            self.btn_mic = ctk.CTkButton(prompt_header, text="🎤", command=self._start_listening, width=40)
             self.btn_mic.pack(side="right")
         self.prompt_text = ctk.CTkTextbox(main_frame, font=("Segoe UI", 12), wrap="word", height=120)
         self.prompt_text.pack(fill="both", expand=True)

@@ -51,9 +51,9 @@ class DashboardView(ctk.CTkFrame):
             accent_bar = ctk.CTkFrame(card, fg_color=accent_color, height=4, corner_radius=0)
             accent_bar.pack(fill="x")
 
-            ctk.CTkLabel(card, text=label, font=("Segoe UI", 8, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(8, 0))
+            ctk.CTkLabel(card, text=label, font=("Segoe UI", 11, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(8, 0))
             ctk.CTkLabel(card, textvariable=var_val, font=("Segoe UI", 18, "bold")).pack(anchor="w", padx=16, pady=(4, 2))
-            ctk.CTkLabel(card, textvariable=var_sub, font=("Segoe UI", 8), text_color=c.get("fg_subtle", c["fg_muted"])).pack(anchor="w", padx=16, pady=(0, 14))
+            ctk.CTkLabel(card, textvariable=var_sub, font=("Segoe UI", 10), text_color=c.get("fg_subtle", c["fg_muted"])).pack(anchor="w", padx=16, pady=(0, 14))
 
         # Area dei Grafici (due colonne)
         self.charts_frame = ctk.CTkFrame(container, fg_color="transparent")
@@ -65,8 +65,8 @@ class DashboardView(ctk.CTkFrame):
         # Grafico 1: Bar Chart Profitto Mensile
         self.chart1_card = ctk.CTkFrame(self.charts_frame, fg_color=c["bg_card"], corner_radius=10)
 
-        ctk.CTkLabel(self.chart1_card, text="ANDAMENTO PROFITTO MENSILE (€)", font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=16, pady=(14, 0))
-        ctk.CTkLabel(self.chart1_card, text="Utili netti generati per ciascun mese di vendita", font=("Segoe UI", 9), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(0, 10))
+        ctk.CTkLabel(self.chart1_card, text="ANDAMENTO PROFITTO MENSILE (€)", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=16, pady=(14, 0))
+        ctk.CTkLabel(self.chart1_card, text="Utili netti generati per ciascun mese di vendita", font=("Segoe UI", 11), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(0, 10))
 
         self.canvas_monthly = tk.Canvas(self.chart1_card, bg=c["bg_card"], highlightthickness=0)
         self.canvas_monthly.pack(fill="both", expand=True, padx=4, pady=(0, 14))
@@ -74,8 +74,8 @@ class DashboardView(ctk.CTkFrame):
         # Grafico 2: Distribution per Stato Prodotti
         self.chart2_card = ctk.CTkFrame(self.charts_frame, fg_color=c["bg_card"], corner_radius=10)
 
-        ctk.CTkLabel(self.chart2_card, text="RIPARTIZIONE INVENTARIO (PEZZI)", font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=16, pady=(14, 0))
-        ctk.CTkLabel(self.chart2_card, text="Distribuzione volumi per stato", font=("Segoe UI", 9), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(0, 10))
+        ctk.CTkLabel(self.chart2_card, text="RIPARTIZIONE INVENTARIO (PEZZI)", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=16, pady=(14, 0))
+        ctk.CTkLabel(self.chart2_card, text="Distribuzione volumi per stato", font=("Segoe UI", 11), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(0, 10))
 
         self.canvas_dist = tk.Canvas(self.chart2_card, bg=c["bg_card"], highlightthickness=0)
         self.canvas_dist.pack(fill="both", expand=True, padx=4, pady=(0, 14))
@@ -277,7 +277,7 @@ class DashboardView(ctk.CTkFrame):
             y_val = margin_top + plot_height * (i / 3)
             profit_val = max_profit - profit_range * (Decimal(i) / Decimal("3"))
             canvas.create_line(margin_left, y_val, width - margin_right, y_val, fill=DARK_THEME["border"], dash=(2, 2))
-            canvas.create_text(margin_left - 8, y_val, text=f"\u20ac{int(profit_val)}", anchor="e", fill=DARK_THEME["fg_muted"], font=("Segoe UI", 8))
+            canvas.create_text(margin_left - 8, y_val, text=f"\u20ac{int(profit_val)}", anchor="e", fill=DARK_THEME["fg_muted"], font=("Segoe UI", 9, "bold"))
         zero_y = margin_top + float(max_profit / profit_range) * plot_height
         for idx, item in enumerate(sales):
             x0 = margin_left + bar_gap + idx * (bar_width + bar_gap)
@@ -308,9 +308,9 @@ class DashboardView(ctk.CTkFrame):
                 else:
                     month_label = f"{months_it.get(month_part, month_part)} '{year_part[2:]}"
 
-            canvas.create_text((x0 + x1) / 2, y1 + 16, text=month_label, fill=DARK_THEME["fg_main"], font=("Segoe UI", 9, "bold"))
+            canvas.create_text((x0 + x1) / 2, y1 + 16, text=month_label, fill=DARK_THEME["fg_main"], font=("Segoe UI", 10, "bold"))
             if bar_width >= 25:
-                canvas.create_text((x0 + x1) / 2, y0 - 8, text=f"\u20ac{int(profit)}", fill=DARK_THEME["fg_main"], font=("Segoe UI", 8, "bold"))
+                canvas.create_text((x0 + x1) / 2, y0 - 8, text=f"\u20ac{int(profit)}", fill=DARK_THEME["fg_main"], font=("Segoe UI", 9, "bold"))
 
     def _draw_distribution_chart(self, totals: Dict[str, Any]) -> None:
         canvas = self.canvas_dist
@@ -346,6 +346,6 @@ class DashboardView(ctk.CTkFrame):
         start_y = 100
         for label, count, color in categories:
             pct = (count / total * 100) if total > 0 else 0
-            canvas.create_rectangle(margin_x, start_y, margin_x + 16, start_y + 16, fill=color, outline="")
-            canvas.create_text(margin_x + 26, start_y + 8, text=f"{label}: {count} pz ({pct:.1f}%)", anchor="w", fill=DARK_THEME["fg_main"], font=("Segoe UI", 10, "bold"))
+            canvas.create_rectangle(margin_x, start_y, margin_x + 18, start_y + 18, fill=color, outline="")
+            canvas.create_text(margin_x + 28, start_y + 9, text=f"{label}: {count} pz ({pct:.1f}%)", anchor="w", fill=DARK_THEME["fg_main"], font=("Segoe UI", 11, "bold"))
             start_y += 35
