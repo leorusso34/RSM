@@ -10,21 +10,10 @@ from tkinter import ttk, messagebox
 import customtkinter as ctk
 
 from ..config import DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
-from ..utils import calculate_profit, money, parse_date, parse_int, parse_money
+from ..utils import calculate_profit, money, parse_date, parse_int, parse_money, center_window, apply_dark_titlebar
 
 
 class ProductDialog(ctk.CTkToplevel):
-    def _apply_dark_titlebar(self) -> None:
-        try:
-            import ctypes
-            self.attributes('-alpha', 0.0); self.update_idletasks()
-            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            value = ctypes.c_int(1)
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
-        except Exception:
-            pass
-
     """Finestra di dialogo per la creazione o modifica di un singolo prodotto."""
 
     def __init__(
@@ -40,27 +29,11 @@ class ProductDialog(ctk.CTkToplevel):
         self.purchased_places, self.selling_places = autocomplete_places
 
         self.title("Modifica prodotto" if record else "Nuovo prodotto")
-        self.attributes('-alpha', 0.0); parent.update_idletasks()
-        pw = parent.winfo_width()
-        ph = parent.winfo_height()
-        px = parent.winfo_rootx()
-        py = parent.winfo_rooty()
-
-        w = max(750, int(pw * 2 / 3))
-        h = max(550, int(ph * 0.5))
-        x = px + (pw - w) // 2
-        y = py + (ph - h) // 2
-
-        self.geometry(f"{w}x{h}+{x}+{y}")
+        center_window(self, 750, 550)
         self.minsize(650, 500)
         self.transient(parent)
         self.grab_set()
-        self._apply_dark_titlebar()
-        self.attributes('-alpha', 1.0)
-        self._apply_dark_titlebar()
-        self.attributes('-alpha', 1.0)
-        self._apply_dark_titlebar()
-        self.attributes('-alpha', 1.0)
+        apply_dark_titlebar(self)
 
         rec = record
         self.vars = {
@@ -306,17 +279,6 @@ class ProductDialog(ctk.CTkToplevel):
 
 
 class BulkStatusDialog(ctk.CTkToplevel):
-    def _apply_dark_titlebar(self) -> None:
-        try:
-            import ctypes
-            self.attributes('-alpha', 0.0); self.update_idletasks()
-            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            value = ctypes.c_int(1)
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
-        except Exception:
-            pass
-
     """Finestra di dialogo per la modifica di massa dello stato dei prodotti selezionati."""
 
     def __init__(self, parent: tk.Misc, count: int, target_status: str) -> None:
@@ -326,24 +288,11 @@ class BulkStatusDialog(ctk.CTkToplevel):
         self.target_status = target_status
 
         self.title("Spostamento di massa")
-        self.attributes('-alpha', 0.0); self.update_idletasks()
-        pw = parent.winfo_width()
-        ph = parent.winfo_height()
-        px = parent.winfo_rootx()
-        py = parent.winfo_rooty()
-        w, h = 520, 460
-        x = px + (pw - w) // 2
-        y = py + (ph - h) // 2
-        self.geometry(f"{w}x{h}+{x}+{y}")
+        center_window(self, 520, 460)
         self.minsize(500, 440)
         self.transient(parent)
         self.grab_set()
-        self._apply_dark_titlebar()
-        self.attributes('-alpha', 1.0)
-        self._apply_dark_titlebar()
-        self.attributes('-alpha', 1.0)
-        self._apply_dark_titlebar()
-        self.attributes('-alpha', 1.0)
+        apply_dark_titlebar(self)
 
         self.var_sold_price = tk.StringVar()
         self.var_fees = tk.StringVar(value="0,00")
@@ -413,17 +362,6 @@ class BulkStatusDialog(ctk.CTkToplevel):
 
 
 class ManagePlacesDialog(ctk.CTkToplevel):
-    def _apply_dark_titlebar(self) -> None:
-        try:
-            import ctypes
-            self.attributes('-alpha', 0.0); self.update_idletasks()
-            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            value = ctypes.c_int(1)
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
-        except Exception:
-            pass
-
     """Finestra per la gestione dei luoghi di vendita."""
 
     def __init__(self, parent: tk.Misc, db: Any, current_places: List[str], on_update: callable) -> None:
@@ -433,24 +371,11 @@ class ManagePlacesDialog(ctk.CTkToplevel):
         self.on_update = on_update
 
         self.title("Gestione Luoghi di Vendita")
-        self.attributes('-alpha', 0.0); self.update_idletasks()
-        pw = parent.winfo_width()
-        ph = parent.winfo_height()
-        px = parent.winfo_rootx()
-        py = parent.winfo_rooty()
-        w, h = 550, 650
-        x = px + (pw - w) // 2
-        y = py + (ph - h) // 2
-        self.geometry(f"{w}x{h}+{x}+{y}")
+        center_window(self, 550, 650)
         self.minsize(450, 600)
         self.transient(parent)
         self.grab_set()
-        self._apply_dark_titlebar()
-        self.attributes('-alpha', 1.0)
-        self._apply_dark_titlebar()
-        self.attributes('-alpha', 1.0)
-        self._apply_dark_titlebar()
-        self.attributes('-alpha', 1.0)
+        apply_dark_titlebar(self)
 
         self._build()
 

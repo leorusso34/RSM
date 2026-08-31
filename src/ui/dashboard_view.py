@@ -10,7 +10,7 @@ import customtkinter as ctk
 
 from ..config import DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
 from ..database import InventoryDatabase
-from ..utils import money
+from ..utils import money, center_window, apply_dark_titlebar
 
 
 class DashboardView(ctk.CTkFrame):
@@ -149,15 +149,12 @@ class DashboardView(ctk.CTkFrame):
 
     def _open_layout_settings(self):
         import json
-        top = ctk.CTkToplevel(self)
+        top = ctk.CTkToplevel(self, fg_color=DARK_THEME["bg_main"])
         top.title("Personalizza Dashboard")
-        w, h = 400, 420
-        top.update_idletasks()
-        x = self.winfo_rootx() + (self.winfo_width() // 2) - (w // 2)
-        y = self.winfo_rooty() + (self.winfo_height() // 2) - (h // 2)
-        top.geometry(f"{w}x{h}+{x}+{y}")
+        center_window(top, 400, 420)
         top.transient(self.winfo_toplevel())
         top.grab_set()
+        apply_dark_titlebar(top)
 
         ctk.CTkLabel(top, text="Seleziona e riordina i grafici da visualizzare.", font=("Segoe UI", 10)).pack(pady=10)
 

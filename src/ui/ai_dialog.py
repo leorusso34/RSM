@@ -5,36 +5,20 @@ import customtkinter as ctk
 
 from ..config import DARK_THEME, STATUS_STOCK
 from ..ai_agent import parse_product_with_ai
+from ..utils import center_window, apply_dark_titlebar
 
 
 class AIDialog(ctk.CTkToplevel):
-    def _apply_dark_titlebar(self) -> None:
-        try:
-            import ctypes
-            self.attributes('-alpha', 0.0); self.update_idletasks()
-            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            value = ctypes.c_int(1)
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
-        except Exception:
-            pass
-
     def __init__(self, parent, db) -> None:
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.db = db
         self.result = None
         self.title("Inserimento Rapido con AI")
-        self.attributes('-alpha', 0.0); parent.update_idletasks()
-        pw, ph = parent.winfo_width(), parent.winfo_height()
-        px, py = parent.winfo_rootx(), parent.winfo_rooty()
-        w, h = 600, 520
-        x, y = px + (pw - w) // 2, py + (ph - h) // 2
-        self.geometry(f"{w}x{h}+{x}+{y}")
+        center_window(self, 600, 520)
         self.minsize(500, 420)
         self.transient(parent)
         self.grab_set()
-        self._apply_dark_titlebar()
-        self.attributes('-alpha', 1.0)
+        apply_dark_titlebar(self)
         self.api_key_var = tk.StringVar(value=self.db.get_setting("gemini_api_key", ""))
         self._build_ui()
 

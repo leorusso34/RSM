@@ -309,3 +309,24 @@ def apply_dark_titlebar(window) -> None:
         ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
     except Exception:
         pass
+
+
+def center_window(window: Any, width: int, height: int) -> None:
+    """Centra una finestra (CTkToplevel o CTk) perfettamente allo schermo su Windows, gestendo correttamente il DPI scaling."""
+    try:
+        import ctypes
+        screen_w = ctypes.windll.user32.GetSystemMetrics(0)
+        screen_h = ctypes.windll.user32.GetSystemMetrics(1)
+    except Exception:
+        screen_w = window.winfo_screenwidth()
+        screen_h = window.winfo_screenheight()
+
+    scaling = getattr(window, "_get_window_scaling", lambda: 1.0)()
+    w_physical = round(width * scaling)
+    h_physical = round(height * scaling)
+
+    x = max(0, (screen_w - w_physical) // 2)
+    y = max(0, (screen_h - h_physical) // 2)
+
+    window.geometry(f"{width}x{height}+{x}+{y}")
+
