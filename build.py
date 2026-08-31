@@ -70,7 +70,8 @@ def main():
         shutil.copytree(source_data, dist_data)
     
     # 3. Copia o creazione di config.json nella cartella dist
-    dist_config = dist_folder / "config.json"
+    import json
+    dist_config = dist_dir / "config.json"
     source_config = project_root / "config.json"
     if source_config.exists():
         shutil.copy(source_config, dist_config)
