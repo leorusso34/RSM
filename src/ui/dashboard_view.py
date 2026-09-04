@@ -188,12 +188,12 @@ class DashboardView(ctk.CTkFrame):
         for ch in all_charts:
             self._chart_vars[ch] = tk.BooleanVar(value=(ch in current_layout))
 
-        # Lista scorrevole con card per ciascun grafico
-        scroll_frame = ctk.CTkScrollableFrame(
+        # Contenitore per le card dei grafici perfettamente allineato ai margini
+        cards_container = ctk.CTkFrame(
             outer,
             fg_color="transparent",
         )
-        scroll_frame.pack(fill="both", expand=True, pady=(0, 16))
+        cards_container.pack(fill="both", expand=True, pady=(0, 16))
 
         def move_item(index: int, direction: int):
             new_idx = index + direction
@@ -205,18 +205,18 @@ class DashboardView(ctk.CTkFrame):
                 render_items()
 
         def render_items():
-            for w in scroll_frame.winfo_children():
+            for w in cards_container.winfo_children():
                 w.destroy()
 
             for idx, cid in enumerate(self._temp_layout):
                 card = ctk.CTkFrame(
-                    scroll_frame,
+                    cards_container,
                     fg_color=c["bg_card"],
                     corner_radius=8,
                     border_width=1,
                     border_color=c["border"],
                 )
-                card.pack(fill="x", pady=4, padx=4)
+                card.pack(fill="x", pady=4)
 
                 # Switch moderno con label
                 switch = ctk.CTkSwitch(
