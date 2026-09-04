@@ -44,7 +44,7 @@ Nella cartella principale dell'applicazione puoi modificare o inserire direttame
 python -m pip install -r requirements.txt
 
 # 2. Avvia l'applicazione
-python russo_stock_manager.py
+python rsm.py
 ```
 
 ---
@@ -92,5 +92,5 @@ RUSSO STOCK/
 │       └── theme.py         # Tema e stili grafici
 ├── tests/                   # Test suite automatica
 ├── build.py                 # Script di packaging PyInstaller
-└── russo_stock_manager.py   # Launcher principale
+└── rsm.py                   # Launcher principale
 ```

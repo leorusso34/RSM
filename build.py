@@ -21,7 +21,7 @@ def main() -> None:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
 
     project_root = Path(__file__).resolve().parent
-    main_script = project_root / "russo_stock_manager.py"
+    main_script = project_root / "rsm.py"
 
     if not main_script.exists():
         print(f"Errore: {main_script} non trovato.")
