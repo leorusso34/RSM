@@ -9,9 +9,11 @@ from pathlib import Path
 from tkinter import messagebox
 from typing import Any, Dict, List, Optional
 import customtkinter as ctk
+from PIL import Image
 
 from ..config import DARK_THEME, STATUS_STOCK, PROJECT_DIR
 from ..ai_agent import parse_product_with_ai
+from ..speech_helper import SpeechTranscriber
 from ..utils import apply_dark_titlebar, apply_window_icon, center_window
 
 
@@ -22,6 +24,8 @@ class AIDialog(ctk.CTkToplevel):
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.db = db
         self.result: Optional[List[Dict[str, Any]]] = None
+        self.transcriber: Optional[SpeechTranscriber] = None
+        self.is_recording: bool = False
 
         self.title("Inserimento Rapido con AI")
         center_window(self, 620, 520)
@@ -33,26 +37,19 @@ class AIDialog(ctk.CTkToplevel):
         self.api_key_var = tk.StringVar(value=self.db.get_setting("gemini_api_key", ""))
         self.status_var = tk.StringVar(value="")
 
-        # Carica icona microfono su sfondo pulito e trasparente
-        self._mic_img = None
-        self._mic_img_rec = None
-        try:
-            from PIL import Image
-            mic_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "mic_icon.png"
-            if not mic_path.exists():
-                mic_path = PROJECT_DIR / "assets" / "mic_icon.png"
+        # Carica icona microfono pulita e versione rossa attiva
+        mic_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "mic_icon.png"
+        if not mic_path.exists():
+            mic_path = PROJECT_DIR / "assets" / "mic_icon.png"
 
-            if mic_path.exists():
-                pil_img = Image.open(mic_path).convert("RGBA")
-                self._mic_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(10, 26))
+        pil_img = Image.open(mic_path).convert("RGBA")
+        self._mic_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(10, 26))
 
-                # Versione rossa durante la registrazione vocale
-                _, _, _, a = pil_img.split()
-                red_pil = Image.new("RGBA", pil_img.size, (239, 68, 68, 255))
-                red_pil.putalpha(a)
-                self._mic_img_rec = ctk.CTkImage(light_image=red_pil, dark_image=red_pil, size=(10, 26))
-        except Exception:
-            pass
+        # Versione rossa durante la registrazione vocale
+        _, _, _, a = pil_img.split()
+        red_pil = Image.new("RGBA", pil_img.size, (239, 68, 68, 255))
+        red_pil.putalpha(a)
+        self._mic_img_rec = ctk.CTkImage(light_image=red_pil, dark_image=red_pil, size=(10, 26))
 
         self._build_ui()
 
@@ -101,33 +98,19 @@ class AIDialog(ctk.CTkToplevel):
 
         ctk.CTkLabel(prompt_top_row, text="COSA VUOI AGGIUNGERE?", font=("Segoe UI", 11, "bold")).pack(side="left")
 
-        # Pulsante Microfono a sfondo 100% pulito e trasparente (senza scritte)
-        if self._mic_img:
-            self.btn_mic = ctk.CTkButton(
-                prompt_top_row,
-                text="",
-                image=self._mic_img,
-                width=34,
-                height=34,
-                fg_color="transparent",
-                hover_color="#1d2538",
-                border_width=0,
-                corner_radius=6,
-                command=self._start_listening,
-            )
-        else:
-            self.btn_mic = ctk.CTkButton(
-                prompt_top_row,
-                text="🎙️",
-                font=("Segoe UI", 16),
-                width=34,
-                height=34,
-                fg_color="transparent",
-                hover_color="#1d2538",
-                border_width=0,
-                corner_radius=6,
-                command=self._start_listening,
-            )
+        # Pulsante Microfono a sfondo 100% pulito e trasparente (senza scritte, clicca per avviare/fermare)
+        self.btn_mic = ctk.CTkButton(
+            prompt_top_row,
+            text="",
+            image=self._mic_img,
+            width=34,
+            height=34,
+            fg_color="transparent",
+            hover_color="#1d2538",
+            border_width=0,
+            corner_radius=6,
+            command=self._toggle_listening,
+        )
         self.btn_mic.pack(side="right")
 
         self.prompt_text = ctk.CTkTextbox(
@@ -236,34 +219,38 @@ class AIDialog(ctk.CTkToplevel):
         self.status_var.set("Errore durante l'analisi.")
         messagebox.showerror("Errore AI", error_msg, parent=self)
 
-    def _start_listening(self) -> None:
-        self.btn_mic.configure(state="disabled")
-        if self._mic_img_rec:
-            self.btn_mic.configure(image=self._mic_img_rec)
-        else:
-            self.btn_mic.configure(text="🔴")
+    def _toggle_listening(self) -> None:
+        if self.is_recording:
+            # Se sta già registrando, un secondo clic interrompe e trascrive subito l'audio
+            if self.transcriber:
+                self.transcriber.stop()
+            self.status_var.set("Elaborazione e trascrizione in corso...")
+            self.btn_mic.configure(image=self._mic_img)
+            return
+
+        # Avvio nuova registrazione vocale
+        self.is_recording = True
+        self.btn_mic.configure(image=self._mic_img_rec)
         self.status_var.set("Inizializzazione microfono...")
 
-        from ..speech_helper import transcribe_from_microphone
-        transcribe_from_microphone(
+        self.transcriber = SpeechTranscriber()
+        self.transcriber.start(
             on_result=self._on_speech_result,
             on_error=self._on_speech_error,
-            on_listening=self._on_listening
+            on_listening=self._on_listening,
+            max_duration=20
         )
 
     def _on_listening(self) -> None:
         def update_ui():
-            self.status_var.set("Microfono attivo: parla ora...")
+            self.status_var.set("Microfono attivo: parla ora... (clicca di nuovo per terminare)")
         self.after(0, update_ui)
 
     def _on_speech_result(self, text: str) -> None:
         def update_ui():
-            self.btn_mic.configure(state="normal")
-            if self._mic_img:
-                self.btn_mic.configure(image=self._mic_img)
-            else:
-                self.btn_mic.configure(text="🎙️")
-            self.status_var.set("Trascrizione vocale completata con successo!")
+            self.is_recording = False
+            self.btn_mic.configure(image=self._mic_img)
+            self.status_var.set("Trascrizione completata!")
             current = self.prompt_text.get("1.0", "end").strip()
             if current:
                 self.prompt_text.insert("end", " " + text)
@@ -273,11 +260,8 @@ class AIDialog(ctk.CTkToplevel):
 
     def _on_speech_error(self, error_msg: str) -> None:
         def update_ui():
-            self.btn_mic.configure(state="normal")
-            if self._mic_img:
-                self.btn_mic.configure(image=self._mic_img)
-            else:
-                self.btn_mic.configure(text="🎙️")
+            self.is_recording = False
+            self.btn_mic.configure(image=self._mic_img)
             self.status_var.set("Errore microfono.")
             messagebox.showerror("Errore Microfono", error_msg, parent=self)
         self.after(0, update_ui)
