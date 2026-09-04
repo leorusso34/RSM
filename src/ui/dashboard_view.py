@@ -191,10 +191,7 @@ class DashboardView(ctk.CTkFrame):
         # Lista scorrevole con card per ciascun grafico
         scroll_frame = ctk.CTkScrollableFrame(
             outer,
-            fg_color=c["bg_input"],
-            corner_radius=10,
-            border_width=1,
-            border_color=c["border"],
+            fg_color="transparent",
         )
         scroll_frame.pack(fill="both", expand=True, pady=(0, 16))
 
