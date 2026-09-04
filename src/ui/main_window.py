@@ -144,13 +144,28 @@ class InventoryApp(ctk.CTk):
         except Exception:
             pass
 
+        # Icona per pulsante AI
+        self._ai_btn_img = None
+        try:
+            ai_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "ai_icon.png"
+            if not ai_path.exists():
+                ai_path = PROJECT_DIR / "assets" / "ai_icon.png"
+            if ai_path.exists():
+                ai_pil = Image.open(ai_path).convert("RGBA")
+                self._ai_btn_img = ctk.CTkImage(light_image=ai_pil, dark_image=ai_pil, size=(18, 18))
+        except Exception:
+            pass
+
         actions = ctk.CTkFrame(header, fg_color="transparent")
         actions.pack(side="right", padx=16, pady=12)
         ctk.CTkButton(actions, text="Importa Excel", command=self.import_excel, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=3)
         ctk.CTkButton(actions, text="Esporta CSV", command=self.export_csv, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=3)
         ctk.CTkButton(actions, text="Backup DB Sicuro", command=self.backup_database, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=3)
         ctk.CTkButton(actions, text="Sincronizza Email", command=self.open_email_sync).pack(side="left", padx=(8, 0))
-        ctk.CTkButton(actions, text="✨ AI", width=60, command=self.open_ai_insert).pack(side="left", padx=(4, 0))
+        if self._ai_btn_img:
+            ctk.CTkButton(actions, text="", image=self._ai_btn_img, width=42, command=self.open_ai_insert).pack(side="left", padx=(4, 0))
+        else:
+            ctk.CTkButton(actions, text="AI", width=60, command=self.open_ai_insert).pack(side="left", padx=(4, 0))
         ctk.CTkButton(actions, text="+ Nuovo Prodotto", command=self.add_product).pack(side="left", padx=(4, 0))
 
         # 2. KPI Cards

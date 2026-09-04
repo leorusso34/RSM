@@ -53,6 +53,18 @@ class AIDialog(ctk.CTkToplevel):
         red_pil.putalpha(a)
         self._mic_img_rec = ctk.CTkImage(light_image=red_pil, dark_image=red_pil, size=(target_w, target_h))
 
+        # Carica icona AI per header
+        ai_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "ai_icon.png"
+        if not ai_path.exists():
+            ai_path = PROJECT_DIR / "assets" / "ai_icon.png"
+        self._ai_header_img = None
+        if ai_path.exists():
+            try:
+                ai_pil = Image.open(ai_path).convert("RGBA")
+                self._ai_header_img = ctk.CTkImage(light_image=ai_pil, dark_image=ai_pil, size=(22, 22))
+            except Exception:
+                pass
+
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -63,7 +75,13 @@ class AIDialog(ctk.CTkToplevel):
         # Header
         header = ctk.CTkFrame(container, fg_color="transparent")
         header.pack(fill="x", pady=(0, 14))
-        ctk.CTkLabel(header, text="✨ Inserimento Rapido AI", font=("Segoe UI", 18, "bold")).pack(anchor="w")
+
+        title_box = ctk.CTkFrame(header, fg_color="transparent")
+        title_box.pack(anchor="w")
+        if self._ai_header_img:
+            ctk.CTkLabel(title_box, text="", image=self._ai_header_img).pack(side="left", padx=(0, 8))
+        ctk.CTkLabel(title_box, text="Inserimento Rapido", font=("Segoe UI", 18, "bold")).pack(side="left")
+
         ctk.CTkLabel(
             header,
             text="Descrivi i prodotti a voce o per testo: Gemini estrarrà automaticamente tutti i dati.",
@@ -138,7 +156,7 @@ class AIDialog(ctk.CTkToplevel):
 
         self.btn_generate = ctk.CTkButton(
             bottom_bar,
-            text="✨ Analizza e Crea",
+            text="Analizza e Crea",
             command=self._generate,
             font=("Segoe UI", 12, "bold"),
             width=150,
