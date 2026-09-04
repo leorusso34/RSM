@@ -1,13 +1,60 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Modulo per il riconoscimento vocale tramite Google Speech API.
+Modulo per il riconoscimento vocale tramite Google Speech API e Google Gemini.
 Usa sounddevice per la cattura dell'audio e permette l'interruzione immediata al riclic del microfono.
 """
 
 import io
 import threading
 from typing import Callable, Optional
+
+
+def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> Optional[str]:
+    """Tenta la trascrizione fedele dell'audio tramite l'API Gemini."""
+    import base64
+    import json
+    import http.client
+
+    try:
+        b64_audio = base64.b64encode(wav_bytes).decode("utf-8")
+        host = "generativelanguage.googleapis.com"
+        path = f"/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
+
+        payload = {
+            "contents": [{
+                "parts": [
+                    {
+                        "inlineData": {
+                            "mimeType": "audio/wav",
+                            "data": b64_audio
+                        }
+                    },
+                    {
+                        "text": "Trascrivi esattamente e fedelmente le parole pronunciate in questo audio in lingua italiana. Restituisci SOLO ed esclusivamente il testo trascritto, senza virgolette, senza markdown e senza commenti."
+                    }
+                ]
+            }],
+            "generationConfig": {
+                "temperature": 0.0
+            }
+        }
+
+        conn = http.client.HTTPSConnection(host, timeout=15)
+        try:
+            conn.request("POST", path, body=json.dumps(payload), headers={"Content-Type": "application/json"})
+            resp = conn.getresponse()
+            if resp.status == 200:
+                result = json.loads(resp.read().decode("utf-8"))
+                if "candidates" in result and result["candidates"]:
+                    text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    if text:
+                        return text
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    return None
 
 
 class SpeechTranscriber:
@@ -27,7 +74,8 @@ class SpeechTranscriber:
         on_result: Callable[[str], None],
         on_error: Callable[[str], None],
         on_listening: Callable[[], None],
-        max_duration: int = 15,
+        api_key: str = "",
+        max_duration: int = 20,
         language: str = "it-IT"
     ) -> None:
         """Avvia la registrazione in background."""
@@ -45,7 +93,7 @@ class SpeechTranscriber:
                 import speech_recognition as sr
             except ImportError as e:
                 self._is_recording = False
-                on_error(f"Dipendenza mancante: {e}\nEsegui: pip install sounddevice scipy SpeechRecognition")
+                on_error(f"Dipendenza mancante: {e}")
                 return
 
             frames = []
@@ -77,9 +125,17 @@ class SpeechTranscriber:
                 # Converti in WAV in memoria
                 wav_buffer = io.BytesIO()
                 wav_io.write(wav_buffer, sample_rate, audio_data)
-                wav_buffer.seek(0)
+                wav_bytes = wav_buffer.getvalue()
 
-                # Riconoscimento vocale
+                # 1. Prova prima con Gemini se la chiave API è configurata
+                if api_key:
+                    gemini_text = _transcribe_with_gemini(wav_bytes, api_key)
+                    if gemini_text:
+                        on_result(gemini_text)
+                        return
+
+                # 2. Fallback su Google Speech Recognition
+                wav_buffer.seek(0)
                 recognizer = sr.Recognizer()
                 audio = sr.AudioData(wav_buffer.read(), sample_rate, 2)
                 text = recognizer.recognize_google(audio, language=language)
@@ -89,14 +145,14 @@ class SpeechTranscriber:
                 self._is_recording = False
                 name = type(e).__name__
                 msg = str(e)
-                if "UnknownValueError" in name or "Could not understand" in msg:
-                    on_error("Non ho capito. Parla più chiaramente e riprova.")
-                elif "RequestError" in name:
-                    on_error(f"Errore connessione Google Speech: {msg}")
+                if "11001" in msg or "getaddrinfo" in msg or "connection failed" in msg.lower() or "RequestError" in name:
+                    on_error("Connessione internet non disponibile per il riconoscimento vocale. Puoi scrivere direttamente nel testo.")
+                elif "UnknownValueError" in name or "Could not understand" in msg:
+                    on_error("Nessun parlato chiaro rilevato. Riprova parlando più vicino al microfono.")
                 elif "Invalid" in msg or "device" in msg.lower():
-                    on_error("Microfono non trovato o non accessibile.")
+                    on_error("Dispositivo microfono non rilevato o non accessibile.")
                 else:
-                    on_error(f"Errore: {msg}")
+                    on_error(f"Impossibile completare la trascrizione: {msg}")
 
         self._thread = threading.Thread(target=_run, daemon=True)
         self._thread.start()
@@ -111,9 +167,10 @@ def transcribe_from_microphone(
     on_result: Callable[[str], None],
     on_error: Callable[[str], None],
     on_listening: Callable[[], None],
+    api_key: str = "",
     language: str = "it-IT"
 ) -> SpeechTranscriber:
     """Helper per avviare la trascrizione vocale restituendo l'istanza controllabile."""
     transcriber = SpeechTranscriber()
-    transcriber.start(on_result, on_error, on_listening, language=language)
+    transcriber.start(on_result, on_error, on_listening, api_key=api_key, language=language)
     return transcriber

@@ -233,11 +233,13 @@ class AIDialog(ctk.CTkToplevel):
         self.btn_mic.configure(image=self._mic_img_rec)
         self.status_var.set("Inizializzazione microfono...")
 
+        api_key = self.api_key_var.get().strip()
         self.transcriber = SpeechTranscriber()
         self.transcriber.start(
             on_result=self._on_speech_result,
             on_error=self._on_speech_error,
             on_listening=self._on_listening,
+            api_key=api_key,
             max_duration=20
         )
 
@@ -250,7 +252,7 @@ class AIDialog(ctk.CTkToplevel):
         def update_ui():
             self.is_recording = False
             self.btn_mic.configure(image=self._mic_img)
-            self.status_var.set("Trascrizione completata!")
+            self.status_var.set("Trascrizione vocale completata con successo!")
             current = self.prompt_text.get("1.0", "end").strip()
             if current:
                 self.prompt_text.insert("end", " " + text)
@@ -262,6 +264,5 @@ class AIDialog(ctk.CTkToplevel):
         def update_ui():
             self.is_recording = False
             self.btn_mic.configure(image=self._mic_img)
-            self.status_var.set("Errore microfono.")
-            messagebox.showerror("Errore Microfono", error_msg, parent=self)
+            self.status_var.set(f"⚠️ {error_msg}")
         self.after(0, update_ui)
