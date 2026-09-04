@@ -1,45 +1,56 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Script per la build dell'eseguibile Windows tramite PyInstaller."""
+"""Script per la build dell'eseguibile Windows tramite PyInstaller per RSM."""
 
+import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-def main():
+
+def main() -> None:
     print("Preparazione per la build di RSM...")
-    
+
     # Assicurati che PyInstaller sia installato
     try:
         import PyInstaller
     except ImportError:
         print("Installazione di PyInstaller in corso...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
-        
+
     project_root = Path(__file__).resolve().parent
     main_script = project_root / "russo_stock_manager.py"
-    
+
     if not main_script.exists():
         print(f"Errore: {main_script} non trovato.")
         sys.exit(1)
-        
-    import shutil
-    source_data = project_root / "data"
-    dist_dir = project_root / "dist" / "RSM"
+
+    dist_root = project_root / "dist"
+    build_root = project_root / "build"
+    dist_dir = dist_root / "RSM"
     dist_data = dist_dir / "data"
-    old_dist_data = project_root / "dist" / "Russo Stock Manager" / "data"
+    old_dist_dir = dist_root / "Russo Stock Manager"
+    old_dist_data = old_dist_dir / "data"
     backup_data = project_root / "data_backup_temp"
-    
-    # 1. Salvataggio del database di produzione (se esiste in dist o nella vecchia cartella) prima della build
+
+    # 1. Salvataggio sicuro del database di produzione prima della nuova compilazione
     target_existing_data = dist_data if dist_data.exists() else (old_dist_data if old_dist_data.exists() else None)
     if target_existing_data and target_existing_data.exists():
         print("Salvataggio del database attuale in corso...")
         if backup_data.exists():
             shutil.rmtree(backup_data)
         shutil.copytree(target_existing_data, backup_data)
-        
-    # Costruisci il comando PyInstaller
+
+    # Rimuovi la vecchia cartella legacy se ancora presente
+    if old_dist_dir.exists():
+        shutil.rmtree(old_dist_dir, ignore_errors=True)
+    old_build_dir = build_root / "Russo Stock Manager"
+    if old_build_dir.exists():
+        shutil.rmtree(old_build_dir, ignore_errors=True)
+
+    # Costruisci il comando PyInstaller con tutte le inclusioni per CustomTkinter
     cmd = [
         sys.executable,
         "-m", "PyInstaller",
@@ -50,29 +61,33 @@ def main():
         "--clean",
         "--icon=assets/app_icon.ico",
         "--add-data=assets;assets",
+        "--hidden-import=customtkinter",
+        "--hidden-import=darkdetect",
+        "--hidden-import=PIL",
         "--collect-all=customtkinter",
+        "--copy-metadata=customtkinter",
         str(main_script)
     ]
-    
+
     print(f"Esecuzione comando: {' '.join(cmd)}")
     subprocess.check_call(cmd, cwd=project_root)
-    
-    # 2. Ripristino o copia iniziale
+
+    # 2. Ripristino del database di produzione in dist/RSM/data
     if not dist_data.exists():
         dist_data.mkdir(parents=True, exist_ok=True)
-        
+
+    source_data = project_root / "data"
     if backup_data.exists():
-        print("Ripristino del database di produzione in dist...")
-        shutil.rmtree(dist_data)
+        print("Ripristino del database di produzione in dist/RSM/data...")
+        shutil.rmtree(dist_data, ignore_errors=True)
         shutil.copytree(backup_data, dist_data)
-        shutil.rmtree(backup_data)
+        shutil.rmtree(backup_data, ignore_errors=True)
     elif source_data.exists():
-        print("Cartella 'data' iniziale copiata con successo nella build.")
+        print("Copia del database iniziale in dist/RSM/data...")
         shutil.rmtree(dist_data, ignore_errors=True)
         shutil.copytree(source_data, dist_data)
-    
-    # 3. Copia o creazione di config.json nella cartella dist
-    import json
+
+    # 3. Copia o creazione di config.json in dist/RSM/config.json
     dist_config = dist_dir / "config.json"
     source_config = project_root / "config.json"
     if source_config.exists():
@@ -80,8 +95,15 @@ def main():
     elif not dist_config.exists():
         with open(dist_config, "w", encoding="utf-8") as f:
             json.dump({"gemini_api_key": "", "email_sync_address": "", "email_sync_app_password": ""}, f, indent=2)
-    
-    print("Build completata con successo! Troverai l'eseguibile nella cartella 'dist/RSM/'.")
+
+    # Pulizia finale cartella legacy se ricreata
+    if old_dist_dir.exists():
+        shutil.rmtree(old_dist_dir, ignore_errors=True)
+
+    print("\nBuild completata con successo!")
+    print("Cartella di rilascio: 'dist/RSM/'")
+    print("Eseguibile: 'dist/RSM/RSM.exe'")
+
 
 if __name__ == "__main__":
     main()

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """RSM - Entry point di avvio."""
 
+import customtkinter as ctk
 from src.main import main
 
 if __name__ == "__main__":
