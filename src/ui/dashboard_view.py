@@ -147,17 +147,26 @@ class DashboardView(ctk.CTkFrame):
 
     def _open_layout_settings(self):
         import json
-        top = ctk.CTkToplevel(self, fg_color=DARK_THEME["bg_main"])
+        c = DARK_THEME
+        top = ctk.CTkToplevel(self, fg_color=c["bg_main"])
         top.title("Personalizza Dashboard")
-        center_window(top, 400, 420)
+        center_window(top, 480, 460)
+        top.minsize(420, 380)
         top.transient(self.winfo_toplevel())
         top.grab_set()
         apply_dark_titlebar(top)
 
-        ctk.CTkLabel(top, text="Seleziona e riordina i grafici da visualizzare.", font=("Segoe UI", 10)).pack(pady=10)
+        outer = ctk.CTkFrame(top, fg_color="transparent")
+        outer.pack(fill="both", expand=True, padx=22, pady=20)
 
-        list_frame = tk.Frame(top, bg=DARK_THEME["bg_card"])
-        list_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        # Header
+        ctk.CTkLabel(outer, text="Personalizza Dashboard", font=("Segoe UI", 16, "bold")).pack(anchor="w")
+        ctk.CTkLabel(
+            outer,
+            text="Attiva o disattiva i grafici e usa le frecce per riordinarli.",
+            font=("Segoe UI", 12),
+            text_color=c["fg_muted"],
+        ).pack(anchor="w", pady=(2, 14))
 
         layout_str = self.db.get_setting("dashboard_layout", '["monthly", "dist"]')
         try:
@@ -166,74 +175,121 @@ class DashboardView(ctk.CTkFrame):
             current_layout = ["monthly", "dist"]
 
         all_charts = {
-            "monthly": "Grafico: Andamento Profitto Mensile",
-            "dist": "Grafico: Ripartizione Inventario"
+            "monthly": "Andamento Profitto Mensile",
+            "dist": "Ripartizione Inventario (Pezzi)",
         }
 
         self._temp_layout = current_layout.copy()
-        for c in all_charts:
-            if c not in self._temp_layout:
-                self._temp_layout.append(c)
+        for ch in all_charts:
+            if ch not in self._temp_layout:
+                self._temp_layout.append(ch)
 
         self._chart_vars = {}
-        for c in all_charts:
-            var = tk.BooleanVar(value=(c in current_layout))
-            self._chart_vars[c] = var
+        for ch in all_charts:
+            self._chart_vars[ch] = tk.BooleanVar(value=(ch in current_layout))
 
-        listbox = tk.Listbox(list_frame, bg=DARK_THEME["bg_card"], fg=DARK_THEME["fg_main"], selectbackground=DARK_THEME["accent"], font=("Segoe UI", 10), bd=0, highlightthickness=0)
-        listbox.pack(side="left", fill="both", expand=True)
+        # Lista scorrevole con card per ciascun grafico
+        scroll_frame = ctk.CTkScrollableFrame(
+            outer,
+            fg_color=c["bg_input"],
+            corner_radius=10,
+            border_width=1,
+            border_color=c["border"],
+        )
+        scroll_frame.pack(fill="both", expand=True, pady=(0, 16))
 
-        for c in self._temp_layout:
-            prefix = "☑  " if self._chart_vars[c].get() else "☐  "
-            listbox.insert(tk.END, prefix + all_charts[c])
+        def move_item(index: int, direction: int):
+            new_idx = index + direction
+            if 0 <= new_idx < len(self._temp_layout):
+                self._temp_layout[index], self._temp_layout[new_idx] = (
+                    self._temp_layout[new_idx],
+                    self._temp_layout[index],
+                )
+                render_items()
 
-        def toggle_item(event):
-            idx = listbox.curselection()
-            if not idx: return
-            idx = idx[0]
-            cid = self._temp_layout[idx]
-            self._chart_vars[cid].set(not self._chart_vars[cid].get())
-            prefix = "☑  " if self._chart_vars[cid].get() else "☐  "
-            listbox.delete(idx)
-            listbox.insert(idx, prefix + all_charts[cid])
-            listbox.selection_set(idx)
+        def render_items():
+            for w in scroll_frame.winfo_children():
+                w.destroy()
 
-        listbox.bind("<Double-Button-1>", toggle_item)
+            for idx, cid in enumerate(self._temp_layout):
+                card = ctk.CTkFrame(
+                    scroll_frame,
+                    fg_color=c["bg_card"],
+                    corner_radius=8,
+                    border_width=1,
+                    border_color=c["border"],
+                )
+                card.pack(fill="x", pady=4, padx=4)
 
-        btn_frame = ctk.CTkFrame(top, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=20, pady=(0, 10))
+                # Switch moderno con label
+                switch = ctk.CTkSwitch(
+                    card,
+                    text=all_charts.get(cid, cid),
+                    variable=self._chart_vars[cid],
+                    font=("Segoe UI", 12, "bold"),
+                    text_color=c["fg_main"],
+                    progress_color=c["accent"],
+                )
+                switch.pack(side="left", padx=12, pady=10)
 
-        def move_up():
-            idx = listbox.curselection()
-            if not idx or idx[0] == 0: return
-            idx = idx[0]
-            self._temp_layout[idx-1], self._temp_layout[idx] = self._temp_layout[idx], self._temp_layout[idx-1]
-            val = listbox.get(idx)
-            listbox.delete(idx)
-            listbox.insert(idx-1, val)
-            listbox.selection_set(idx-1)
+                # Pulsanti freccia per riordinamento
+                btn_box = ctk.CTkFrame(card, fg_color="transparent")
+                btn_box.pack(side="right", padx=10, pady=6)
 
-        def move_down():
-            idx = listbox.curselection()
-            if not idx or idx[0] == len(self._temp_layout)-1: return
-            idx = idx[0]
-            self._temp_layout[idx+1], self._temp_layout[idx] = self._temp_layout[idx], self._temp_layout[idx+1]
-            val = listbox.get(idx)
-            listbox.delete(idx)
-            listbox.insert(idx+1, val)
-            listbox.selection_set(idx+1)
+                btn_up = ctk.CTkButton(
+                    btn_box,
+                    text="▲",
+                    width=32,
+                    height=28,
+                    font=("Segoe UI", 10),
+                    fg_color="#374151",
+                    hover_color="#4b5563",
+                    state="normal" if idx > 0 else "disabled",
+                    command=lambda i=idx: move_item(i, -1),
+                )
+                btn_up.pack(side="left", padx=(0, 4))
 
-        ctk.CTkButton(btn_frame, text="Spunta/Nascondi", command=lambda: toggle_item(None), fg_color="#374151", hover_color="#4b5563").pack(side="left", fill="x", expand=True, padx=(0, 5))
-        ctk.CTkButton(btn_frame, text="▲", command=move_up, width=60, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=5)
-        ctk.CTkButton(btn_frame, text="▼", command=move_down, width=60, fg_color="#374151", hover_color="#4b5563").pack(side="left", padx=(5, 0))
+                btn_down = ctk.CTkButton(
+                    btn_box,
+                    text="▼",
+                    width=32,
+                    height=28,
+                    font=("Segoe UI", 10),
+                    fg_color="#374151",
+                    hover_color="#4b5563",
+                    state="normal" if idx < len(self._temp_layout) - 1 else "disabled",
+                    command=lambda i=idx: move_item(i, 1),
+                )
+                btn_down.pack(side="left")
+
+        render_items()
+
+        # Bottoni inferiori
+        bottom_box = ctk.CTkFrame(outer, fg_color="transparent")
+        bottom_box.pack(fill="x")
 
         def save():
-            final_layout = [c for c in self._temp_layout if self._chart_vars[c].get()]
+            final_layout = [ch for ch in self._temp_layout if self._chart_vars[ch].get()]
             self.db.set_setting("dashboard_layout", json.dumps(final_layout))
             self._apply_layout()
             top.destroy()
 
-        ctk.CTkButton(top, text="Salva Layout", command=save).pack(pady=10)
+        ctk.CTkButton(
+            bottom_box,
+            text="Annulla",
+            command=top.destroy,
+            fg_color="#374151",
+            hover_color="#4b5563",
+            width=90,
+        ).pack(side="left")
+
+        ctk.CTkButton(
+            bottom_box,
+            text="Salva Layout",
+            command=save,
+            font=("Segoe UI", 12, "bold"),
+            width=130,
+        ).pack(side="right")
 
     def refresh(self) -> None:
         """Aggiorna i dati KPI e ridisegna i grafici."""
