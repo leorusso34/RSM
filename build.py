@@ -34,14 +34,19 @@ def main() -> None:
     old_dist_dir = dist_root / "Russo Stock Manager"
     old_dist_data = old_dist_dir / "data"
     backup_data = project_root / "data_backup_temp"
+    backup_config = project_root / "config_backup_temp.json"
+    dist_config = dist_dir / "config.json"
 
-    # 1. Salvataggio sicuro del database di produzione prima della nuova compilazione
+    # 1. Salvataggio sicuro di database e config.json prima della ricompilazione
     target_existing_data = dist_data if dist_data.exists() else (old_dist_data if old_dist_data.exists() else None)
     if target_existing_data and target_existing_data.exists():
         print("Salvataggio del database attuale in corso...")
         if backup_data.exists():
             shutil.rmtree(backup_data)
         shutil.copytree(target_existing_data, backup_data)
+
+    if dist_config.exists():
+        shutil.copy(dist_config, backup_config)
 
     # Rimuovi la vecchia cartella legacy se ancora presente
     if old_dist_dir.exists():
@@ -87,10 +92,12 @@ def main() -> None:
         shutil.rmtree(dist_data, ignore_errors=True)
         shutil.copytree(source_data, dist_data)
 
-    # 3. Copia o creazione di config.json in dist/RSM/config.json
-    dist_config = dist_dir / "config.json"
+    # 3. Ripristino o creazione di config.json in dist/RSM/config.json
     source_config = project_root / "config.json"
-    if source_config.exists():
+    if backup_config.exists():
+        shutil.copy(backup_config, dist_config)
+        backup_config.unlink(missing_ok=True)
+    elif source_config.exists():
         shutil.copy(source_config, dist_config)
     elif not dist_config.exists():
         with open(dist_config, "w", encoding="utf-8") as f:
