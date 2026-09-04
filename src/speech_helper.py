@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Modulo per il riconoscimento vocale tramite Google Speech API e Google Gemini.
-Usa sounddevice per la cattura dell'audio e permette l'interruzione immediata al riclic del microfono.
+Modulo ottimizzato per il riconoscimento vocale rapido tramite Gemini 3.1 Flash Lite e Google Speech API.
+Usa sounddevice per la cattura a 16kHz Mono e supporta interruzione istantanea e trimming del silenzio.
 """
 
 import io
@@ -11,7 +11,7 @@ from typing import Callable, Optional
 
 
 def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> Optional[str]:
-    """Tenta la trascrizione fedele dell'audio tramite l'API Gemini."""
+    """Tenta la trascrizione fedele e veloce dell'audio tramite l'API Gemini 3.1 Flash Lite."""
     import base64
     import json
     import http.client
@@ -31,18 +31,22 @@ def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> Optional[str]:
                         }
                     },
                     {
-                        "text": "Trascrivi esattamente e fedelmente le parole pronunciate in questo audio in lingua italiana. Restituisci SOLO ed esclusivamente il testo trascritto, senza virgolette, senza markdown e senza commenti."
+                        "text": "Trascrivi l'audio in testo italiano. Restituisci SOLO le parole pronunciate, senza spiegazioni."
                     }
                 ]
             }],
             "generationConfig": {
-                "temperature": 0.0
+                "temperature": 0.0,
+                "maxOutputTokens": 250
             }
         }
 
-        conn = http.client.HTTPSConnection(host, timeout=15)
+        data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+
+        conn = http.client.HTTPSConnection(host, timeout=10)
         try:
-            conn.request("POST", path, body=json.dumps(payload), headers={"Content-Type": "application/json"})
+            conn.request("POST", path, body=data, headers=headers)
             resp = conn.getresponse()
             if resp.status == 200:
                 result = json.loads(resp.read().decode("utf-8"))
@@ -122,12 +126,22 @@ class SpeechTranscriber:
 
                 audio_data = np.concatenate(frames, axis=0)
 
+                # Trimming intelligente del silenzio iniziale e finale per velocizzare il caricamento
+                if len(audio_data) > 0:
+                    abs_data = np.abs(audio_data.flatten())
+                    indices = np.where(abs_data > 400)[0]
+                    if len(indices) > 0:
+                        pad = int(0.15 * sample_rate)
+                        start_idx = max(0, indices[0] - pad)
+                        end_idx = min(len(audio_data), indices[-1] + pad)
+                        audio_data = audio_data[start_idx:end_idx]
+
                 # Converti in WAV in memoria
                 wav_buffer = io.BytesIO()
                 wav_io.write(wav_buffer, sample_rate, audio_data)
                 wav_bytes = wav_buffer.getvalue()
 
-                # 1. Prova prima con Gemini se la chiave API è configurata
+                # 1. Prova prima con Gemini 3.1 Flash Lite
                 if api_key:
                     gemini_text = _transcribe_with_gemini(wav_bytes, api_key)
                     if gemini_text:
