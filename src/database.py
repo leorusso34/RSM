@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Gestione database SQLite e migrazioni per Russo Stock Manager."""
+"""Gestione database SQLite e migrazioni per RSM."""
 
 import json
 import os

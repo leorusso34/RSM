@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Utility di formattazione, calcolo e I/O per Russo Stock Manager."""
+"""Utility di formattazione, calcolo e I/O per RSM."""
 
 import csv
 import re

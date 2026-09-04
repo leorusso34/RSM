@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Russo Stock Manager - Entry point di avvio."""
+"""RSM - Entry point di avvio."""
 
 from src.main import main
 

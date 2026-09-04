@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Finestre di dialogo per Russo Stock Manager."""
+"""Finestre di dialogo per RSM."""
 
 import sqlite3
 import tkinter as tk
@@ -100,7 +100,7 @@ class ProductDialog(ctk.CTkToplevel):
         self._field_entry(form, "TAGLIA", "size", 1, 0)
         self._field_entry(form, "QUANTITA *", "quantity", 1, 1)
 
-        self._field_entry(form, "PREZZO ACQUISTO (euro) *", "purchased_price", 2, 0)
+        self._field_entry(form, "PREZZO ACQUISTO (€)", "purchased_price", 2, 0)
         self._field_combo(form, "LUOGO ACQUISTO", "purchased_place", self.purchased_places, 2, 1)
 
         # Selling place con ingranaggio
@@ -117,7 +117,7 @@ class ProductDialog(ctk.CTkToplevel):
         self.selling_place_combo = ctk.CTkComboBox(form, variable=self.vars["selling_place"], values=self.selling_places, font=("Segoe UI", 12))
         self.selling_place_combo.grid(row=7, column=0, sticky="ew", padx=(0, 6))
 
-        self._field_entry(form, "PREZZO VENDITA (euro)", "selling_price", 3, 1)
+        self._field_entry(form, "PREZZO VENDITA (€)", "selling_price", 3, 1)
 
         # Stato
         self.lbl_status_lbl = ctk.CTkLabel(form, text="STATO PRODOTTO *", font=("Segoe UI", 11, "bold"))
@@ -133,7 +133,7 @@ class ProductDialog(ctk.CTkToplevel):
         status_box.grid(row=9, column=0, columnspan=2, sticky="ew")
 
         # Commissioni e data vendita
-        self.lbl_fees = ctk.CTkLabel(form, text="COMMISSIONI / SPESE (euro)", font=("Segoe UI", 11, "bold"))
+        self.lbl_fees = ctk.CTkLabel(form, text="COMMISSIONI / SPESE (€)", font=("Segoe UI", 11, "bold"))
         self.lbl_fees.grid(row=10, column=0, sticky="w", pady=(10, 4))
         self.entry_fees = ctk.CTkEntry(form, textvariable=self.vars["fees"], font=("Segoe UI", 12))
         self.entry_fees.grid(row=11, column=0, sticky="ew", padx=(0, 6))
@@ -324,12 +324,12 @@ class BulkStatusDialog(ctk.CTkToplevel):
             form = ctk.CTkFrame(outer, fg_color="transparent")
             form.pack(fill="x", pady=6)
 
-            ctk.CTkLabel(form, text="Prezzo vendita TOTALE (euro):", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+            ctk.CTkLabel(form, text="Prezzo vendita TOTALE (€):", font=("Segoe UI", 11, "bold")).pack(anchor="w")
             ent_price = ctk.CTkEntry(form, textvariable=self.var_sold_price, font=("Segoe UI", 12))
             ent_price.pack(fill="x", pady=(2, 10))
             ent_price.focus_set()
 
-            ctk.CTkLabel(form, text="Commissioni/Spese TOTALI (euro):", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+            ctk.CTkLabel(form, text="Commissioni/Spese TOTALI (€):", font=("Segoe UI", 11, "bold")).pack(anchor="w")
             ctk.CTkEntry(form, textvariable=self.var_fees, font=("Segoe UI", 12)).pack(fill="x", pady=(2, 10))
 
             ctk.CTkLabel(form, text="Data di vendita (AAAA-MM-GG):", font=("Segoe UI", 11, "bold")).pack(anchor="w")

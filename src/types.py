@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Definizioni dei tipi per Russo Stock Manager."""
+"""Definizioni dei tipi per RSM."""
 
 from typing import TypedDict, Optional
 from decimal import Decimal

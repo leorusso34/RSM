@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Configurazione e costanti per Russo Stock Manager."""
+"""Configurazione e costanti per RSM."""
 
 import sys
 from pathlib import Path
 
-APP_NAME = "Russo Stock Manager"
+APP_NAME = "RSM"
 APP_VERSION = "2.0.0"
 
 # Stati prodotti

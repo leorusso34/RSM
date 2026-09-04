@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Vista Dashboard e Grafici Statistici per Russo Stock Manager."""
+"""Vista Dashboard e Grafici Statistici per RSM."""
 
 import tkinter as tk
 from decimal import Decimal

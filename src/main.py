@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Entry point principale per Russo Stock Manager."""
+"""Entry point principale per RSM."""
 
 import sqlite3
 import tkinter as tk

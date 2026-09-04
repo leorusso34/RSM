@@ -1,4 +1,4 @@
-# Russo Stock Manager
+# RSM
 
 Applicazione desktop moderna in **CustomTkinter** per la gestione di inventario, pre-ordini, vendite attive e storiche, con cruscotto KPI, grafici statistici e inserimento intelligente con AI (testuale e vocale).
 
@@ -57,7 +57,7 @@ Per compilare l'applicazione in una cartella autonoma per Windows (senza bisogno
 python build.py
 ```
 
-L'eseguibile completo e pronto all'uso verrà generato nella cartella `dist/Russo Stock Manager/`.
+L'eseguibile completo e pronto all'uso verrà generato nella cartella `dist/RSM/`.
 
 ---
 

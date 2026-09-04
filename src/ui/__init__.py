@@ -1,1 +1,1 @@
-"""Modulo UI per Russo Stock Manager."""
+"""Modulo UI per RSM."""

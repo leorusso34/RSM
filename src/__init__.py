@@ -1,1 +1,1 @@
-"""Codice sorgente di Russo Stock Manager."""
+"""Codice sorgente di RSM."""

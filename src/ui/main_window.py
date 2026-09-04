@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Finestra principale dell'applicazione InventoryApp per Russo Stock Manager."""
+"""Finestra principale dell'applicazione InventoryApp per RSM."""
 
 import tkinter as tk
 from datetime import datetime
@@ -21,7 +21,7 @@ from ..utils import export_to_csv, money, parse_excel_file, parse_money, calcula
 
 
 class InventoryApp(ctk.CTk):
-    """Finestra principale dell'applicazione di gestione inventario Russo Stock Manager."""
+    """Finestra principale dell'applicazione di gestione inventario RSM."""
 
     COLUMNS = (
         "name", "size", "quantity", "purchased_price", "purchased_place",

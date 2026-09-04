@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 def main():
-    print("Preparazione per la build di Russo Stock Manager...")
+    print("Preparazione per la build di RSM...")
     
     # Assicurati che PyInstaller sia installato
     try:
@@ -26,16 +26,18 @@ def main():
         
     import shutil
     source_data = project_root / "data"
-    dist_dir = project_root / "dist" / "Russo Stock Manager"
+    dist_dir = project_root / "dist" / "RSM"
     dist_data = dist_dir / "data"
+    old_dist_data = project_root / "dist" / "Russo Stock Manager" / "data"
     backup_data = project_root / "data_backup_temp"
     
-    # 1. Salvataggio del database di produzione (se esiste in dist) prima della build
-    if dist_data.exists():
+    # 1. Salvataggio del database di produzione (se esiste in dist o nella vecchia cartella) prima della build
+    target_existing_data = dist_data if dist_data.exists() else (old_dist_data if old_dist_data.exists() else None)
+    if target_existing_data and target_existing_data.exists():
         print("Salvataggio del database attuale in corso...")
         if backup_data.exists():
             shutil.rmtree(backup_data)
-        shutil.copytree(dist_data, backup_data)
+        shutil.copytree(target_existing_data, backup_data)
         
     # Costruisci il comando PyInstaller
     cmd = [
@@ -44,7 +46,7 @@ def main():
         "--noconfirm",
         "--onedir",
         "--windowed",
-        "--name=Russo Stock Manager",
+        "--name=RSM",
         "--clean",
         "--icon=assets/app_icon.ico",
         "--add-data=assets;assets",
@@ -79,7 +81,7 @@ def main():
         with open(dist_config, "w", encoding="utf-8") as f:
             json.dump({"gemini_api_key": "", "email_sync_address": "", "email_sync_app_password": ""}, f, indent=2)
     
-    print("Build completata con successo! Troverai l'eseguibile nella cartella 'dist/Russo Stock Manager/'.")
+    print("Build completata con successo! Troverai l'eseguibile nella cartella 'dist/RSM/'.")
 
 if __name__ == "__main__":
     main()
