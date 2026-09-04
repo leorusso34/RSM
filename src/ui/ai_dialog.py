@@ -43,13 +43,15 @@ class AIDialog(ctk.CTkToplevel):
             mic_path = PROJECT_DIR / "assets" / "mic_icon.png"
 
         pil_img = Image.open(mic_path).convert("RGBA")
-        self._mic_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(10, 26))
+        target_h = 22
+        target_w = max(1, int(round(target_h * (pil_img.width / max(1, pil_img.height)))))
+        self._mic_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(target_w, target_h))
 
         # Versione rossa durante la registrazione vocale
         _, _, _, a = pil_img.split()
         red_pil = Image.new("RGBA", pil_img.size, (239, 68, 68, 255))
         red_pil.putalpha(a)
-        self._mic_img_rec = ctk.CTkImage(light_image=red_pil, dark_image=red_pil, size=(10, 26))
+        self._mic_img_rec = ctk.CTkImage(light_image=red_pil, dark_image=red_pil, size=(target_w, target_h))
 
         self._build_ui()
 
