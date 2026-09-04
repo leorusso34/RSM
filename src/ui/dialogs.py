@@ -371,6 +371,8 @@ class ManagePlacesDialog(ctk.CTkToplevel):
         self.db = db
         self.current_places = current_places
         self.on_update = on_update
+        self.selected_place: Optional[str] = None
+        self._place_widgets: Dict[str, ctk.CTkButton] = {}
 
         self.title("Gestione Luoghi di Vendita")
         center_window(self, 550, 650)
@@ -406,56 +408,79 @@ class ManagePlacesDialog(ctk.CTkToplevel):
 
         ctk.CTkButton(input_frame, text="Aggiungi (Invio)", command=self._add_place).pack(side="right")
 
-        # Lista luoghi esistenti
+        # Lista luoghi esistenti in CTkScrollableFrame
         ctk.CTkLabel(outer, text="LUOGHI ESISTENTI:", font=("Segoe UI", 11, "bold")).pack(anchor="w")
 
-        list_frame = tk.Frame(outer, bg=c["bg_card"])
-        list_frame.pack(fill="both", expand=True, pady=(4, 10))
-
-        self.listbox = tk.Listbox(
-            list_frame,
-            bg=c["bg_input"],
-            fg=c["fg_main"],
-            selectbackground=c["accent"],
-            font=("Segoe UI", 13),
-            activestyle="none",
-            highlightthickness=1,
-            highlightbackground=c["border"],
+        self.scroll_frame = ctk.CTkScrollableFrame(
+            outer,
+            fg_color=c["bg_input"],
+            corner_radius=10,
+            border_width=1,
+            border_color=c["border"]
         )
-        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.listbox.yview)
-        self.listbox.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side="right", fill="y")
-        self.listbox.pack(side="left", fill="both", expand=True)
+        self.scroll_frame.pack(fill="both", expand=True, pady=(4, 10))
 
-        for p in self.current_places:
-            self.listbox.insert("end", p)
+        self._render_places()
 
         btn_frame = ctk.CTkFrame(outer, fg_color="transparent")
         btn_frame.pack(fill="x", pady=(10, 0))
         ctk.CTkButton(btn_frame, text="Elimina Selezionato", command=self._delete_place, fg_color=c["danger"], hover_color=c["danger_hover"]).pack(side="left")
         ctk.CTkButton(btn_frame, text="Chiudi", command=self.destroy, fg_color="#374151", hover_color="#4b5563").pack(side="right")
 
+    def _render_places(self) -> None:
+        c = DARK_THEME
+        for widget in self.scroll_frame.winfo_children():
+            widget.destroy()
+
+        self._place_widgets.clear()
+        for p in self.current_places:
+            is_selected = (p == self.selected_place)
+            btn = ctk.CTkButton(
+                self.scroll_frame,
+                text=f"  {p}",
+                anchor="w",
+                font=("Segoe UI", 13),
+                fg_color=c["accent"] if is_selected else "transparent",
+                hover_color=c["accent_hover"] if is_selected else "#28334a",
+                text_color="#ffffff" if is_selected else c["fg_main"],
+                height=34,
+                corner_radius=6,
+                command=lambda name=p: self._select_place(name)
+            )
+            btn.pack(fill="x", pady=2, padx=4)
+            self._place_widgets[p] = btn
+
+    def _select_place(self, name: str) -> None:
+        c = DARK_THEME
+        self.selected_place = name
+        for p, btn in self._place_widgets.items():
+            is_selected = (p == name)
+            btn.configure(
+                fg_color=c["accent"] if is_selected else "transparent",
+                hover_color=c["accent_hover"] if is_selected else "#28334a",
+                text_color="#ffffff" if is_selected else c["fg_main"]
+            )
+
     def _add_place(self) -> None:
         val = self.var_new.get().strip()
         if not val:
             return
         self.db.add_custom_place(val)
+        self.selected_place = val
         self._refresh()
         self.var_new.set("")
 
     def _delete_place(self) -> None:
-        sel = self.listbox.curselection()
-        if not sel:
+        if not self.selected_place:
             messagebox.showwarning("Attenzione", "Seleziona un luogo da eliminare.", parent=self)
             return
-        val = self.listbox.get(sel[0])
+        val = self.selected_place
         self.db.delete_custom_place(val)
+        self.selected_place = None
         self._refresh()
 
     def _refresh(self) -> None:
         self.on_update()
         _, selling = self.db.get_distinct_places()
         self.current_places = selling
-        self.listbox.delete(0, "end")
-        for p in self.current_places:
-            self.listbox.insert("end", p)
+        self._render_places()
