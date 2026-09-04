@@ -157,7 +157,7 @@ class ProductDialog(ctk.CTkToplevel):
             self.notes.insert("1.0", self.record["notes"])
 
         # Tracciamento profitto live
-        for key in ("purchased_price", "sold_price", "fees", "quantity"):
+        for key in ("purchased_price", "selling_price", "sold_price", "fees", "quantity"):
             self.vars[key].trace_add("write", lambda *_a: self._update_profit_preview())
 
         # Bottoni
