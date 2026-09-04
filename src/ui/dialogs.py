@@ -8,9 +8,12 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional, Tuple
 from tkinter import ttk, messagebox
+import sys
+from pathlib import Path
+from PIL import Image
 import customtkinter as ctk
 
-from ..config import DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
+from ..config import PROJECT_DIR, DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
 from ..utils import calculate_profit, money, parse_date, parse_int, parse_money, center_window, apply_dark_titlebar
 
 
@@ -61,6 +64,31 @@ class ProductDialog(ctk.CTkToplevel):
         }
 
         self.profit_info_var = tk.StringVar(value="-")
+
+        # Carica icona ingranaggio per gestione luoghi di vendita
+        gear_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "settings_icon.png"
+        if not gear_path.exists():
+            gear_path = PROJECT_DIR / "assets" / "settings_icon.png"
+
+        self._gear_img_muted = None
+        self._gear_img_hover = None
+        if gear_path.exists():
+            try:
+                pil_gear = Image.open(gear_path).convert("RGBA")
+                _, _, _, ga = pil_gear.split()
+
+                # Versione muted (#8b9bb4)
+                muted_pil = Image.new("RGBA", pil_gear.size, (139, 155, 180, 255))
+                muted_pil.putalpha(ga)
+                self._gear_img_muted = ctk.CTkImage(light_image=muted_pil, dark_image=muted_pil, size=(13, 13))
+
+                # Versione hover (#f1f5f9)
+                hover_pil = Image.new("RGBA", pil_gear.size, (241, 245, 249, 255))
+                hover_pil.putalpha(ga)
+                self._gear_img_hover = ctk.CTkImage(light_image=hover_pil, dark_image=hover_pil, size=(13, 13))
+            except Exception:
+                pass
+
         self._build()
         self.protocol("WM_DELETE_WINDOW", self.destroy)
         self.bind("<Escape>", lambda _e: self.destroy())
@@ -108,11 +136,18 @@ class ProductDialog(ctk.CTkToplevel):
         lbl_frame.grid(row=6, column=0, sticky="w", padx=(0, 6), pady=(8, 2))
 
         ctk.CTkLabel(lbl_frame, text="LUOGO VENDITA", font=("Segoe UI", 11, "bold")).pack(side="left")
-        gear_lbl = ctk.CTkLabel(lbl_frame, text="⚙", font=("Segoe UI", 12), text_color=c["fg_muted"], cursor="hand2")
-        gear_lbl.pack(side="left", padx=(6, 0), pady=(0, 2))
-        gear_lbl.bind("<Button-1>", lambda _e: self._open_manage_places())
-        gear_lbl.bind("<Enter>", lambda _e: gear_lbl.configure(text_color=c["fg_main"]))
-        gear_lbl.bind("<Leave>", lambda _e: gear_lbl.configure(text_color=c["fg_muted"]))
+        if self._gear_img_muted:
+            gear_lbl = ctk.CTkLabel(lbl_frame, text="", image=self._gear_img_muted, cursor="hand2")
+            gear_lbl.pack(side="left", padx=(6, 0))
+            gear_lbl.bind("<Button-1>", lambda _e: self._open_manage_places())
+            gear_lbl.bind("<Enter>", lambda _e: gear_lbl.configure(image=self._gear_img_hover))
+            gear_lbl.bind("<Leave>", lambda _e: gear_lbl.configure(image=self._gear_img_muted))
+        else:
+            gear_lbl = ctk.CTkLabel(lbl_frame, text="⚙", font=("Segoe UI", 12), text_color=c["fg_muted"], cursor="hand2")
+            gear_lbl.pack(side="left", padx=(6, 0))
+            gear_lbl.bind("<Button-1>", lambda _e: self._open_manage_places())
+            gear_lbl.bind("<Enter>", lambda _e: gear_lbl.configure(text_color=c["fg_main"]))
+            gear_lbl.bind("<Leave>", lambda _e: gear_lbl.configure(text_color=c["fg_muted"]))
 
         self.selling_place_combo = ctk.CTkComboBox(form, variable=self.vars["selling_place"], values=self.selling_places, font=("Segoe UI", 12))
         self.selling_place_combo.grid(row=7, column=0, sticky="ew", padx=(0, 6))
@@ -146,7 +181,7 @@ class ProductDialog(ctk.CTkToplevel):
         # Card profitto con angoli arrotondati
         self.profit_card = ctk.CTkFrame(form, corner_radius=10, border_width=1, border_color=c["border"], fg_color=c["bg_input"])
         self.profit_card.grid(row=14, column=0, columnspan=2, sticky="ew", pady=(14, 4))
-        ctk.CTkLabel(self.profit_card, text="CALCOLO PROFITTO NETTO E ROI", font=("Segoe UI", 10, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=12, pady=(10, 0))
+        #ctk.CTkLabel(self.profit_card, text="CALCOLO PROFITTO NETTO E ROI", font=("Segoe UI", 10, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=12, pady=(10, 0))
         ctk.CTkLabel(self.profit_card, textvariable=self.profit_info_var, font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=12, pady=(2, 10))
 
         # Note
