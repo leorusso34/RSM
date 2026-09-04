@@ -82,15 +82,7 @@ class InventoryApp(ctk.CTk):
         }
         self.status_to_tab_name = {v: k for k, v in self.tab_name_to_status.items()}
 
-        try:
-            import sys
-            icon_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_icon.ico"
-            if not icon_path.exists():
-                icon_path = PROJECT_DIR / "assets" / "app_icon.ico"
-            if icon_path.exists():
-                self.iconbitmap(str(icon_path))
-        except Exception as e:
-            print(f"Icona non caricata: {e}")
+        apply_window_icon(self)
 
         setup_app_theme(self)
         self._build_ui()

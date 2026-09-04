@@ -306,17 +306,58 @@ def parse_excel_file(filepath: str) -> Tuple[List[Dict[str, Any]], int]:
     return records, skipped
 
 def apply_window_icon(window: Any) -> None:
-    """Imposta l'icona personalizzata assets/app_icon.ico su qualsiasi finestra (CTk o CTkToplevel)."""
+    """Imposta l'icona personalizzata ad alta definizione su qualsiasi finestra (CTk o CTkToplevel)."""
     try:
         import sys
+        import ctypes
         from pathlib import Path
-        icon_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_icon.ico"
-        if not icon_path.exists():
-            icon_path = PROJECT_DIR / "assets" / "app_icon.ico"
-        if not icon_path.exists():
-            icon_path = PROJECT_DIR / "app_icon.ico"
-        if icon_path.exists():
-            window.iconbitmap(str(icon_path))
+        from PIL import Image, ImageTk
+
+        ico_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_icon.ico"
+        if not ico_path.exists():
+            ico_path = PROJECT_DIR / "assets" / "app_icon.ico"
+        if not ico_path.exists():
+            ico_path = PROJECT_DIR / "app_icon.ico"
+
+        logo_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_logo.png"
+        if not logo_path.exists():
+            logo_path = PROJECT_DIR / "assets" / "app_logo.png"
+
+        # 1. Fallback Tkinter standard iconbitmap
+        if ico_path.exists():
+            try:
+                window.iconbitmap(str(ico_path))
+            except Exception:
+                pass
+
+        # 2. Registra le icone multi-risoluzione native (16, 24, 32, 48, 64, 128, 256) per Tkinter
+        source_img_path = logo_path if logo_path.exists() else ico_path
+        if source_img_path.exists():
+            try:
+                base_img = Image.open(source_img_path).convert("RGBA")
+                photos = []
+                for sz in (16, 24, 32, 48, 64, 128, 256):
+                    resized = base_img.resize((sz, sz), Image.Resampling.LANCZOS)
+                    photos.append(ImageTk.PhotoImage(resized))
+                window._icon_photos_keepalive = photos
+                window.iconphoto(False, *photos)
+            except Exception:
+                pass
+
+        # 3. Chiamata Win32 diretta WM_SETICON per rendere la barra delle applicazioni perfettamente nitida
+        if ico_path.exists() and sys.platform == "win32":
+            try:
+                window.update_idletasks()
+                hwnd = ctypes.windll.user32.GetAncestor(window.winfo_id(), 2)  # GA_ROOT = 2
+                h_icon_big = ctypes.windll.user32.LoadImageW(None, str(ico_path), 1, 0, 0, 0x0010 | 0x0040)
+                h_icon_small = ctypes.windll.user32.LoadImageW(None, str(ico_path), 1, 16, 16, 0x0010)
+                WM_SETICON = 0x0080
+                if h_icon_big:
+                    ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 1, h_icon_big)
+                if h_icon_small:
+                    ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 0, h_icon_small)
+            except Exception:
+                pass
     except Exception:
         pass
 
