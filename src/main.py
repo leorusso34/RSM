@@ -13,7 +13,14 @@ from .ui.main_window import InventoryApp
 
 
 def main() -> None:
-    # Abilita il supporto High DPI su Windows per testi nitidi (non sgranati)
+    # 1. Imposta AppUserModelID per visualizzare correttamente l'icona nitida nella taskbar di Windows
+    try:
+        app_id = "russostock.rsm.app.1.0"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except Exception:
+        pass
+
+    # 2. Abilita il supporto High DPI su Windows per testi e grafica nitidi
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
     except Exception:
