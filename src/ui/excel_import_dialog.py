@@ -207,3 +207,136 @@ class ExcelImportDialog(ctk.CTkToplevel):
         self.confirmed = True
         self.saved_count = saved
         self.destroy()
+
+
+class ExcelHintDialog(ctk.CTkToplevel):
+    """
+    Piccola dialog che appare dopo la selezione del file Excel/CSV,
+    prima di avviare l'analisi AI. Permette all'utente di fornire
+    indicazioni contestuali opzionali per aumentare la precisione dell'AI.
+
+    Esempi di note utili:
+    - "Dalla riga 15 in poi sono tutti pre-ordini"
+    - "La colonna 'costo netto' è il prezzo di acquisto"
+    - "I prodotti con 'eBay' nel negozio sono già venduti"
+
+    Attributi pubblici dopo chiusura:
+        confirmed (bool): True se l'utente ha premuto Procedi, False se Annulla.
+        hint (str): Il testo inserito (può essere vuoto).
+    """
+
+    def __init__(self, parent: tk.Misc, filename: str) -> None:
+        super().__init__(parent, fg_color=DARK_THEME["bg_main"])
+        self.confirmed = False
+        self.hint = ""
+
+        self.title("Importazione AI — Suggerimento opzionale")
+        center_window(self, 560, 340)
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+        apply_dark_titlebar(self)
+
+        self._build(filename)
+
+    def _build(self, filename: str) -> None:
+        c = DARK_THEME
+        container = ctk.CTkFrame(self, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=22, pady=18)
+
+        # ── Header ──────────────────────────────────────────────────────────
+        ctk.CTkLabel(
+            container,
+            text="Suggerimento per l'AI (opzionale)",
+            font=("Segoe UI", 16, "bold"),
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(
+            container,
+            text=(
+                f"File selezionato: {filename}\n"
+                "Puoi fornire indicazioni contestuali per aiutare l'AI a interpretare "
+                "correttamente il file. Lascia vuoto per procedere con le regole standard."
+            ),
+            font=("Segoe UI", 11),
+            text_color=c["fg_muted"],
+            justify="left",
+            wraplength=510,
+        ).pack(anchor="w", pady=(4, 12))
+
+        # ── Campo testo ──────────────────────────────────────────────────────
+        hint_card = ctk.CTkFrame(
+            container,
+            fg_color=c["bg_card"],
+            corner_radius=8,
+            border_width=1,
+            border_color=c["border"],
+        )
+        hint_card.pack(fill="both", expand=True, pady=(0, 12))
+
+        self.txt_hint = ctk.CTkTextbox(
+            hint_card,
+            font=("Segoe UI", 12),
+            fg_color="transparent",
+            wrap="word",
+            height=110,
+        )
+        self.txt_hint.pack(fill="both", expand=True, padx=10, pady=8)
+        self.txt_hint.insert(
+            "1.0",
+            "",
+        )
+
+        # Placeholder hint examples
+        ctk.CTkLabel(
+            container,
+            text='Es: "Dalla riga 10 in poi sono pre-ordini" · "Il campo Costo è il prezzo acquisto"',
+            font=("Segoe UI", 10),
+            text_color=c["fg_muted"],
+            justify="left",
+        ).pack(anchor="w", pady=(0, 10))
+
+        # ── Pulsanti ────────────────────────────────────────────────────────
+        btn_bar = ctk.CTkFrame(container, fg_color="transparent")
+        btn_bar.pack(fill="x")
+
+        ctk.CTkButton(
+            btn_bar,
+            text="Annulla",
+            command=self.destroy,
+            fg_color="#374151",
+            hover_color="#4b5563",
+            width=90,
+        ).pack(side="right")
+
+        ctk.CTkButton(
+            btn_bar,
+            text="Procedi senza note",
+            command=self._proceed_no_hint,
+            fg_color="#374151",
+            hover_color="#4b5563",
+            width=140,
+        ).pack(side="right", padx=(0, 8))
+
+        ctk.CTkButton(
+            btn_bar,
+            text="Procedi con nota  →",
+            command=self._proceed_with_hint,
+            font=("Segoe UI", 12, "bold"),
+            width=150,
+        ).pack(side="right", padx=(0, 8))
+
+        # Focus sul campo di testo
+        self.txt_hint.focus_set()
+        # Bind Ctrl+Enter per procedere rapidamente
+        self.bind("<Control-Return>", lambda _e: self._proceed_with_hint())
+
+    def _proceed_with_hint(self) -> None:
+        self.hint = self.txt_hint.get("1.0", "end").strip()
+        self.confirmed = True
+        self.destroy()
+
+    def _proceed_no_hint(self) -> None:
+        self.hint = ""
+        self.confirmed = True
+        self.destroy()

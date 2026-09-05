@@ -18,7 +18,7 @@ from .ai_dialog import AIDialog
 from .email_sync_dialog import EmailSyncDialog
 from .theme import setup_app_theme
 from ..utils import export_to_csv, money, read_spreadsheet_raw, parse_money, calculate_profit, center_window, apply_window_icon
-from .excel_import_dialog import ExcelImportDialog
+from .excel_import_dialog import ExcelImportDialog, ExcelHintDialog
 
 
 class InventoryApp(ctk.CTk):
@@ -975,6 +975,7 @@ class InventoryApp(ctk.CTk):
     def import_excel(self) -> None:
         """Importa un file Excel/CSV qualsiasi tramite AI (analisi universale)."""
         import threading
+        from pathlib import Path as _Path
 
         path = filedialog.askopenfilename(
             parent=self,
@@ -994,6 +995,17 @@ class InventoryApp(ctk.CTk):
             )
             return
 
+        # Mostra la dialog per il suggerimento contestuale opzionale
+        filename = _Path(path).name
+        hint_dialog = ExcelHintDialog(self, filename)
+        self.wait_window(hint_dialog)
+
+        if not hint_dialog.confirmed:
+            # L'utente ha premuto Annulla nella hint dialog
+            return
+
+        user_hint = hint_dialog.hint  # Può essere stringa vuota
+
         # Mostra stato di elaborazione
         self.status_bar_var.set("Analisi AI del file in corso...")
         self.update_idletasks()
@@ -1010,7 +1022,7 @@ class InventoryApp(ctk.CTk):
                     ))
                     self.after(0, lambda: self.status_bar_var.set("Importazione annullata: file vuoto"))
                     return
-                products = parse_excel_with_ai(raw_text, api_key)
+                products = parse_excel_with_ai(raw_text, api_key, user_hint=user_hint)
                 self.after(0, lambda: _on_ai_done(products))
             except Exception as exc:
                 err = str(exc)

@@ -80,7 +80,7 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
         conn.close()
 
 
-def parse_excel_with_ai(raw_text: str, api_key: str) -> List[Dict[str, Any]]:
+def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> List[Dict[str, Any]]:
     """
     Analizza l'intero contenuto testuale di un file Excel/CSV con una singola
     chiamata a Gemini e restituisce la lista di prodotti estratti in formato JSON.
@@ -92,6 +92,7 @@ def parse_excel_with_ai(raw_text: str, api_key: str) -> List[Dict[str, Any]]:
     - Taglia di default: 'UNI' se non specificata.
     - Quantità di default: 1 se non specificata.
     - Restituisce TUTTI i prodotti trovati nella tabella, uno per riga dati.
+    - Se user_hint è fornito, viene trattato come istruzione prioritaria aggiuntiva.
     """
     host = "generativelanguage.googleapis.com"
     path = f"/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
@@ -139,7 +140,16 @@ def parse_excel_with_ai(raw_text: str, api_key: str) -> List[Dict[str, Any]]:
         "Formato date: YYYY-MM-DD. Formato numeri: senza simboli di valuta."
     )
 
+    hint_section = ""
+    if user_hint and user_hint.strip():
+        hint_section = (
+            "ISTRUZIONI AGGIUNTIVE PRIORITARIE fornite dall'utente "
+            "(seguile con precedenza assoluta sulle regole generali):\n"
+            f"{user_hint.strip()}\n\n"
+        )
+
     user_prompt = (
+        f"{hint_section}"
         "Analizza il seguente contenuto di un file Excel/CSV ed estrai tutti i prodotti presenti:\n\n"
         f"{raw_text}"
     )
