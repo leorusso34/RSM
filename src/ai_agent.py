@@ -1,5 +1,6 @@
 import json
 import http.client
+from datetime import datetime
 from typing import Any, List, Dict
 
 def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
@@ -94,6 +95,7 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
     - Restituisce TUTTI i prodotti trovati nella tabella, uno per riga dati.
     - Se user_hint è fornito, viene trattato come istruzione prioritaria aggiuntiva.
     """
+    today_str = datetime.now().strftime("%Y-%m-%d")
     host = "generativelanguage.googleapis.com"
     path = f"/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
 
@@ -109,7 +111,7 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
             "selling_price":    {"type": "NUMBER", "description": "Prezzo di vendita stimato. 0 se non trovato."},
             "sold_price":       {"type": "NUMBER", "description": "Prezzo di vendita effettivo. 0 se non trovato."},
             "fees":             {"type": "NUMBER", "description": "Commissioni o spese. Default 0."},
-            "sold_date":        {"type": "STRING", "description": "Data vendita in formato YYYY-MM-DD. Data di oggi se non trovata."},
+            "sold_date":        {"type": "STRING", "description": f"Data vendita in formato YYYY-MM-DD. Se lo stato è Venduto e non c'è una data specifica nel foglio, usa rigorosamente la data odierna: {today_str}."},
             "status":           {"type": "STRING", "description": (
                 "Stato del prodotto. Scegli RIGOROSAMENTE tra: 'In Stock', 'Pre-ordine', 'Venduto'. "
                 "Regole: se trovi un prezzo di vendita effettivo o un luogo di vendita → 'Venduto'. "
@@ -131,11 +133,12 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
     }
 
     system_prompt = (
-        "Sei un assistente esperto di inventari. "
+        f"Sei un assistente esperto di inventari. La data di oggi è {today_str}. "
         "Ti verrà fornito il contenuto grezzo di un file Excel o CSV, con righe e colonne separate da tabulazioni. "
         "Il tuo compito è identificare OGNI riga che rappresenta un prodotto fisico e restituire la lista 'products' con tutti i dati estratti. "
         "Ignora le righe di intestazione, righe totali, righe vuote e sezioni di testo non dati. "
         "Riconosci automaticamente le colonne indipendentemente dalla lingua (italiano, inglese, ecc.) e dal formato (valute, date, simboli). "
+        f"Se lo stato è 'Venduto' e non è presente una data specifica nel foglio, assegna la data di oggi ({today_str}) come sold_date. "
         "Non inventare dati non presenti: usa i valori di default specificati nello schema. "
         "Formato date: YYYY-MM-DD. Formato numeri: senza simboli di valuta."
     )
@@ -150,6 +153,7 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
 
     user_prompt = (
         f"{hint_section}"
+        f"Data di oggi: {today_str}\n"
         "Analizza il seguente contenuto di un file Excel/CSV ed estrai tutti i prodotti presenti:\n\n"
         f"{raw_text}"
     )

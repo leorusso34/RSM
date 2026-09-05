@@ -5,6 +5,7 @@
 import threading
 import tkinter as tk
 from tkinter import ttk
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List
 import customtkinter as ctk
@@ -181,6 +182,8 @@ class ExcelImportDialog(ctk.CTkToplevel):
                     qty = 1
 
                 sold_date   = str(p.get("sold_date",    "") or "").strip()
+                if db_status == STATUS_SOLD and not sold_date:
+                    sold_date = datetime.now().strftime("%Y-%m-%d")
                 release_date = str(p.get("release_date", "") or "").strip()
                 notes        = str(p.get("notes",        "") or "").strip()
 
@@ -290,7 +293,7 @@ class ExcelHintDialog(ctk.CTkToplevel):
         # Placeholder hint examples
         ctk.CTkLabel(
             container,
-            text='Es: "Dalla riga 10 in poi sono pre-ordini" · "Il campo Costo è il prezzo acquisto"',
+            text='Per esempio: "Dalla riga 10 in poi sono pre-ordini" oppure "Il campo Costo è il prezzo acquisto"',
             font=("Segoe UI", 10),
             text_color=c["fg_muted"],
             justify="left",
@@ -320,7 +323,7 @@ class ExcelHintDialog(ctk.CTkToplevel):
 
         ctk.CTkButton(
             btn_bar,
-            text="Procedi con nota  →",
+            text="Procedi con nota",
             command=self._proceed_with_hint,
             font=("Segoe UI", 12, "bold"),
             width=150,
