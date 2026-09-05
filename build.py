@@ -103,6 +103,11 @@ def main() -> None:
         with open(dist_config, "w", encoding="utf-8") as f:
             json.dump({"gemini_api_key": "", "email_sync_address": "", "email_sync_app_password": ""}, f, indent=2)
 
+    # 4. Copia del README.md nella cartella di rilascio dist/RSM
+    source_readme = project_root / "README.md"
+    if source_readme.exists():
+        shutil.copy(source_readme, dist_dir / "README.md")
+
     # Pulizia finale cartella legacy se ricreata
     if old_dist_dir.exists():
         shutil.rmtree(old_dist_dir, ignore_errors=True)
