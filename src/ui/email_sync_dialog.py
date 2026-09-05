@@ -57,7 +57,7 @@ class EmailSyncDialog(ctk.CTkToplevel):
         ctk.CTkLabel(head_box, text="Sincronizzazione Ordini via Email", font=("Segoe UI", 18, "bold")).pack(anchor="w")
         ctk.CTkLabel(
             head_box,
-            text="Scarica le conferme d'ordine non lette da Gmail ed estrai i prodotti nei Pre-ordini con Gemini AI.",
+            text="Scarica le conferme d'ordine non lette da Gmail ed estrai i prodotti nei Pre-ordini con Gemini.",
             font=("Segoe UI", 12),
             text_color=c["fg_muted"],
         ).pack(anchor="w", pady=(2, 0))

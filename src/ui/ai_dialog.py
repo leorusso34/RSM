@@ -84,7 +84,7 @@ class AIDialog(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             header,
-            text="Descrivi i prodotti a voce o per testo: Gemini estrarrà automaticamente tutti i dati.",
+            text="Descrivi i prodotti a voce o per testo e Gemini estrarrà automaticamente tutti i dati.",
             font=("Segoe UI", 12),
             text_color=c["fg_muted"],
         ).pack(anchor="w", pady=(2, 0))
@@ -185,7 +185,7 @@ class AIDialog(ctk.CTkToplevel):
             return
 
         self.btn_generate.configure(state="disabled")
-        self.status_var.set("Analisi del testo con Gemini AI in corso...")
+        self.status_var.set("Analisi del testo con Gemini in corso...")
 
         threading.Thread(target=self._run_ai, args=(prompt, api_key), daemon=True).start()
 

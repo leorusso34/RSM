@@ -109,7 +109,7 @@ class ProductDialog(ctk.CTkToplevel):
         ctk.CTkLabel(outer, text="Dettagli prodotto", font=("Segoe UI", 18, "bold"), anchor="w").pack(fill="x")
         ctk.CTkLabel(
             outer,
-            text="Compila i dati del prodotto (* indica i campi obbligatori)",
+            text="Compila i dati del prodotto",
             font=("Segoe UI", 13),
             text_color=c["fg_muted"],
             anchor="w",
@@ -124,9 +124,9 @@ class ProductDialog(ctk.CTkToplevel):
         form.columnconfigure(1, weight=1)
 
         # Campi base
-        self.name_entry = self._field_entry(form, "NOME PRODOTTO *", "name", 0, 0, span=2)
+        self.name_entry = self._field_entry(form, "NOME PRODOTTO", "name", 0, 0, span=2)
         self._field_entry(form, "TAGLIA", "size", 1, 0)
-        self._field_entry(form, "QUANTITA *", "quantity", 1, 1)
+        self._field_entry(form, "QUANTITA", "quantity", 1, 1)
 
         self._field_entry(form, "PREZZO ACQUISTO (€)", "purchased_price", 2, 0)
         self._field_combo(form, "LUOGO ACQUISTO", "purchased_place", self.purchased_places, 2, 1)
@@ -155,7 +155,7 @@ class ProductDialog(ctk.CTkToplevel):
         self._field_entry(form, "PREZZO VENDITA (€)", "selling_price", 3, 1)
 
         # Stato
-        self.lbl_status_lbl = ctk.CTkLabel(form, text="STATO PRODOTTO *", font=("Segoe UI", 11, "bold"))
+        self.lbl_status_lbl = ctk.CTkLabel(form, text="STATO PRODOTTO ", font=("Segoe UI", 11, "bold"))
         self.lbl_status_lbl.grid(row=8, column=0, columnspan=2, sticky="w", pady=(12, 4))
 
         status_box = ctk.CTkComboBox(
