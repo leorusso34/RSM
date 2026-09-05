@@ -6,7 +6,7 @@ from pathlib import Path
 from src.config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
 from src.database import InventoryDatabase
 from src.ui.main_window import InventoryApp
-from src.utils import calculate_profit, export_to_csv, parse_excel_file, parse_int, parse_money
+from src.utils import calculate_profit, export_to_csv, read_spreadsheet_raw, parse_int, parse_money
 
 
 def product(name="Test", status=STATUS_STOCK):
@@ -65,20 +65,35 @@ def test_backup_and_export(tmp_path):
         assert next(csv.reader(handle, delimiter=";"))[0] == "ID"
 
 
-def test_excel_import_validates_dates(tmp_path):
+def test_read_spreadsheet_raw_xlsx(tmp_path):
+    """Verifica che read_spreadsheet_raw legga qualsiasi .xlsx restituendo testo grezzo."""
     openpyxl = __import__("openpyxl")
     workbook = openpyxl.Workbook()
     sheet = workbook.active
-    sheet.append(["NOME", "PREZZO ACQUISTO", "DATA VENDITA", "STATO"])
-    sheet.append(["Valid", 10, "2026-08-26", "Venduto"])
-    sheet.append(["Valid2", 10, "26/08/2026", "Venduto"])
-    sheet.append(["Invalid", 10, "NotADate", "Venduto"])
-    path = tmp_path / "import.xlsx"
+    sheet.title = "Inventario"
+    sheet.append(["Nome Prodotto", "Prezzo", "Quantita", "Stato"])
+    sheet.append(["Nike Air Max", 120.00, 2, "Magazzino"])
+    sheet.append(["Adidas Yeezy", 250.00, 1, "Pre-ordine"])
+    path = tmp_path / "test_import.xlsx"
     workbook.save(path)
-    records, skipped = parse_excel_file(path)
-    assert len(records) == 2
-    assert skipped == 1
-    assert records[1]["sold_date"] == "2026-08-26"
+
+    raw = read_spreadsheet_raw(str(path))
+    assert "Nike Air Max" in raw
+    assert "Adidas Yeezy" in raw
+    assert "Inventario" in raw  # Il nome del foglio è incluso
+    assert "120" in raw
+    assert "250" in raw
+
+
+def test_read_spreadsheet_raw_csv(tmp_path):
+    """Verifica che read_spreadsheet_raw legga anche file .csv."""
+    csv_path = tmp_path / "test_import.csv"
+    csv_path.write_text("Nome,Prezzo,Quantita\nNike Dunk,90.00,1\nJordan 1,180.00,3\n", encoding="utf-8")
+
+    raw = read_spreadsheet_raw(str(csv_path))
+    assert "Nike Dunk" in raw
+    assert "Jordan 1" in raw
+    assert "90" in raw
 
 
 def test_sort_tree_is_defined():

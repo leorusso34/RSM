@@ -17,7 +17,8 @@ from .dialogs import BulkStatusDialog, ProductDialog
 from .ai_dialog import AIDialog
 from .email_sync_dialog import EmailSyncDialog
 from .theme import setup_app_theme
-from ..utils import export_to_csv, money, parse_excel_file, parse_money, calculate_profit, center_window, apply_window_icon
+from ..utils import export_to_csv, money, read_spreadsheet_raw, parse_money, calculate_profit, center_window, apply_window_icon
+from .excel_import_dialog import ExcelImportDialog
 
 
 class InventoryApp(ctk.CTk):
@@ -972,21 +973,82 @@ class InventoryApp(ctk.CTk):
         messagebox.showinfo("Esportazione completata", f"Esportati {count} prodotti nel file:\n{path}", parent=self)
 
     def import_excel(self) -> None:
-        path = filedialog.askopenfilename(parent=self, title="Importa file Excel", filetypes=[("Excel", "*.xlsx *.xlsm")])
+        """Importa un file Excel/CSV qualsiasi tramite AI (analisi universale)."""
+        import threading
+
+        path = filedialog.askopenfilename(
+            parent=self,
+            title="Importa file Excel o CSV",
+            filetypes=[("Excel / CSV", "*.xlsx *.xlsm *.csv")],
+        )
         if not path:
             return
-        try:
-            records, skipped = parse_excel_file(path)
-            if not records:
-                raise ValueError("Nessuna riga valida trovata. Verifica che le colonne NAME e PURCHASED PRICE siano presenti.")
-            if not messagebox.askyesno("Conferma importazione", f"Trovati {len(records)} prodotti nell'Excel.\n(Tutti i prodotti sotto la sezione PREORDER verranno importati come Pre-ordini).\n\nAggiungere all'inventario?", parent=self):
+
+        api_key = self.db.get_setting("gemini_api_key", "")
+        if not api_key:
+            messagebox.showwarning(
+                "API Key mancante",
+                "Inserisci la tua Chiave API Gemini nelle impostazioni prima di usare l'importazione AI.\n"
+                "(Puoi salvarla dalla finestra Sincronizzazione Email → campo 'API Key Gemini')",
+                parent=self,
+            )
+            return
+
+        # Mostra stato di elaborazione
+        self.status_bar_var.set("Analisi AI del file in corso...")
+        self.update_idletasks()
+
+        def _run_import():
+            try:
+                from ..ai_agent import parse_excel_with_ai
+                raw_text = read_spreadsheet_raw(path)
+                if not raw_text.strip():
+                    self.after(0, lambda: messagebox.showerror(
+                        "File vuoto",
+                        "Il file selezionato non contiene dati leggibili.",
+                        parent=self,
+                    ))
+                    self.after(0, lambda: self.status_bar_var.set("Importazione annullata: file vuoto"))
+                    return
+                products = parse_excel_with_ai(raw_text, api_key)
+                self.after(0, lambda: _on_ai_done(products))
+            except Exception as exc:
+                err = str(exc)
+                self.after(0, lambda: messagebox.showerror(
+                    "Errore Importazione AI",
+                    f"Impossibile analizzare il file:\n{err}",
+                    parent=self,
+                ))
+                self.after(0, lambda: self.status_bar_var.set("Errore durante l'analisi AI"))
+
+        def _on_ai_done(products):
+            if not products:
+                messagebox.showwarning(
+                    "Nessun prodotto trovato",
+                    "L'AI non ha rilevato prodotti validi nel file.\n"
+                    "Assicurati che il file contenga righe con nome e prezzo.",
+                    parent=self,
+                )
+                self.status_bar_var.set("Nessun prodotto trovato nel file")
                 return
-            inserted = self.db.insert_many(records)
-            self.refresh()
-            messagebox.showinfo("Importazione Completata", f"Importati con successo {inserted} prodotti!\n(Righe ignorate: {skipped})", parent=self)
-            self.status_bar_var.set(f"Importati {inserted} prodotti da Excel")
-        except Exception as exc:
-            messagebox.showerror("Errore Importazione Excel", str(exc), parent=self)
+
+            dialog = ExcelImportDialog(self, self.db, products)
+            self.wait_window(dialog)
+
+            if dialog.confirmed:
+                saved = getattr(dialog, "saved_count", len(products))
+                self.refresh()
+                self.status_bar_var.set(f"Importati {saved} prodotti da Excel con AI")
+                messagebox.showinfo(
+                    "Importazione Completata",
+                    f"Importati con successo {saved} prodott{'o' if saved == 1 else 'i'} dall'Excel!",
+                    parent=self,
+                )
+            else:
+                self.status_bar_var.set("Importazione Excel annullata")
+
+        threading.Thread(target=_run_import, daemon=True).start()
+
 
     def backup_database(self) -> None:
         if not DB_PATH.exists():

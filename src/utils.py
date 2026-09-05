@@ -135,6 +135,47 @@ def normalize_header(value: Any) -> str:
     text = str(value or "").strip().upper().replace("_", " ")
     return re.sub(r"\s+", " ", text)
 
+
+def read_spreadsheet_raw(filepath: str) -> str:
+    """
+    Legge qualsiasi file .xlsx o .csv e restituisce il contenuto come testo grezzo
+    tabulare (tab-separated) da passare all'AI per l'estrazione dei prodotti.
+    Funziona con qualsiasi struttura di colonne, lingue e formati.
+    """
+    path = str(filepath)
+    lines: List[str] = []
+
+    if path.lower().endswith(".csv"):
+        # Lettura CSV con rilevamento automatico del separatore
+        with open(path, newline="", encoding="utf-8-sig", errors="replace") as f:
+            sample = f.read(4096)
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
+        except csv.Error:
+            dialect = csv.excel
+        with open(path, newline="", encoding="utf-8-sig", errors="replace") as f:
+            reader = csv.reader(f, dialect)
+            for row in reader:
+                cleaned = [str(c).strip() for c in row]
+                if any(cleaned):
+                    lines.append("\t".join(cleaned))
+    else:
+        # Lettura XLSX/XLSM con openpyxl
+        from openpyxl import load_workbook
+        wb = load_workbook(path, data_only=True, read_only=True)
+        for sheet in wb.worksheets:
+            sheet_title = sheet.title.strip()
+            if sheet_title:
+                lines.append(f"=== Foglio: {sheet_title} ===")
+            for row in sheet.iter_rows(values_only=True):
+                cleaned = [str(c).strip() if c is not None else "" for c in row]
+                if any(c for c in cleaned):
+                    lines.append("\t".join(cleaned))
+        wb.close()
+
+    return "\n".join(lines)
+
+
 def export_to_csv(filepath: str, products: List[dict]) -> int:
     """Esporta una lista di prodotti in un file CSV formattato per Excel."""
     headers = [
@@ -172,138 +213,6 @@ def export_to_csv(filepath: str, products: List[dict]) -> int:
                 row.get("notes", "")
             ])
     return len(products)
-
-def parse_excel_file(filepath: str) -> Tuple[List[Dict[str, Any]], int]:
-    """
-    Legge un file Excel e converte le righe in dizionari prodotto.
-    Riconosce automaticamente se i prodotti sono sotto una sezione/scritta 'PREORDER'.
-    """
-    from openpyxl import load_workbook
-
-    workbook = load_workbook(filepath, data_only=True, read_only=True)
-    aliases = {
-        "name": {"NAME", "NOME", "PRODOTTO", "PRODUCT", "DESCR"},
-        "size": {"SIZE", "TAGLIA"},
-        "quantity": {"QUANTITY", "QUANTITA", "QTY", "PZ", "PEZZI"},
-        "purchased_price": {"PURCHASED PRICE", "PREZZO ACQUISTO", "PURCHASE PRICE", "COSTO", "COST"},
-        "purchased_place": {"PURCHASED PLACE", "LUOGO ACQUISTO", "PURCHASE PLACE", "SITO ACQUISTO"},
-        "selling_place": {"SELLING PLACE", "LUOGO VENDITA", "SALE PLACE", "PIATTAFORMA VENDITA"},
-        "selling_price": {"SELLING PRICE", "PREZZO VENDITA", "SALE PRICE", "PREZZO STIMATO"},
-        "sold_price": {"SOLD PRICE", "PREZZO EFFETTIVO", "PREZZO VENDUTO", "INCASSO"},
-        "fees": {"FEES", "SPESE", "COMMISSIONI", "COMMISSIONI/SPESE"},
-        "sold_date": {"SOLD DATE", "DATA VENDITA", "VENDUTO IL"},
-        "status": {"STATO", "STATUS"},
-        "release_date": {"DATA USCITA", "RELEASE DATE", "USCITA"},
-        "notes": {"NOTE", "NOTES"},
-    }
-
-    records: List[Dict[str, Any]] = []
-    skipped = 0
-
-    for sheet in workbook.worksheets:
-        default_status = STATUS_PREORDER if "PRE" in sheet.title.upper() else STATUS_STOCK
-        current_section_status = default_status
-
-        rows = list(sheet.iter_rows(values_only=True))
-        if not rows:
-            continue
-
-        mapping: Dict[str, int] = {}
-        header_found = False
-
-        for row in rows:
-            if not row or all(c is None for c in row):
-                continue
-
-            # Verifichiamo se l'intera riga contiene una scritta/sezione tipo "PREORDER" o "IN STOCK"
-            row_str = " ".join(str(cell or "").upper() for cell in row)
-            if "PREORDER" in row_str or "PRE-ORDER" in row_str or "PRE ORDER" in row_str:
-                current_section_status = STATUS_PREORDER
-            elif "IN STOCK" in row_str or "MAGAZZINO" in row_str or "STOCK" in row_str:
-                if "TOTAL" not in row_str and "PRE" not in row_str:
-                    current_section_status = STATUS_STOCK
-
-            normalized_row = [normalize_header(cell) for cell in row]
-
-            # Controlla se questa riga è una riga d'intestazione
-            temp_mapping: Dict[str, int] = {}
-            for key, names in aliases.items():
-                for index, header in enumerate(normalized_row):
-                    if header in names:
-                        temp_mapping[key] = index
-                        break
-
-            if "name" in temp_mapping and "purchased_price" in temp_mapping:
-                mapping = temp_mapping
-                header_found = True
-                continue
-
-            if not header_found:
-                continue
-
-            # Processa riga dati
-            def value(key: str, default: Any = "") -> Any:
-                index = mapping.get(key)
-                return row[index] if index is not None and index < len(row) and row[index] is not None else default
-
-            name = str(value("name")).strip()
-            if not name or name.upper() in {"NAME", "NOME", "PRODOTTO", "TOTAL", "TOTALE"}:
-                continue
-
-            try:
-                purchase = parse_money(value("purchased_price"))
-                sale = parse_money(value("selling_price"), allow_empty=True)
-                sold = parse_money(value("sold_price"), allow_empty=True)
-                fees = parse_money(value("fees"), allow_empty=True) or 0.0
-                qty = parse_int(value("quantity"), default=1)
-            except ValueError:
-                skipped += 1
-                continue
-
-            # Rilevamento dello stato
-            raw_status = str(value("status", "")).strip().lower()
-            if "vendut" in raw_status or "sold" in raw_status:
-                status = STATUS_SOLD
-            elif "pre" in raw_status or "order" in raw_status:
-                status = STATUS_PREORDER
-            elif "stock" in raw_status or "magazzino" in raw_status:
-                status = STATUS_STOCK
-            else:
-                status = current_section_status
-
-            try:
-                release_raw = value("release_date")
-                if isinstance(release_raw, datetime):
-                    release = release_raw.strftime("%Y-%m-%d")
-                else:
-                    release = parse_date(release_raw)
-
-                sold_date_raw = value("sold_date")
-                if isinstance(sold_date_raw, datetime):
-                    sold_date = sold_date_raw.strftime("%Y-%m-%d")
-                else:
-                    sold_date = parse_date(sold_date_raw)
-            except ValueError:
-                skipped += 1
-                continue
-
-            records.append({
-                "name": name,
-                "size": str(value("size")).strip(),
-                "quantity": qty,
-                "purchased_price": purchase,
-                "purchased_place": str(value("purchased_place")).strip(),
-                "selling_place": str(value("selling_place")).strip(),
-                "selling_price": sale,
-                "sold_price": sold,
-                "fees": fees,
-                "sold_date": sold_date,
-                "status": status,
-                "release_date": release if status == STATUS_PREORDER else "",
-                "notes": str(value("notes")).strip(),
-            })
-
-    return records, skipped
 
 def apply_window_icon(window: Any) -> None:
     """Imposta l'icona personalizzata ad alta definizione su qualsiasi finestra (CTk o CTkToplevel)."""
