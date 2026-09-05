@@ -108,7 +108,7 @@ def parse_excel_with_ai(raw_text: str, api_key: str) -> List[Dict[str, Any]]:
             "selling_price":    {"type": "NUMBER", "description": "Prezzo di vendita stimato. 0 se non trovato."},
             "sold_price":       {"type": "NUMBER", "description": "Prezzo di vendita effettivo. 0 se non trovato."},
             "fees":             {"type": "NUMBER", "description": "Commissioni o spese. Default 0."},
-            "sold_date":        {"type": "STRING", "description": "Data vendita in formato YYYY-MM-DD. Vuoto se non trovata."},
+            "sold_date":        {"type": "STRING", "description": "Data vendita in formato YYYY-MM-DD. Data di oggi se non trovata."},
             "status":           {"type": "STRING", "description": (
                 "Stato del prodotto. Scegli RIGOROSAMENTE tra: 'In Stock', 'Pre-ordine', 'Venduto'. "
                 "Regole: se trovi un prezzo di vendita effettivo o un luogo di vendita → 'Venduto'. "
