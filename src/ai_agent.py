@@ -71,7 +71,7 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
             "name": {"type": "STRING"},
             "size": {"type": "STRING", "description": "A meno che non venga scritto diversamente metti rigorosamente UNI come valore di default."},
             "quantity": {"type": "INTEGER", "description": "Non ci sono limiti di quantità, e il valore di default è sempre 1, ma se viene scritto un numero subito dopo una x, allora la quantità sarà quel numero."},
-            "purchased_price": {"type": "NUMBER"},
+            "purchased_price": {"type": "NUMBER", "description": "Prezzo di acquisto UNITARIO per singolo pezzo. Se viene indicato un prezzo totale per più pezzi, dividi per la quantità."},
             "purchased_place": {"type": "STRING"},
             "status": {"type": "STRING", "description": "Scegli rigorosamente tra: 'In Stock', 'Pre-ordine', 'Venduto', o 'Completato'. Default: 'In Stock'."},
             "release_date": {"type": "STRING", "description": "Se non inserita la data inserire la data di oggi. Formato: YYYY-MM-DD."}
@@ -94,7 +94,7 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "systemInstruction": {
-            "parts": [{"text": "Sei un assistente per l'inventario. Estrai TUTTI i prodotti menzionati nel testo. Restituisci sempre una lista 'products', anche se c'è un solo prodotto. Mappa i dati nello schema JSON, senza commenti o markdown. Formato date: YYYY-MM-DD."}]
+            "parts": [{"text": "Sei un assistente per l'inventario. Estrai TUTTI i prodotti menzionati nel testo. Restituisci sempre una lista 'products', anche se c'è un solo prodotto. I prezzi devono essere SEMPRE UNITARI per singolo pezzo (se il prezzo indicato è totale per più pezzi, dividilo per la quantità). Mappa i dati nello schema JSON, senza commenti o markdown. Formato date: YYYY-MM-DD."}]
         },
         "generationConfig": {
             "temperature": 0.1,
@@ -156,12 +156,12 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
             "name":             {"type": "STRING", "description": "Nome del prodotto. Obbligatorio."},
             "size":             {"type": "STRING", "description": "Taglia. Default 'UNI' se non specificata."},
             "quantity":         {"type": "INTEGER", "description": "Quantità. Default 1."},
-            "purchased_price":  {"type": "NUMBER", "description": "Prezzo di acquisto. Obbligatorio. Usa 0 se mancante."},
+            "purchased_price":  {"type": "NUMBER", "description": "Prezzo di acquisto UNITARIO (per singolo pezzo). Obbligatorio. Se nel foglio leggi un prezzo totale per più pezzi (es. 5 pezzi a 100€ totali), dividi per la quantità (100 / 5 = 20.0)."},
             "purchased_place":  {"type": "STRING", "description": "Luogo o sito di acquisto. Vuoto se non trovato."},
             "selling_place":    {"type": "STRING", "description": "Luogo o piattaforma di vendita. Vuoto se non trovato."},
-            "selling_price":    {"type": "NUMBER", "description": "Prezzo di vendita stimato. 0 se non trovato."},
-            "sold_price":       {"type": "NUMBER", "description": "Prezzo di vendita effettivo. 0 se non trovato."},
-            "fees":             {"type": "NUMBER", "description": "Commissioni o spese. Default 0."},
+            "selling_price":    {"type": "NUMBER", "description": "Prezzo di vendita stimato UNITARIO per singolo pezzo. 0 se non trovato."},
+            "sold_price":       {"type": "NUMBER", "description": "Prezzo di vendita effettivo UNITARIO per singolo pezzo. 0 se non trovato."},
+            "fees":             {"type": "NUMBER", "description": "Commissioni o spese UNITARIE per singolo pezzo. Default 0."},
             "sold_date":        {"type": "STRING", "description": f"Data vendita in formato YYYY-MM-DD. Se lo stato è Venduto e non c'è una data specifica nel foglio, usa rigorosamente la data odierna: {today_str}."},
             "status":           {"type": "STRING", "description": (
                 "Stato del prodotto. Scegli RIGOROSAMENTE tra: 'In Stock', 'Pre-ordine', 'Venduto'. "
@@ -189,6 +189,9 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
         "Il tuo compito è identificare OGNI riga che rappresenta un prodotto fisico e restituire la lista 'products' con tutti i dati estratti. "
         "Ignora le righe di intestazione, righe totali, righe vuote e sezioni di testo non dati. "
         "Riconosci automaticamente le colonne indipendentemente dalla lingua (italiano, inglese, ecc.) e dal formato (valute, date, simboli). "
+        "REGOLA CRUCIALE SUI PREZZI: i campi 'purchased_price', 'selling_price', 'sold_price' e 'fees' DEVONO ESSERE RIGOROSAMENTE PREZZI UNITARI (per 1 singolo pezzo). "
+        "Se una riga rappresenta una quantità multipla (es. quantità 5, o dicitura 'x5' nel nome/colonna) e il prezzo indicato nel foglio è il totale complessivo del lotto/ordine (es. 5 pezzi a 200€ totali), "
+        "DEVI dividere il prezzo totale per la quantità (es. 200 / 5 = 40.0) in modo da inserire SEMPRE il prezzo unitario per singola unità. Non inserire MAI il totale complessivo come prezzo di acquisto se la quantità è maggiore di 1. "
         f"Se lo stato è 'Venduto' e non è presente una data specifica nel foglio, assegna la data di oggi ({today_str}) come sold_date. "
         "Non inventare dati non presenti: usa i valori di default specificati nello schema. "
         "Formato date: YYYY-MM-DD. Formato numeri: senza simboli di valuta."
