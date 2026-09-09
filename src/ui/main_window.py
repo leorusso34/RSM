@@ -405,8 +405,11 @@ class InventoryApp(ctk.CTk):
                 self.context_menu.add_command(label="Modifica", command=self.edit_selected)
                 self.context_menu.add_command(label="Duplica", command=self.duplicate_selected)
 
-            if st == STATUS_PREORDER:
+            if st in (STATUS_STOCK, STATUS_PREORDER):
                 self.context_menu.add_separator()
+                self.context_menu.add_command(label="Metti in vendita", command=self.move_selected_to_sold)
+
+            if st == STATUS_PREORDER:
                 self.context_menu.add_command(label="Conferma in magazzino", command=self.move_selected_to_stock)
 
             if st == STATUS_SOLD:

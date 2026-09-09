@@ -169,3 +169,49 @@ def test_external_config_json_priority(tmp_path, monkeypatch):
     # JSON has priority!
     assert db.get_setting("gemini_api_key") == "KEY_FROM_JSON"
     db.close()
+
+
+def test_search_by_price(tmp_path):
+    """Verifica che la ricerca trovi prodotti anche cercando per prezzo o frazioni di prezzo."""
+    db = InventoryDatabase(tmp_path / "test_search.db")
+    db.save({
+        "name": "Jordan 4 Retro", "size": "43", "quantity": 1,
+        "purchased_price": Decimal("210.50"), "purchased_place": "SNKRS",
+        "selling_place": "", "selling_price": Decimal("350.00"),
+        "sold_price": None, "fees": Decimal("0"), "sold_date": "",
+        "status": STATUS_STOCK, "release_date": "", "notes": ""
+    })
+    db.save({
+        "name": "Yeezy Slide", "size": "42", "quantity": 1,
+        "purchased_price": Decimal("70.00"), "purchased_place": "Confirmed",
+        "selling_place": "", "selling_price": Decimal("110.00"),
+        "sold_price": None, "fees": Decimal("0"), "sold_date": "",
+        "status": STATUS_STOCK, "release_date": "", "notes": ""
+    })
+
+    # Ricerca per prezzo intero
+    res_70 = db.list_products(search="70")
+    assert len(res_70) == 1
+    assert res_70[0]["name"] == "Yeezy Slide"
+
+    # Ricerca per decimale con virgola
+    res_comma = db.list_products(search="210,50")
+    assert len(res_comma) == 1
+    assert res_comma[0]["name"] == "Jordan 4 Retro"
+
+    # Ricerca per decimale con punto
+    res_dot = db.list_products(search="210.50")
+    assert len(res_dot) == 1
+    assert res_dot[0]["name"] == "Jordan 4 Retro"
+
+    # Ricerca con simbolo valuta
+    res_curr = db.list_products(search="€ 350")
+    assert len(res_curr) == 1
+    assert res_curr[0]["name"] == "Jordan 4 Retro"
+
+    # Ricerca per nome continua a funzionare
+    res_name = db.list_products(search="Yeezy")
+    assert len(res_name) == 1
+    assert res_name[0]["name"] == "Yeezy Slide"
+
+    db.close()

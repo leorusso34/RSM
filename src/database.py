@@ -201,11 +201,26 @@ class InventoryDatabase:
         search_clean = search.strip()
         if search_clean:
             needle = f"%{search_clean}%"
+            price_clean = search_clean.replace("€", "").replace("$", "").replace("£", "").strip()
+            price_needle = f"%{price_clean}%" if price_clean else needle
+
             query += """ AND (
                 name LIKE ? OR size LIKE ? OR purchased_place LIKE ? OR
-                selling_place LIKE ? OR release_date LIKE ? OR notes LIKE ? OR sold_date LIKE ?
+                selling_place LIKE ? OR release_date LIKE ? OR notes LIKE ? OR sold_date LIKE ? OR
+                CAST(purchased_price_cents / 100 AS TEXT) LIKE ? OR
+                printf('%.2f', purchased_price_cents / 100.0) LIKE ? OR
+                replace(printf('%.2f', purchased_price_cents / 100.0), '.', ',') LIKE ? OR
+                CAST(selling_price_cents / 100 AS TEXT) LIKE ? OR
+                printf('%.2f', selling_price_cents / 100.0) LIKE ? OR
+                replace(printf('%.2f', selling_price_cents / 100.0), '.', ',') LIKE ? OR
+                CAST(sold_price_cents / 100 AS TEXT) LIKE ? OR
+                printf('%.2f', sold_price_cents / 100.0) LIKE ? OR
+                replace(printf('%.2f', sold_price_cents / 100.0), '.', ',') LIKE ? OR
+                CAST(fees_cents / 100 AS TEXT) LIKE ? OR
+                printf('%.2f', fees_cents / 100.0) LIKE ? OR
+                replace(printf('%.2f', fees_cents / 100.0), '.', ',') LIKE ?
             )"""
-            params.extend([needle] * 7)
+            params.extend([needle] * 7 + [price_needle] * 12)
 
         if purchased_place.strip():
             query += " AND purchased_place = ?"
