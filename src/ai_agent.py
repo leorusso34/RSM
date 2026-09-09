@@ -1,5 +1,6 @@
 import json
 import http.client
+import socket
 from datetime import datetime
 from typing import Any, List, Dict
 
@@ -22,7 +23,7 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
             "purchased_price": {"type": "NUMBER"},
             "purchased_place": {"type": "STRING"},
             "status": {"type": "STRING", "description": "Scegli rigorosamente tra: 'In Stock', 'Pre-ordine', 'Venduto', o 'Completato'. Default: 'In Stock'."},
-            "release_date": {"type": "STRING", "description": "Se non inserita la data inserire la data di oggi. Formato: AAAA-MM-GG."}
+            "release_date": {"type": "STRING", "description": "Se non inserita la data inserire la data di oggi. Formato: YYYY-MM-DD."}
         },
         "required": ["name", "quantity", "purchased_price", "status"]
     }
@@ -42,7 +43,7 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "systemInstruction": {
-            "parts": [{"text": "Sei un assistente per l'inventario. Estrai TUTTI i prodotti menzionati nel testo. Restituisci sempre una lista 'products', anche se c'è un solo prodotto. Mappa i dati nello schema JSON, senza commenti o markdown. Formato date: AAAA-MM-GG."}]
+            "parts": [{"text": "Sei un assistente per l'inventario. Estrai TUTTI i prodotti menzionati nel testo. Restituisci sempre una lista 'products', anche se c'è un solo prodotto. Mappa i dati nello schema JSON, senza commenti o markdown. Formato date: YYYY-MM-DD."}]
         },
         "generationConfig": {
             "temperature": 0.1,
@@ -54,9 +55,8 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
     data = json.dumps(payload).encode("utf-8")
     headers = {"Content-Type": "application/json"}
 
-    import socket as _socket
-    _prev_timeout = _socket.getdefaulttimeout()
-    _socket.setdefaulttimeout(20)
+    _prev_timeout = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(20)
 
     conn = http.client.HTTPSConnection(host, timeout=20)
     try:
@@ -77,7 +77,7 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
     except Exception as e:
         raise RuntimeError(f"Errore di connessione: {str(e)}")
     finally:
-        _socket.setdefaulttimeout(_prev_timeout)
+        socket.setdefaulttimeout(_prev_timeout)
         conn.close()
 
 
@@ -171,9 +171,8 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
     data = json.dumps(payload).encode("utf-8")
     headers = {"Content-Type": "application/json"}
 
-    import socket as _socket
-    _prev_timeout = _socket.getdefaulttimeout()
-    _socket.setdefaulttimeout(60)  # Timeout più lungo per file grandi
+    _prev_timeout = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(60)  # Timeout più lungo per file grandi
 
     conn = http.client.HTTPSConnection(host, timeout=60)
     try:
@@ -194,5 +193,5 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
     except Exception as e:
         raise RuntimeError(f"Errore AI Excel import: {str(e)}")
     finally:
-        _socket.setdefaulttimeout(_prev_timeout)
+        socket.setdefaulttimeout(_prev_timeout)
         conn.close()

@@ -179,14 +179,14 @@ class DashboardView(ctk.CTkFrame):
             "dist": "Ripartizione Inventario (Pezzi)",
         }
 
-        self._temp_layout = current_layout.copy()
+        temp_layout = current_layout.copy()
         for ch in all_charts:
-            if ch not in self._temp_layout:
-                self._temp_layout.append(ch)
+            if ch not in temp_layout:
+                temp_layout.append(ch)
 
-        self._chart_vars = {}
+        chart_vars = {}
         for ch in all_charts:
-            self._chart_vars[ch] = tk.BooleanVar(value=(ch in current_layout))
+            chart_vars[ch] = tk.BooleanVar(value=(ch in current_layout))
 
         # Contenitore per le card dei grafici perfettamente allineato ai margini
         cards_container = ctk.CTkFrame(
@@ -197,10 +197,10 @@ class DashboardView(ctk.CTkFrame):
 
         def move_item(index: int, direction: int):
             new_idx = index + direction
-            if 0 <= new_idx < len(self._temp_layout):
-                self._temp_layout[index], self._temp_layout[new_idx] = (
-                    self._temp_layout[new_idx],
-                    self._temp_layout[index],
+            if 0 <= new_idx < len(temp_layout):
+                temp_layout[index], temp_layout[new_idx] = (
+                    temp_layout[new_idx],
+                    temp_layout[index],
                 )
                 render_items()
 
@@ -208,7 +208,7 @@ class DashboardView(ctk.CTkFrame):
             for w in cards_container.winfo_children():
                 w.destroy()
 
-            for idx, cid in enumerate(self._temp_layout):
+            for idx, cid in enumerate(temp_layout):
                 card = ctk.CTkFrame(
                     cards_container,
                     fg_color=c["bg_card"],
@@ -222,7 +222,7 @@ class DashboardView(ctk.CTkFrame):
                 switch = ctk.CTkSwitch(
                     card,
                     text=all_charts.get(cid, cid),
-                    variable=self._chart_vars[cid],
+                    variable=chart_vars[cid],
                     font=("Segoe UI", 12, "bold"),
                     text_color=c["fg_main"],
                     progress_color=c["accent"],
@@ -254,7 +254,7 @@ class DashboardView(ctk.CTkFrame):
                     font=("Segoe UI", 10),
                     fg_color="#374151",
                     hover_color="#4b5563",
-                    state="normal" if idx < len(self._temp_layout) - 1 else "disabled",
+                    state="normal" if idx < len(temp_layout) - 1 else "disabled",
                     command=lambda i=idx: move_item(i, 1),
                 )
                 btn_down.pack(side="left")
@@ -266,7 +266,7 @@ class DashboardView(ctk.CTkFrame):
         bottom_box.pack(fill="x")
 
         def save():
-            final_layout = [ch for ch in self._temp_layout if self._chart_vars[ch].get()]
+            final_layout = [ch for ch in temp_layout if chart_vars[ch].get()]
             self.db.set_setting("dashboard_layout", json.dumps(final_layout))
             self._apply_layout()
             top.destroy()

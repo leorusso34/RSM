@@ -285,10 +285,6 @@ class ExcelHintDialog(ctk.CTkToplevel):
             height=110,
         )
         self.txt_hint.pack(fill="both", expand=True, padx=10, pady=8)
-        self.txt_hint.insert(
-            "1.0",
-            "",
-        )
 
         # Placeholder hint examples
         ctk.CTkLabel(

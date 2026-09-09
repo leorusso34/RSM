@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Finestra principale dell'applicazione InventoryApp per RSM."""
 
+import threading
 import tkinter as tk
 from datetime import datetime
 from decimal import Decimal
@@ -19,6 +20,7 @@ from .email_sync_dialog import EmailSyncDialog
 from .theme import setup_app_theme
 from ..utils import export_to_csv, money, read_spreadsheet_raw, parse_money, calculate_profit, center_window, apply_window_icon
 from .excel_import_dialog import ExcelImportDialog, ExcelHintDialog
+from ..ai_agent import parse_excel_with_ai
 
 
 class InventoryApp(ctk.CTk):
@@ -96,24 +98,12 @@ class InventoryApp(ctk.CTk):
         self.bind("<Control-Tab>", lambda _e: self._switch_tab(1))
         self.bind("<Control-Shift-Tab>", lambda _e: self._switch_tab(-1))
         self.search_entry.focus_set()
-        
-
-    def _apply_dark_titlebar(self) -> None:
-        """Forza la titlebar di Windows 10/11 in modalita scura."""
-        try:
-            import ctypes
-            self.update_idletasks()
-            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            value = ctypes.c_int(1)
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
-        except Exception:
-            pass
 
     def _build_ui(self) -> None:
         c = DARK_THEME
 
-        self.configure(fg_color=DARK_THEME["bg_main"]); container = ctk.CTkFrame(self, fg_color="transparent")
+        self.configure(fg_color=DARK_THEME["bg_main"])
+        container = ctk.CTkFrame(self, fg_color="transparent")
         container.pack(fill="both", expand=True, padx=12, pady=12)
 
         # 1. Header superiore
@@ -734,14 +724,12 @@ class InventoryApp(ctk.CTk):
         if count == 0:
             self.lbl_selected_info.configure(text="0 prodotti selezionati")
             return
-        from decimal import Decimal
         total_cost = Decimal("0")
         for item_id in ids:
             prod = self.db.get(item_id)
             if prod:
                 total_cost += prod["purchased_price"]
         avg_cost = total_cost / count
-        from ..utils import money
         self.lbl_selected_info.configure(text=f"{count} selezionati | Totale: {money(total_cost)} | Media: {money(avg_cost)}")
 
     def open_email_sync(self) -> None:
@@ -974,9 +962,6 @@ class InventoryApp(ctk.CTk):
 
     def import_excel(self) -> None:
         """Importa un file Excel/CSV qualsiasi tramite AI (analisi universale)."""
-        import threading
-        from pathlib import Path as _Path
-
         path = filedialog.askopenfilename(
             parent=self,
             title="Importa file Excel o CSV",
@@ -996,7 +981,7 @@ class InventoryApp(ctk.CTk):
             return
 
         # Mostra la dialog per il suggerimento contestuale opzionale
-        filename = _Path(path).name
+        filename = Path(path).name
         hint_dialog = ExcelHintDialog(self, filename)
         self.wait_window(hint_dialog)
 
@@ -1012,7 +997,6 @@ class InventoryApp(ctk.CTk):
 
         def _run_import():
             try:
-                from ..ai_agent import parse_excel_with_ai
                 raw_text = read_spreadsheet_raw(path)
                 if not raw_text.strip():
                     self.after(0, lambda: messagebox.showerror(

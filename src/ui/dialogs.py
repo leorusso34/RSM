@@ -178,6 +178,11 @@ class ProductDialog(ctk.CTkToplevel):
         self.entry_sold_date = ctk.CTkEntry(form, textvariable=self.vars["sold_date"], font=("Segoe UI", 12))
         self.entry_sold_date.grid(row=11, column=1, sticky="ew", padx=(6, 0))
 
+        self.lbl_release_date = ctk.CTkLabel(form, text="DATA USCITA (AAAA-MM-GG)", font=("Segoe UI", 11, "bold"))
+        self.lbl_release_date.grid(row=12, column=0, sticky="w", pady=(10, 4))
+        self.entry_release_date = ctk.CTkEntry(form, textvariable=self.vars["release_date"], font=("Segoe UI", 12))
+        self.entry_release_date.grid(row=12, column=1, sticky="ew", padx=(6, 0))
+
         # Card profitto con angoli arrotondati
         self.profit_card = ctk.CTkFrame(form, corner_radius=10, border_width=1, border_color=c["border"], fg_color=c["bg_input"])
         self.profit_card.grid(row=14, column=0, columnspan=2, sticky="ew", pady=(14, 4))
@@ -242,22 +247,39 @@ class ProductDialog(ctk.CTkToplevel):
 
     def _on_status_changed(self) -> None:
         st = self.vars["status"].get()
+        c = DARK_THEME
         if st == STATUS_SOLD:
             self.entry_fees.configure(state="normal")
             self.entry_sold_date.configure(state="normal")
-            self.lbl_fees.configure(text_color=DARK_THEME["fg_main"])
-            self.lbl_sold_date.configure(text_color=DARK_THEME["fg_main"])
+            self.entry_release_date.configure(state="disabled")
+            self.lbl_fees.configure(text_color=c["fg_main"])
+            self.lbl_sold_date.configure(text_color=c["fg_main"])
+            self.lbl_release_date.configure(text_color=c["fg_muted"])
             self.profit_card.grid()
             if not self.vars["sold_date"].get():
                 self.vars["sold_date"].set(datetime.now().strftime("%Y-%m-%d"))
-        else:
+            self.vars["release_date"].set("")
+        elif st == STATUS_PREORDER:
             self.entry_fees.configure(state="disabled")
             self.entry_sold_date.configure(state="disabled")
-            self.lbl_fees.configure(text_color=DARK_THEME["fg_muted"])
-            self.lbl_sold_date.configure(text_color=DARK_THEME["fg_muted"])
+            self.entry_release_date.configure(state="normal")
+            self.lbl_fees.configure(text_color=c["fg_muted"])
+            self.lbl_sold_date.configure(text_color=c["fg_muted"])
+            self.lbl_release_date.configure(text_color=c["fg_main"])
             self.profit_card.grid_remove()
             self.vars["fees"].set("0,00")
             self.vars["sold_date"].set("")
+        else:
+            self.entry_fees.configure(state="disabled")
+            self.entry_sold_date.configure(state="disabled")
+            self.entry_release_date.configure(state="disabled")
+            self.lbl_fees.configure(text_color=c["fg_muted"])
+            self.lbl_sold_date.configure(text_color=c["fg_muted"])
+            self.lbl_release_date.configure(text_color=c["fg_muted"])
+            self.profit_card.grid_remove()
+            self.vars["fees"].set("0,00")
+            self.vars["sold_date"].set("")
+            self.vars["release_date"].set("")
         self._update_profit_preview()
 
     def _update_profit_preview(self) -> None:
@@ -288,7 +310,7 @@ class ProductDialog(ctk.CTkToplevel):
             sold = sale if st == STATUS_SOLD else None
             if st == STATUS_SOLD and sold is None:
                 raise ValueError("Per i prodotti venduti e obbligatorio inserire il Prezzo di Vendita.")
-            release = ""
+            release_date = parse_date(self.vars["release_date"].get().strip())
             sold_date = self.vars["sold_date"].get().strip()
             sold_date = parse_date(sold_date)
         except ValueError as exc:
@@ -308,7 +330,7 @@ class ProductDialog(ctk.CTkToplevel):
             "fees": fees,
             "sold_date": sold_date,
             "status": st,
-            "release_date": release,
+            "release_date": release_date,
             "notes": self.notes.get("1.0", "end").strip(),
         }
         self.destroy()
