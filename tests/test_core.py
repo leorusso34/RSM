@@ -214,4 +214,56 @@ def test_search_by_price(tmp_path):
     assert len(res_name) == 1
     assert res_name[0]["name"] == "Yeezy Slide"
 
-    db.close()
+    db.close()
+
+
+def test_undo_stack_limit_and_actions(tmp_path):
+    """Verifica che l'undo stack rispetti il limite massimo di 10 azioni e ripristini correttamente i record."""
+    db = InventoryDatabase(tmp_path / "test_undo.db")
+    status_var = type("Var", (), {"set": lambda self, v: None})()
+    
+    app_stub = type("AppStub", (), {
+        "_undo_stack": [],
+        "db": db,
+        "status_bar_var": status_var,
+        "refresh": lambda self: None,
+        "_push_undo": InventoryApp._push_undo,
+        "undo": InventoryApp.undo,
+        "_undo_insert": InventoryApp._undo_insert,
+        "_undo_update": InventoryApp._undo_update,
+        "_undo_delete": InventoryApp._undo_delete,
+    })()
+
+    # Inseriamo un prodotto
+    pid = db.save({
+        "name": "Articolo Originale", "size": "42", "quantity": 1,
+        "purchased_price": Decimal("100.00"), "purchased_place": "Store",
+        "selling_place": "", "selling_price": None, "sold_price": None,
+        "fees": Decimal("0"), "sold_date": "", "status": STATUS_STOCK,
+        "release_date": "", "notes": ""
+    })
+    app_stub._push_undo("Aggiunto articolo", lambda nids=[pid]: app_stub._undo_insert(nids))
+    assert len(app_stub._undo_stack) == 1
+
+    # Verifichiamo il limite massimo di 10 elementi
+    for i in range(15):
+        app_stub._push_undo(f"Azione {i}", lambda: None)
+    assert len(app_stub._undo_stack) == 10
+
+    # Test eliminazione e ripristino con undo
+    app_stub._undo_stack.clear()
+    old_rec = dict(db.get(pid))
+    db.delete_many([pid])
+    assert db.get(pid) is None
+
+    app_stub._push_undo("Eliminato", lambda recs=[old_rec]: app_stub._undo_delete(recs))
+    app_stub.undo()
+    
+    # Il prodotto è stato ripristinato
+    prods = db.list_products()
+    assert len(prods) == 1
+    assert prods[0]["name"] == "Articolo Originale"
+
+    db.close()
+
+

@@ -256,10 +256,12 @@ class InventoryDatabase:
 
     def save(self, data: Dict[str, Any], product_id: Optional[int] = None) -> int:
         """Salva (inserisce o aggiorna) un prodotto nel database."""
+        bundle_id = str(data.get("bundle_id", "") or "")
+        is_completed = int(data.get("is_completed", 0) or 0)
         fields = (
             "name", "size", "quantity", "purchased_price_cents", "purchased_place",
             "selling_place", "selling_price_cents", "sold_price_cents", "fees_cents", "sold_date",
-            "status", "release_date", "notes"
+            "status", "release_date", "notes", "bundle_id", "is_completed"
         )
         status = data.get("status", STATUS_STOCK)
         if status not in {STATUS_STOCK, STATUS_PREORDER, STATUS_SOLD}:
@@ -273,7 +275,7 @@ class InventoryDatabase:
             money_to_cents(data.get("purchased_price")), data.get("purchased_place", ""),
             data.get("selling_place", ""), money_to_cents(data.get("selling_price")),
             money_to_cents(sold_price), money_to_cents(fees), sold_date, status,
-            release_date, data.get("notes", ""),
+            release_date, data.get("notes", ""), bundle_id, is_completed,
         )
 
         with self.connection:

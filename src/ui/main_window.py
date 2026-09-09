@@ -75,6 +75,7 @@ class InventoryApp(ctk.CTk):
         self.current_sort: Dict[str, tuple[str, bool]] = {}
         self.trees: Dict[str, ttk.Treeview] = {}
         self._clipboard_ids: List[int] = []
+        self._undo_stack: List[tuple[str, Any]] = []
         self.status_tabs = [STATUS_STOCK, STATUS_PREORDER, STATUS_SOLD, STATUS_COMPLETED]
 
         self.tab_name_to_status = {
@@ -95,6 +96,10 @@ class InventoryApp(ctk.CTk):
         self.bind("<Control-n>", lambda _e: self.add_product())
         self.bind("<Control-f>", lambda _e: self.search_entry.focus_set())
         self.bind("<F5>", lambda _e: self.refresh())
+        self.bind("<Control-z>", self.undo)
+        self.bind("<Control-Z>", self.undo)
+        self.bind("<KeyPress-e>", self._on_e_press)
+        self.bind("<KeyPress-E>", self._on_e_press)
         self.bind("<Control-Tab>", lambda _e: self._switch_tab(1))
         self.bind("<Control-Shift-Tab>", lambda _e: self._switch_tab(-1))
         self.search_entry.focus_set()
@@ -424,9 +429,12 @@ class InventoryApp(ctk.CTk):
     def complete_selected_sales(self) -> None:
         ids = self.selected_ids()
         if not ids: return
+        old_records = [dict(self.db.get(i)) for i in ids if self.db.get(i)]
         with self.db.connection:
             self.db.connection.execute(f"UPDATE products SET is_completed = 1 WHERE id IN ({','.join('?'*len(ids))})", ids)
         self.refresh()
+        if old_records:
+            self._push_undo(f"Completate {len(ids)} vendite", lambda recs=old_records: self._undo_update(recs))
         self.status_bar_var.set(f"{len(ids)} prodotti contrassegnati come vendita completata")
 
     def _on_search_changed(self, *args) -> None:
@@ -752,22 +760,25 @@ class InventoryApp(ctk.CTk):
         places = self.db.get_distinct_places()
         cur_st = self.current_status() or STATUS_STOCK
         last_target = None
+        created_ids = []
         for record in dialog.result:
             prod_dialog = ProductDialog(self, cur_st, autocomplete_places=places, record=record)
             self.wait_window(prod_dialog)
             if prod_dialog.result:
                 new_id = self.db.save(prod_dialog.result)
+                created_ids.append(new_id)
                 last_target = prod_dialog.result["status"]
-        if last_target:
+        if created_ids and last_target:
             self.refresh()
             if last_target in self.status_to_tab_name:
                 self.notebook.set(self.status_to_tab_name[last_target])
             tree = self.trees[last_target]
-            if tree.exists(str(new_id)):
-                tree.selection_set(str(new_id))
-                tree.see(str(new_id))
-            n = len(dialog.result)
-            self.status_bar_var.set(f"{n} prodott{'o' if n == 1 else 'i'} generati e aggiunti con successo")
+            if tree.exists(str(created_ids[-1])):
+                tree.selection_set(str(created_ids[-1]))
+                tree.see(str(created_ids[-1]))
+            self._push_undo(f"Aggiunti {len(created_ids)} prodotti AI", lambda nids=created_ids: self._undo_insert(nids))
+            n = len(created_ids)
+            self.status_bar_var.set(f"{n} prodott{'o aggiunto' if n == 1 else 'i aggiunti'} con successo")
 
     def add_product(self) -> None:
         cur_st = self.current_status() or STATUS_STOCK
@@ -784,6 +795,7 @@ class InventoryApp(ctk.CTk):
             if tree.exists(str(new_id)):
                 tree.selection_set(str(new_id))
                 tree.see(str(new_id))
+            self._push_undo(f"Aggiunto '{dialog.result.get('name')}'", lambda nids=[new_id]: self._undo_insert(nids))
             self.status_bar_var.set("Prodotto aggiunto con successo")
 
     def sort_tree(self, status: str, column: str) -> None:
@@ -809,58 +821,102 @@ class InventoryApp(ctk.CTk):
         for _, item in sorted(items, key=sort_value, reverse=not ascending):
             tree.move(item, "", "end")
 
+    def _on_e_press(self, event=None) -> Optional[str]:
+        focused = self.focus_get()
+        if focused and (
+            isinstance(focused, (tk.Entry, ttk.Entry))
+            or "entry" in str(focused).lower()
+            or "textbox" in str(focused).lower()
+            or "text" in str(focused).lower()
+        ):
+            return None
+        self.edit_selected()
+        return "break"
+
     def edit_selected(self) -> None:
         ids = self.selected_ids()
-        if len(ids) != 1:
+        if not ids:
             return
-        prod_id = ids[0]
-        record = self.db.get(prod_id)
-        if not record:
-            self.refresh()
-            return
-        if record.get("is_completed"):
-            messagebox.showinfo("Azione non consentita", "Questa vendita è stata segnata come Completata.\nNon è possibile modificarla. Serve solo come storico.", parent=self)
-            return
-        if record.get("bundle_id"):
-            messagebox.showinfo("Azione non consentita", "Questo prodotto fa parte di una Vendita Multipla.\nNon è possibile modificarlo singolarmente per non sfasare i totali della vendita in blocco.", parent=self)
-            return
-        places = self.db.get_distinct_places()
-        dialog = ProductDialog(self, record["status"], autocomplete_places=places, record=record)
-        self.wait_window(dialog)
-        if dialog.result:
-            self.db.save(dialog.result, prod_id)
-            target = dialog.result["status"]
-            self.refresh()
-            if target in self.status_to_tab_name:
-                self.notebook.set(self.status_to_tab_name[target])
-            tree = self.trees[target]
-            if tree.exists(str(prod_id)):
-                tree.selection_set(str(prod_id))
-                tree.see(str(prod_id))
-            self.status_bar_var.set("Prodotto modificato con successo")
 
-    def _clone_record(self, record: dict, force_status: Optional[str] = None) -> None:
-        record.pop("id", None)
-        record["name"] = f"{record['name']} (Copia)"
-        record["bundle_id"] = ""
-        record["is_completed"] = 0
+        valid_records = []
+        for prod_id in ids:
+            record = self.db.get(prod_id)
+            if not record:
+                continue
+            if record.get("is_completed"):
+                messagebox.showinfo(
+                    "Azione non consentita",
+                    f"'{record.get('name', 'Il prodotto')}' è una vendita Completata.\nNon è possibile modificarla (serve solo come storico).",
+                    parent=self
+                )
+                continue
+            if record.get("bundle_id"):
+                messagebox.showinfo(
+                    "Azione non consentita",
+                    f"'{record.get('name', 'Il prodotto')}' fa parte di una Vendita Multipla.\nNon è possibile modificarlo singolarmente.",
+                    parent=self
+                )
+                continue
+            valid_records.append((prod_id, dict(record)))
+
+        if not valid_records:
+            return
+
+        places = self.db.get_distinct_places()
+        modified_old_records = []
+        last_target = None
+        last_id = None
+
+        for prod_id, record in valid_records:
+            dialog = ProductDialog(self, record["status"], autocomplete_places=places, record=record)
+            self.wait_window(dialog)
+            if dialog.result:
+                self.db.save(dialog.result, prod_id)
+                modified_old_records.append(record)
+                last_target = dialog.result["status"]
+                last_id = prod_id
+
+        if modified_old_records:
+            self.refresh()
+            if last_target and last_target in self.status_to_tab_name:
+                self.notebook.set(self.status_to_tab_name[last_target])
+            if last_id and last_target and last_target in self.trees:
+                tree = self.trees[last_target]
+                if tree.exists(str(last_id)):
+                    tree.selection_set(str(last_id))
+                    tree.see(str(last_id))
+            self._push_undo(
+                f"Modificati {len(modified_old_records)} prodotti",
+                lambda recs=modified_old_records: self._undo_update(recs)
+            )
+            count = len(modified_old_records)
+            self.status_bar_var.set(f"{count} prodott{'o modificato' if count == 1 else 'i modificati'} con successo")
+
+    def _clone_record(self, record: dict, force_status: Optional[str] = None) -> int:
+        record_copy = dict(record)
+        record_copy.pop("id", None)
+        record_copy["name"] = f"{record_copy['name']} (Copia)"
+        record_copy["bundle_id"] = ""
+        record_copy["is_completed"] = 0
         if force_status:
-            record["status"] = force_status
-        self.db.save(record)
+            record_copy["status"] = force_status
+        return self.db.save(record_copy)
 
     def duplicate_selected(self) -> None:
         ids = self.selected_ids()
         if not ids:
             return
-        duplicated = 0
+        duplicated_ids = []
         for prod_id in ids:
             record = self.db.get(prod_id)
             if record:
-                self._clone_record(record)
-                duplicated += 1
-        if duplicated > 0:
+                new_id = self._clone_record(record)
+                if new_id:
+                    duplicated_ids.append(new_id)
+        if duplicated_ids:
             self.refresh()
-            self.status_bar_var.set(f"Duplicati {duplicated} prodotti")
+            self._push_undo(f"Duplicati {len(duplicated_ids)} prodotti", lambda nids=duplicated_ids: self._undo_insert(nids))
+            self.status_bar_var.set(f"Duplicati {len(duplicated_ids)} prodotti")
 
     def _copy_to_clipboard(self, event=None) -> str:
         ids = self.selected_ids()
@@ -882,17 +938,19 @@ class InventoryApp(ctk.CTk):
     def _paste_from_clipboard(self, event=None) -> str:
         if not getattr(self, "_clipboard_ids", None):
             return "break"
-        pasted = 0
+        pasted_ids = []
         current_tab = self.current_status()
         force_status = current_tab if current_tab in (STATUS_STOCK, STATUS_PREORDER) else None
         for prod_id in self._clipboard_ids:
             record = self.db.get(prod_id)
             if record:
-                self._clone_record(record, force_status)
-                pasted += 1
-        if pasted > 0:
+                new_id = self._clone_record(record, force_status)
+                if new_id:
+                    pasted_ids.append(new_id)
+        if pasted_ids:
             self.refresh()
-            self.status_bar_var.set(f"Incollati {pasted} prodotti")
+            self._push_undo(f"Incollati {len(pasted_ids)} prodotti", lambda nids=pasted_ids: self._undo_insert(nids))
+            self.status_bar_var.set(f"Incollati {len(pasted_ids)} prodotti")
         return "break"
 
     def delete_selected(self) -> None:
@@ -902,9 +960,13 @@ class InventoryApp(ctk.CTk):
         count = len(ids)
         msg = f"Eliminare definitivamente {count} prodotti selezionati?\nQuesta operazione non può essere annullata." if count > 1 else "Eliminare definitivamente il prodotto selezionato?"
         if messagebox.askyesno("Conferma eliminazione", msg, parent=self):
+            old_records = [dict(self.db.get(i)) for i in ids if self.db.get(i)]
             deleted_count = self.db.delete_many(ids)
-            self.refresh()
-            self.status_bar_var.set(f"Eliminati {deleted_count} prodotti")
+            if deleted_count > 0:
+                self.refresh()
+                if old_records:
+                    self._push_undo(f"Eliminati {deleted_count} prodotti", lambda recs=old_records: self._undo_delete(recs))
+                self.status_bar_var.set(f"Eliminati {deleted_count} prodotti")
 
     def move_selected_to_stock(self) -> None:
         ids = self.selected_ids()
@@ -916,15 +978,19 @@ class InventoryApp(ctk.CTk):
                 messagebox.showinfo("Azione non consentita", "Uno o più prodotti selezionati fanno parte di una Vendita Multipla.\nNon puoi spostarli in Magazzino separatamente.\n\nSe vuoi annullare la vendita, elimina l'intera Vendita Multipla e ricrea i prodotti.", parent=self)
                 return
         if messagebox.askyesno("Conferma spostamento", f"Spostare {len(ids)} prodotti in 'In Magazzino'?", parent=self):
+            old_records = [dict(self.db.get(i)) for i in ids if self.db.get(i)]
             self.db.update_status_many(ids, STATUS_STOCK)
             self.refresh()
             self.notebook.set("Magazzino")
+            if old_records:
+                self._push_undo("Spostamento in magazzino", lambda recs=old_records: self._undo_update(recs))
             self.status_bar_var.set(f"{len(ids)} prodotti spostati in magazzino")
 
     def move_selected_to_sold(self) -> None:
         ids = self.selected_ids()
         if not ids:
             return
+        old_records = [dict(self.db.get(i)) for i in ids if self.db.get(i)]
         if len(ids) == 1:
             prod_id = ids[0]
             record = self.db.get(prod_id)
@@ -938,6 +1004,8 @@ class InventoryApp(ctk.CTk):
                 self.db.save(dialog.result, prod_id)
                 self.refresh()
                 self.notebook.set("Vendite Attive")
+                if old_records:
+                    self._push_undo("Spostamento in vendita", lambda recs=old_records: self._undo_update(recs))
                 self.status_bar_var.set("Prodotto venduto con successo")
         else:
             dialog = BulkStatusDialog(self, len(ids), STATUS_SOLD)
@@ -946,7 +1014,48 @@ class InventoryApp(ctk.CTk):
                 self.db.update_status_many(ids, STATUS_SOLD, extra_data=dialog.result)
                 self.refresh()
                 self.notebook.set("Vendite Attive")
+                if old_records:
+                    self._push_undo(f"Spostamento {len(ids)} prodotti in vendita", lambda recs=old_records: self._undo_update(recs))
                 self.status_bar_var.set(f"{len(ids)} prodotti contrassegnati come venduti")
+
+    def _push_undo(self, desc: str, action_fn: Any) -> None:
+        """Aggiunge un'azione invertibile alla pila di Undo (max 10 azioni)."""
+        self._undo_stack.append((desc, action_fn))
+        if len(self._undo_stack) > 10:
+            self._undo_stack.pop(0)
+
+    def undo(self, event=None) -> None:
+        """Annulla l'ultima azione eseguita dall'utente."""
+        if not self._undo_stack:
+            self.status_bar_var.set("Nessuna azione da annullare")
+            return
+        desc, action_fn = self._undo_stack.pop()
+        try:
+            action_fn()
+        except Exception as exc:
+            self.status_bar_var.set(f"Impossibile annullare: {exc}")
+
+    def _undo_insert(self, inserted_ids: List[int]) -> None:
+        if inserted_ids:
+            self.db.delete_many(inserted_ids)
+            self.refresh()
+            self.status_bar_var.set(f"Annullato: rimossi {len(inserted_ids)} prodotti aggiunti")
+
+    def _undo_update(self, old_records: List[Dict[str, Any]]) -> None:
+        for rec in old_records:
+            pid = rec.get("id")
+            if pid:
+                self.db.save(rec, pid)
+        self.refresh()
+        self.status_bar_var.set(f"Annullato: ripristinate modifiche per {len(old_records)} prodotti")
+
+    def _undo_delete(self, deleted_records: List[Dict[str, Any]]) -> None:
+        restored = 0
+        for rec in deleted_records:
+            self.db.save(rec)
+            restored += 1
+        self.refresh()
+        self.status_bar_var.set(f"Annullato: ripristinati {restored} prodotti eliminati")
 
     def export_csv(self) -> None:
         path = filedialog.asksaveasfilename(
