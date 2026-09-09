@@ -1,8 +1,59 @@
 import json
 import http.client
 import socket
+import re
 from datetime import datetime
 from typing import Any, List, Dict
+
+
+def _safe_parse_json_products(raw_content: str) -> List[Dict[str, Any]]:
+    """
+    Decodifica in modo resiliente il payload JSON dei prodotti restituito dall'AI.
+    Se la risposta è stata troncata ai limiti di token, ripara automaticamente
+    l'array JSON per recuperare tutti i prodotti generati fino all'ultimo valido.
+    """
+    cleaned = raw_content.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    # 1. Tentativo standard diretto
+    try:
+        data = json.loads(cleaned)
+        if isinstance(data, dict):
+            return data.get("products", [])
+        elif isinstance(data, list):
+            return data
+    except json.JSONDecodeError:
+        pass
+
+    # 2. Riparazione JSON troncato: trova l'ultimo oggetto chiuso '}' e sigilla l'array
+    idx = cleaned.rfind("}")
+    while idx > 0:
+        candidate = cleaned[:idx + 1] + "]}"
+        try:
+            data = json.loads(candidate)
+            if isinstance(data, dict):
+                return data.get("products", [])
+            elif isinstance(data, list):
+                return data
+        except json.JSONDecodeError:
+            idx = cleaned.rfind("}", 0, idx)
+
+    # 3. Fallback: estrazione manuale di tutti gli oggetti JSON validi
+    pattern = re.compile(r'\{[^{}]*"name"[^{}]*\}')
+    objects = []
+    for match in pattern.finditer(cleaned):
+        try:
+            obj = json.loads(match.group(0))
+            if isinstance(obj, dict) and obj.get("name"):
+                objects.append(obj)
+        except Exception:
+            pass
+    if objects:
+        return objects
+
+    raise ValueError(f"Impossibile interpretare la risposta AI come elenco prodotti JSON: {raw_content[:200]}...")
 
 def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
     """
@@ -47,6 +98,7 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
         },
         "generationConfig": {
             "temperature": 0.1,
+            "maxOutputTokens": 65536,
             "responseMimeType": "application/json",
             "responseSchema": response_schema
         }
@@ -70,8 +122,7 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
         result = json.loads(resp_data)
         if "candidates" in result and len(result["candidates"]) > 0:
             content = result["candidates"][0]["content"]["parts"][0]["text"]
-            parsed = json.loads(content)
-            return parsed.get("products", [])
+            return _safe_parse_json_products(content)
         else:
             raise ValueError(f"Risposta inaspettata: {resp_data}")
     except Exception as e:
@@ -163,6 +214,7 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
         "systemInstruction": {"parts": [{"text": system_prompt}]},
         "generationConfig": {
             "temperature": 0.1,
+            "maxOutputTokens": 65536,
             "responseMimeType": "application/json",
             "responseSchema": response_schema
         }
@@ -186,8 +238,7 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
         result = json.loads(resp_data)
         if "candidates" in result and len(result["candidates"]) > 0:
             content = result["candidates"][0]["content"]["parts"][0]["text"]
-            parsed = json.loads(content)
-            return parsed.get("products", [])
+            return _safe_parse_json_products(content)
         else:
             raise ValueError(f"Risposta AI inaspettata: {resp_data}")
     except (socket.timeout, TimeoutError) as e:

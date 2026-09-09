@@ -157,6 +157,8 @@ def read_spreadsheet_raw(filepath: str) -> str:
             reader = csv.reader(f, dialect)
             for row in reader:
                 cleaned = [str(c).strip() for c in row]
+                while cleaned and not cleaned[-1]:
+                    cleaned.pop()
                 if any(cleaned):
                     lines.append("\t".join(cleaned))
     else:
@@ -169,6 +171,8 @@ def read_spreadsheet_raw(filepath: str) -> str:
                 lines.append(f"=== Foglio: {sheet_title} ===")
             for row in sheet.iter_rows(values_only=True):
                 cleaned = [str(c).strip() if c is not None else "" for c in row]
+                while cleaned and not cleaned[-1]:
+                    cleaned.pop()
                 if any(c for c in cleaned):
                     lines.append("\t".join(cleaned))
         wb.close()

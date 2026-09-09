@@ -266,4 +266,23 @@ def test_undo_stack_limit_and_actions(tmp_path):
 
     db.close()
 
+
+def test_safe_parse_json_products_truncated():
+    """Verifica che il parser gestisca sia JSON standard sia JSON troncati dall'AI."""
+    from src.ai_agent import _safe_parse_json_products
+
+    # 1. JSON integro in blocco markdown
+    normal_json = "```json\n{\"products\": [{\"name\": \"Prodotto A\", \"purchased_price\": 50.0}]}\n```"
+    res1 = _safe_parse_json_products(normal_json)
+    assert len(res1) == 1
+    assert res1[0]["name"] == "Prodotto A"
+
+    # 2. JSON troncato a metà stringa (come nel caso di superamento limiti token)
+    truncated_json = '{"products": [{"name": "Prodotto 1", "purchased_price": 10.0}, {"name": "Prodotto 2", "purchased_price": 20.0}, {"name": "Prodotto 3", "purchased_'
+    res2 = _safe_parse_json_products(truncated_json)
+    assert len(res2) == 2
+    assert res2[0]["name"] == "Prodotto 1"
+    assert res2[1]["name"] == "Prodotto 2"
+
+
 
