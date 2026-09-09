@@ -172,9 +172,9 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
     headers = {"Content-Type": "application/json"}
 
     _prev_timeout = socket.getdefaulttimeout()
-    socket.setdefaulttimeout(60)  # Timeout più lungo per file grandi
+    socket.setdefaulttimeout(180)  # Timeout esteso a 3 minuti per file Excel corposi
 
-    conn = http.client.HTTPSConnection(host, timeout=60)
+    conn = http.client.HTTPSConnection(host, timeout=180)
     try:
         conn.request("POST", path, body=data, headers=headers)
         response = conn.getresponse()
@@ -190,8 +190,13 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
             return parsed.get("products", [])
         else:
             raise ValueError(f"Risposta AI inaspettata: {resp_data}")
+    except (socket.timeout, TimeoutError) as e:
+        raise RuntimeError("Tempo scaduto: il server AI ha impiegato più di 3 minuti ad analizzare il file. Riprova tra poco.")
     except Exception as e:
-        raise RuntimeError(f"Errore AI Excel import: {str(e)}")
+        err_msg = str(e)
+        if "timed out" in err_msg.lower():
+            raise RuntimeError("Tempo scaduto: l'analisi ha superato il tempo massimo. Riprova.")
+        raise RuntimeError(f"Errore AI Excel import: {err_msg}")
     finally:
         socket.setdefaulttimeout(_prev_timeout)
         conn.close()
