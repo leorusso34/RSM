@@ -285,4 +285,52 @@ def test_safe_parse_json_products_truncated():
     assert res2[1]["name"] == "Prodotto 2"
 
 
-
+def test_partial_sale_splits_record(tmp_path):
+    """Verifica la logica DB della vendita parziale:
+    vendere k pezzi su N deve creare un nuovo record vendita (qty=k)
+    e lasciare il record originale con qty=N-k nello stesso status."""
+    from decimal import Decimal
+    from src.config import STATUS_STOCK, STATUS_SOLD
+
+    db = InventoryDatabase(tmp_path / "inventory.db")
+
+    # Prodotto originale: 5 pezzi in magazzino
+    original_qty = 5
+    sold_qty = 2
+    remaining_qty = original_qty - sold_qty
+
+    prod_id = db.save({
+        "name": "Scarpa Test", "size": "42", "quantity": original_qty,
+        "purchased_price": Decimal("80.00"), "purchased_place": "Shop",
+        "selling_place": "eBay", "selling_price": Decimal("120.00"),
+        "sold_price": None, "fees": Decimal("0.00"),
+        "sold_date": "", "status": STATUS_STOCK, "release_date": "", "notes": "",
+    })
+
+    # Simulazione della logica di move_selected_to_sold (vendita parziale)
+    record = dict(db.get(prod_id))
+    new_sold_record = dict(record)
+    new_sold_record.pop("id", None)
+    new_sold_record["quantity"] = sold_qty
+    new_sold_record["status"] = STATUS_SOLD
+    new_sold_record["sold_price"] = Decimal("115.00")
+    new_sold_record["sold_date"] = "2026-09-10"
+
+    new_id = db.save(new_sold_record)
+
+    updated_original = dict(record)
+    updated_original["quantity"] = remaining_qty
+    db.save(updated_original, prod_id)
+
+    # Verifica: il record originale ha la quantità decrementata
+    original_after = db.get(prod_id)
+    assert original_after["quantity"] == remaining_qty
+    assert original_after["status"] == STATUS_STOCK
+
+    # Verifica: il nuovo record di vendita è corretto
+    sold_after = db.get(new_id)
+    assert sold_after["quantity"] == sold_qty
+    assert sold_after["status"] == STATUS_SOLD
+    assert sold_after["name"] == "Scarpa Test"
+
+    db.close()

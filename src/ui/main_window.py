@@ -994,19 +994,49 @@ class InventoryApp(ctk.CTk):
         if len(ids) == 1:
             prod_id = ids[0]
             record = self.db.get(prod_id)
-            if not record: return
+            if not record:
+                return
+            original_qty = record.get("quantity", 1) or 1
             record_dict = dict(record)
             record_dict["status"] = STATUS_SOLD
             places = self.db.get_distinct_places()
             dialog = ProductDialog(self, STATUS_SOLD, autocomplete_places=places, record=record_dict)
             self.wait_window(dialog)
             if dialog.result:
-                self.db.save(dialog.result, prod_id)
+                sold_qty = dialog.result.get("quantity", 1) or 1
+                if sold_qty < original_qty:
+                    # Vendita parziale: crea un nuovo record per la quota venduta
+                    # e aggiorna il record originale con la quantità rimanente.
+                    new_sold_record = dict(dialog.result)
+                    new_sold_record.pop("id", None)
+                    new_new_id = self.db.save(new_sold_record)
+                    remaining = original_qty - sold_qty
+                    updated_original = dict(record)
+                    updated_original["quantity"] = remaining
+                    self.db.save(updated_original, prod_id)
+                    undo_ids = [new_new_id] if new_new_id else []
+                    self._push_undo(
+                        "Vendita parziale",
+                        lambda recs=old_records, nids=undo_ids: (
+                            self._undo_update(recs),
+                            self.db.delete_many(nids) if nids else None,
+                            self.refresh(),
+                        ),
+                    )
+                    self.status_bar_var.set(
+                        f"Venduti {sold_qty} pz — restano {remaining} pz in {record.get('status', 'magazzino')}"
+                    )
+                else:
+                    # Vendita totale: comportamento classico (sovrascrive il record).
+                    self.db.save(dialog.result, prod_id)
+                    if old_records:
+                        self._push_undo(
+                            "Spostamento in vendita",
+                            lambda recs=old_records: self._undo_update(recs),
+                        )
+                    self.status_bar_var.set("Prodotto venduto con successo")
                 self.refresh()
                 self.notebook.set("Vendite Attive")
-                if old_records:
-                    self._push_undo("Spostamento in vendita", lambda recs=old_records: self._undo_update(recs))
-                self.status_bar_var.set("Prodotto venduto con successo")
         else:
             dialog = BulkStatusDialog(self, len(ids), STATUS_SOLD)
             self.wait_window(dialog)
