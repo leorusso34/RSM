@@ -22,6 +22,7 @@ from ..utils import export_to_csv, money, read_spreadsheet_raw, parse_money, cal
 from .excel_import_dialog import ExcelImportDialog, ExcelHintDialog
 from ..ai_agent import parse_excel_with_ai
 from ..ebay_api import open_search_in_browser
+from .ebay_price_dialog import EbayPriceDialog
 
 
 class InventoryApp(ctk.CTk):
@@ -95,7 +96,8 @@ class InventoryApp(ctk.CTk):
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.bind("<Control-n>", lambda _e: self.add_product())
-        self.bind("<Control-f>", lambda _e: self.search_entry.focus_set())
+        self.bind("<Control-f>", self._focus_search)
+        self.bind("<Control-F>", self._focus_search)
         self.bind("<F5>", lambda _e: self.refresh())
         self.bind("<Control-z>", self.undo)
         self.bind("<Control-Z>", self.undo)
@@ -395,6 +397,8 @@ class InventoryApp(ctk.CTk):
         tree.bind("<Control-C>", self._copy_to_clipboard)
         tree.bind("<Control-v>", self._paste_from_clipboard)
         tree.bind("<Control-V>", self._paste_from_clipboard)
+        tree.bind("<Control-f>", self._focus_search)
+        tree.bind("<Control-F>", self._focus_search)
 
         self.trees[status] = tree
 
@@ -424,30 +428,93 @@ class InventoryApp(ctk.CTk):
 
             self.context_menu.add_separator()
             self.context_menu.add_command(label="Cerca su eBay", command=self._search_selected_on_ebay)
+            self.context_menu.add_command(label="Prezzo Medio eBay", command=self._show_ebay_price_dialog)
             self.context_menu.add_separator()
             self.context_menu.add_command(label="Elimina", command=self.delete_selected)
 
             self.context_menu.post(event.x_root, event.y_root)
 
     def _search_selected_on_ebay(self) -> None:
-        """Apre nel browser predefinito la ricerca eBay per il primo prodotto selezionato."""
+        """Apre nel browser predefinito una scheda eBay per ogni prodotto selezionato."""
         ids = self.selected_ids()
         if not ids:
             return
-        record = self.db.get(ids[0])
-        if not record:
-            return
-        name = record.get("name", "").strip()
-        size = record.get("size", "").strip()
-        if not name:
-            self.status_bar_var.set("Impossibile cercare su eBay: nome prodotto mancante")
-            return
-        # La taglia "UNI" indica taglia unica: non è un filtro utile su eBay.
-        effective_size = "" if size.upper() == "UNI" else size
-        open_search_in_browser(name, effective_size)
-        size_info = f" (taglia {effective_size})" if effective_size else ""
-        self.status_bar_var.set(f"Ricerca eBay aperta per: {name}{size_info}")
+        opened = 0
+        for prod_id in ids:
+            record = self.db.get(prod_id)
+            if not record:
+                continue
+            name = record.get("name", "").strip()
+            if not name:
+                continue
+            size = record.get("size", "").strip()
+            # La taglia "UNI" indica taglia unica: non è un filtro utile su eBay.
+            effective_size = "" if size.upper() == "UNI" else size
+            open_search_in_browser(name, effective_size)
+            opened += 1
+        if opened:
+            self.status_bar_var.set(f"Ricerca eBay aperta per {opened} prodott{'o' if opened == 1 else 'i'}")
+        else:
+            self.status_bar_var.set("Impossibile cercare su eBay: nessun prodotto valido selezionato")
 
+    def _show_ebay_price_dialog(self) -> None:
+        """Apre il dialog con i prezzi di mercato eBay per ciascun prodotto selezionato, in sequenza."""
+        ids = self.selected_ids()
+        if not ids:
+            return
+
+        client_id = self.db.get_setting("ebay_client_id", "")
+        client_secret = self.db.get_setting("ebay_client_secret", "")
+        if not client_id or not client_secret:
+            messagebox.showwarning(
+                "Credenziali eBay mancanti",
+                "Inserisci 'ebay_client_id' e 'ebay_client_secret' nel file config.json "
+                "per usare la funzione Prezzo Medio eBay.",
+                parent=self,
+            )
+            return
+
+        applied_old_records = []
+        applied_count = 0
+
+        for prod_id in ids:
+            record = self.db.get(prod_id)
+            if not record:
+                continue
+            name = record.get("name", "").strip()
+            if not name:
+                continue
+            size = record.get("size", "").strip()
+
+            def make_apply_callback(pid: int, old_rec: dict):
+                def on_apply(avg_price: Decimal) -> None:
+                    nonlocal applied_count
+                    updated = dict(old_rec)
+                    updated["selling_price"] = avg_price
+                    self.db.save(updated, pid)
+                    applied_old_records.append(old_rec)
+                    applied_count += 1
+                return on_apply
+
+            dialog = EbayPriceDialog(
+                self,
+                product_name=name,
+                product_size=size,
+                client_id=client_id,
+                client_secret=client_secret,
+                on_apply_price=make_apply_callback(prod_id, dict(record)),
+            )
+            self.wait_window(dialog)
+
+        if applied_old_records:
+            self.refresh()
+            self._push_undo(
+                f"Applicato prezzo medio eBay a {applied_count} prodotti",
+                lambda recs=applied_old_records: self._undo_update(recs),
+            )
+            self.status_bar_var.set(
+                f"Prezzo stimato aggiornato per {applied_count} prodott{'o' if applied_count == 1 else 'i'} (media eBay)"
+            )
 
     def complete_selected_sales(self) -> None:
         ids = self.selected_ids()
@@ -759,11 +826,14 @@ class InventoryApp(ctk.CTk):
             self.lbl_selected_info.configure(text="0 prodotti selezionati")
             return
         total_cost = Decimal("0")
+        total_qty = 0
         for item_id in ids:
             prod = self.db.get(item_id)
             if prod:
-                total_cost += prod["purchased_price"]
-        avg_cost = total_cost / count
+                qty = prod.get("quantity", 1) or 1
+                total_cost += prod["purchased_price"] * qty
+                total_qty += qty
+        avg_cost = total_cost / total_qty if total_qty else Decimal("0")
         self.lbl_selected_info.configure(text=f"{count} selezionati | Totale: {money(total_cost)} | Media: {money(avg_cost)}")
 
     def open_email_sync(self) -> None:
@@ -843,6 +913,19 @@ class InventoryApp(ctk.CTk):
                 return (0, item[0].casefold())
         for _, item in sorted(items, key=sort_value, reverse=not ascending):
             tree.move(item, "", "end")
+
+    def _focus_search(self, event=None) -> str:
+        """Porta il focus sulla barra di ricerca e seleziona il testo esistente per cercare subito."""
+        self.search_entry.focus_set()
+        try:
+            if hasattr(self.search_entry, "_entry"):
+                self.search_entry._entry.select_range(0, "end")
+                self.search_entry._entry.icursor("end")
+            else:
+                self.search_entry.select_range(0, "end")
+        except Exception:
+            pass
+        return "break"
 
     def _on_e_press(self, event=None) -> Optional[str]:
         focused = self.focus_get()

@@ -92,16 +92,43 @@ def main() -> None:
         shutil.rmtree(dist_data, ignore_errors=True)
         shutil.copytree(source_data, dist_data)
 
-    # 3. Ripristino o creazione di config.json in dist/RSM/config.json
+    # 3. Sincronizzazione di config.json in dist/RSM/config.json con i dati della cartella principale
     source_config = project_root / "config.json"
+    final_config_data = {}
+
+    # Se c'era un config nella build (backup), carichiamo i suoi dati per non perdere eventuali layout
     if backup_config.exists():
-        shutil.copy(backup_config, dist_config)
+        try:
+            with open(backup_config, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    final_config_data.update(loaded)
+        except Exception:
+            pass
         backup_config.unlink(missing_ok=True)
-    elif source_config.exists():
-        shutil.copy(source_config, dist_config)
+
+    # I dati del config.json della cartella principale hanno priorità assoluta e aggiornano tutti i campi
+    if source_config.exists():
+        try:
+            with open(source_config, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    final_config_data.update(loaded)
+        except Exception:
+            pass
+
+    if final_config_data:
+        with open(dist_config, "w", encoding="utf-8") as f:
+            json.dump(final_config_data, f, indent=2, ensure_ascii=False)
     elif not dist_config.exists():
         with open(dist_config, "w", encoding="utf-8") as f:
-            json.dump({"gemini_api_key": "", "email_sync_address": "", "email_sync_app_password": ""}, f, indent=2)
+            json.dump({
+                "gemini_api_key": "",
+                "email_sync_address": "",
+                "email_sync_app_password": "",
+                "ebay_client_id": "",
+                "ebay_client_secret": ""
+            }, f, indent=2, ensure_ascii=False)
 
     # 4. Copia del README.md nella cartella di rilascio dist/RSM
     source_readme = project_root / "README.md"

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "RSM"
-APP_VERSION = "2.0.0"
+APP_VERSION = "1.1.0"
 
 # Stati prodotti
 STATUS_STOCK = "In Stock"

@@ -92,8 +92,19 @@ class ProductDialog(ctk.CTkToplevel):
         self._build()
         self.protocol("WM_DELETE_WINDOW", self.destroy)
         self.bind("<Escape>", lambda _e: self.destroy())
+        self.bind("<Return>", self._on_return)
+        self.bind("<KP_Enter>", self._on_return)
         self.bind("<Control-Return>", lambda _e: self._submit())
         self.after(80, self._focus_name)
+
+    def _on_return(self, event=None) -> Optional[str]:
+        """Salva il prodotto alla pressione del tasto Invio (lascia il comportamento a capo solo se l'utente e nel box Note)."""
+        if event and hasattr(self, "notes") and self.notes:
+            textbox = getattr(self.notes, "_textbox", None)
+            if event.widget == textbox:
+                return None
+        self._submit()
+        return "break"
 
     def _focus_name(self) -> None:
         self.name_entry.focus_set()
@@ -178,11 +189,6 @@ class ProductDialog(ctk.CTkToplevel):
         self.entry_sold_date = ctk.CTkEntry(form, textvariable=self.vars["sold_date"], font=("Segoe UI", 12))
         self.entry_sold_date.grid(row=11, column=1, sticky="ew", padx=(6, 0))
 
-        self.lbl_release_date = ctk.CTkLabel(form, text="DATA USCITA (AAAA-MM-GG)", font=("Segoe UI", 11, "bold"))
-        self.lbl_release_date.grid(row=12, column=0, sticky="w", pady=(10, 4))
-        self.entry_release_date = ctk.CTkEntry(form, textvariable=self.vars["release_date"], font=("Segoe UI", 12))
-        self.entry_release_date.grid(row=12, column=1, sticky="ew", padx=(6, 0))
-
         # Card profitto con angoli arrotondati
         self.profit_card = ctk.CTkFrame(form, corner_radius=10, border_width=1, border_color=c["border"], fg_color=c["bg_input"])
         self.profit_card.grid(row=14, column=0, columnspan=2, sticky="ew", pady=(14, 4))
@@ -251,35 +257,27 @@ class ProductDialog(ctk.CTkToplevel):
         if st == STATUS_SOLD:
             self.entry_fees.configure(state="normal")
             self.entry_sold_date.configure(state="normal")
-            self.entry_release_date.configure(state="disabled")
             self.lbl_fees.configure(text_color=c["fg_main"])
             self.lbl_sold_date.configure(text_color=c["fg_main"])
-            self.lbl_release_date.configure(text_color=c["fg_muted"])
             self.profit_card.grid()
             if not self.vars["sold_date"].get():
                 self.vars["sold_date"].set(datetime.now().strftime("%Y-%m-%d"))
-            self.vars["release_date"].set("")
         elif st == STATUS_PREORDER:
             self.entry_fees.configure(state="disabled")
             self.entry_sold_date.configure(state="disabled")
-            self.entry_release_date.configure(state="normal")
             self.lbl_fees.configure(text_color=c["fg_muted"])
             self.lbl_sold_date.configure(text_color=c["fg_muted"])
-            self.lbl_release_date.configure(text_color=c["fg_main"])
             self.profit_card.grid_remove()
             self.vars["fees"].set("0,00")
             self.vars["sold_date"].set("")
         else:
             self.entry_fees.configure(state="disabled")
             self.entry_sold_date.configure(state="disabled")
-            self.entry_release_date.configure(state="disabled")
             self.lbl_fees.configure(text_color=c["fg_muted"])
             self.lbl_sold_date.configure(text_color=c["fg_muted"])
-            self.lbl_release_date.configure(text_color=c["fg_muted"])
             self.profit_card.grid_remove()
             self.vars["fees"].set("0,00")
             self.vars["sold_date"].set("")
-            self.vars["release_date"].set("")
         self._update_profit_preview()
 
     def _update_profit_preview(self) -> None:
@@ -310,7 +308,8 @@ class ProductDialog(ctk.CTkToplevel):
             sold = sale if st == STATUS_SOLD else None
             if st == STATUS_SOLD and sold is None:
                 raise ValueError("Per i prodotti venduti e obbligatorio inserire il Prezzo di Vendita.")
-            release_date = parse_date(self.vars["release_date"].get().strip())
+            rec_rd = self.record.get("release_date", "") if self.record and "release_date" in self.record.keys() and self.record["release_date"] else ""
+            release_date = parse_date(rec_rd)
             sold_date = self.vars["sold_date"].get().strip()
             sold_date = parse_date(sold_date)
         except ValueError as exc:
