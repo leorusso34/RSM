@@ -21,6 +21,7 @@ from .theme import setup_app_theme
 from ..utils import export_to_csv, money, read_spreadsheet_raw, parse_money, calculate_profit, center_window, apply_window_icon
 from .excel_import_dialog import ExcelImportDialog, ExcelHintDialog
 from ..ai_agent import parse_excel_with_ai
+from ..ebay_api import open_search_in_browser
 
 
 class InventoryApp(ctk.CTk):
@@ -422,9 +423,31 @@ class InventoryApp(ctk.CTk):
                 self.context_menu.add_command(label="Completa Vendita", command=self.complete_selected_sales)
 
             self.context_menu.add_separator()
+            self.context_menu.add_command(label="Cerca su eBay", command=self._search_selected_on_ebay)
+            self.context_menu.add_separator()
             self.context_menu.add_command(label="Elimina", command=self.delete_selected)
 
             self.context_menu.post(event.x_root, event.y_root)
+
+    def _search_selected_on_ebay(self) -> None:
+        """Apre nel browser predefinito la ricerca eBay per il primo prodotto selezionato."""
+        ids = self.selected_ids()
+        if not ids:
+            return
+        record = self.db.get(ids[0])
+        if not record:
+            return
+        name = record.get("name", "").strip()
+        size = record.get("size", "").strip()
+        if not name:
+            self.status_bar_var.set("Impossibile cercare su eBay: nome prodotto mancante")
+            return
+        # La taglia "UNI" indica taglia unica: non è un filtro utile su eBay.
+        effective_size = "" if size.upper() == "UNI" else size
+        open_search_in_browser(name, effective_size)
+        size_info = f" (taglia {effective_size})" if effective_size else ""
+        self.status_bar_var.set(f"Ricerca eBay aperta per: {name}{size_info}")
+
 
     def complete_selected_sales(self) -> None:
         ids = self.selected_ids()
