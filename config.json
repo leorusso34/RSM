@@ -2,6 +2,7 @@
   "gemini_api_key": "GEMINI_API_KEY",
   "email_sync_address": "test@gmail.com",
   "email_sync_app_password": "abcdefghijklmnop",
-  "ebay_client_id": "Leonardo-RSMProje-PRD-2936aa717-2b9eae5e",
-  "ebay_client_secret": "PRD-936aa717331e-22d9-4352-9bbb-20a8"
+  "ebay_client_id": "EBAY_CLIENT_ID",
+  "ebay_client_secret": "EBAY_CLIENT_SECRET_ID",
+  "github_token": "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"
 }

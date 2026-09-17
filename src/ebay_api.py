@@ -3,24 +3,35 @@
 """
 Modulo di integrazione con le API eBay per RSM.
 
-Responsabilità attuali:
+Responsabilità:
   - Costruzione dell'URL di ricerca eBay (apertura nel browser dell'utente).
-
-Responsabilità future (quando richiesto):
-  - Autenticazione OAuth 2.0 con le credenziali Client Credentials Grant.
-  - Chiamate alla Browse API (item_summary/search) per recuperare prezzi di mercato.
+  - Autenticazione OAuth 2.0 con flusso Client Credentials Grant.
+  - Recupero prezzi di mercato tramite Browse API (item_summary/search).
 """
 
+import base64
+import http.client
+import json
 import urllib.parse
 import webbrowser
+from typing import Dict, Optional, Tuple
+
+
+# ---------------------------------------------------------------------------
+# Costanti API eBay
+# ---------------------------------------------------------------------------
+
+EBAY_AUTH_HOST  = "api.ebay.com"
+EBAY_API_HOST   = "api.ebay.com"
+EBAY_SEARCH_URL = "https://www.ebay.it/sch/i.html"
+
+# Marketplace ID per eBay Italia
+EBAY_MARKETPLACE_ID = "EBAY_IT"
 
 
 # ---------------------------------------------------------------------------
 # URL di ricerca pubblica (nessuna autenticazione richiesta)
 # ---------------------------------------------------------------------------
-
-EBAY_SEARCH_URL = "https://www.ebay.it/sch/i.html"
-
 
 def build_search_url(name: str, size: str = "") -> str:
     """
@@ -55,3 +66,156 @@ def open_search_in_browser(name: str, size: str = "") -> None:
     """
     url = build_search_url(name, size)
     webbrowser.open(url)
+
+
+# ---------------------------------------------------------------------------
+# OAuth 2.0 — Client Credentials Grant
+# ---------------------------------------------------------------------------
+
+def _get_oauth_token(client_id: str, client_secret: str) -> str:
+    """
+    Richiede un token di accesso OAuth 2.0 a eBay tramite Client Credentials.
+    Questo flusso non richiede login utente ed è adatto per dati pubblici.
+
+    Args:
+        client_id:     App ID / Client ID eBay.
+        client_secret: Cert ID / Client Secret eBay.
+
+    Returns:
+        Token di accesso (stringa Bearer) da usare nelle chiamate API.
+
+    Raises:
+        RuntimeError: se l'autenticazione fallisce.
+    """
+    credentials = base64.b64encode(
+        f"{client_id}:{client_secret}".encode()
+    ).decode()
+
+    body = urllib.parse.urlencode({
+        "grant_type": "client_credentials",
+        "scope": "https://api.ebay.com/oauth/api_scope",
+    })
+
+    conn = http.client.HTTPSConnection(EBAY_AUTH_HOST, timeout=15)
+    try:
+        conn.request(
+            "POST",
+            "/identity/v1/oauth2/token",
+            body=body,
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": f"Basic {credentials}",
+            },
+        )
+        resp = conn.getresponse()
+        raw = resp.read().decode("utf-8")
+    finally:
+        conn.close()
+
+    data = json.loads(raw)
+    if "access_token" not in data:
+        error = data.get("error_description", data.get("error", "risposta non valida"))
+        raise RuntimeError(f"Autenticazione eBay fallita: {error}")
+
+    return data["access_token"]
+
+
+# ---------------------------------------------------------------------------
+# Browse API — ricerca prezzi
+# ---------------------------------------------------------------------------
+
+def fetch_market_prices(
+    name: str,
+    size: str,
+    client_id: str,
+    client_secret: str,
+    limit: int = 100,
+) -> Dict:
+    """
+    Recupera i prezzi delle inserzioni eBay attive per un prodotto e
+    restituisce un riepilogo con min, media e max.
+
+    Args:
+        name:          Nome del prodotto.
+        size:          Taglia (vuota o "UNI" → non inclusa nella query).
+        client_id:     App ID / Client ID eBay.
+        client_secret: Cert ID / Client Secret eBay.
+        limit:         Numero massimo di risultati da analizzare (max 200).
+
+    Returns:
+        Dizionario con le chiavi:
+          - "count"   (int)   — numero di inserzioni trovate
+          - "min"     (float) — prezzo minimo trovato
+          - "avg"     (float) — prezzo medio
+          - "max"     (float) — prezzo massimo
+          - "query"   (str)   — query utilizzata per la ricerca
+
+    Raises:
+        RuntimeError: se l'autenticazione o la chiamata API fallisce.
+        ValueError:   se non viene trovata nessuna inserzione valida.
+    """
+    # 1. Autenticazione
+    token = _get_oauth_token(client_id, client_secret)
+
+    # 2. Costruzione query (stessa logica dell'URL browser)
+    query_parts = [name.strip()]
+    effective_size = size.strip() if size.strip().upper() != "UNI" else ""
+    if effective_size:
+        query_parts.append(effective_size)
+    query = " ".join(query_parts)
+
+    # 3. Parametri ricerca
+    params = urllib.parse.urlencode({
+        "q": query,
+        "limit": str(min(limit, 200)),
+        "filter": "buyingOptions:{FIXED_PRICE}",  # solo inserzioni a prezzo fisso
+    })
+    path = f"/buy/browse/v1/item_summary/search?{params}"
+
+    # 4. Chiamata Browse API
+    conn = http.client.HTTPSConnection(EBAY_API_HOST, timeout=15)
+    try:
+        conn.request(
+            "GET",
+            path,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-EBAY-C-MARKETPLACE-ID": EBAY_MARKETPLACE_ID,
+                "Content-Type": "application/json",
+            },
+        )
+        resp = conn.getresponse()
+        raw = resp.read().decode("utf-8")
+    finally:
+        conn.close()
+
+    data = json.loads(raw)
+
+    if resp.status != 200:
+        error = data.get("errors", [{}])[0].get("message", "Errore sconosciuto")
+        raise RuntimeError(f"Errore Browse API eBay ({resp.status}): {error}")
+
+    items = data.get("itemSummaries", [])
+    if not items:
+        raise ValueError(f"Nessuna inserzione trovata su eBay per: {query}")
+
+    # 5. Estrazione prezzi (campo "price.value")
+    prices = []
+    for item in items:
+        price_info = item.get("price", {})
+        try:
+            prices.append(float(price_info.get("value", 0)))
+        except (TypeError, ValueError):
+            continue
+
+    prices = [p for p in prices if p > 0]
+    if not prices:
+        raise ValueError(f"Nessun prezzo valido trovato per: {query}")
+
+    return {
+        "count": len(prices),
+        "min":   round(min(prices), 2),
+        "avg":   round(sum(prices) / len(prices), 2),
+        "max":   round(max(prices), 2),
+        "query": query,
+    }

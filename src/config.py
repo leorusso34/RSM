@@ -6,7 +6,8 @@ import sys
 from pathlib import Path
 
 APP_NAME = "RSM"
-APP_VERSION = "2.0.0"
+APP_VERSION = "0.0.9"
+GITHUB_REPO = "leorusso34/RSM"
 
 # Stati prodotti
 STATUS_STOCK = "In Stock"
