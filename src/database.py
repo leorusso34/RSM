@@ -471,7 +471,7 @@ class InventoryDatabase:
                 is_completed,
                 SUM(quantity) as total_qty,
                 SUM(quantity * purchased_price_cents) as total_cost,
-                SUM(quantity * COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
+                SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
                 SUM(quantity * fees_cents) as total_fees
             FROM products
             GROUP BY status, is_completed
@@ -546,7 +546,7 @@ class InventoryDatabase:
                 SUBSTR(sold_date, 1, 7) as month_key,
                 SUM(quantity) as total_qty,
                 SUM(quantity * purchased_price_cents) as total_cost,
-                SUM(quantity * COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
+                SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
                 SUM(quantity * fees_cents) as total_fees
             FROM products
             WHERE status = ? AND is_completed = 1 AND sold_date != ''

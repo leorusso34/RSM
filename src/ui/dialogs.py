@@ -163,7 +163,7 @@ class ProductDialog(ctk.CTkToplevel):
         self.selling_place_combo = ctk.CTkComboBox(form, variable=self.vars["selling_place"], values=self.selling_places, font=("Segoe UI", 12))
         self.selling_place_combo.grid(row=7, column=0, sticky="ew", padx=(0, 6))
 
-        self._field_entry(form, "PREZZO VENDITA (€)", "selling_price", 3, 1)
+        self._field_entry(form, "PREZZO VENDITA TOTALE (€)", "selling_price", 3, 1)
 
         # Stato
         self.lbl_status_lbl = ctk.CTkLabel(form, text="STATO PRODOTTO ", font=("Segoe UI", 11, "bold"))
@@ -394,7 +394,7 @@ class BulkStatusDialog(ctk.CTkToplevel):
         buttons = ctk.CTkFrame(outer, fg_color="transparent")
         buttons.pack(fill="x", side="bottom", pady=(20, 0))
         ctk.CTkButton(buttons, text="Annulla", command=self.destroy, fg_color="#374151", hover_color="#4b5563").pack(side="right")
-        ctk.CTkButton(buttons, text="Conferma Spostamento (Invio)", command=self._submit).pack(side="right", padx=(0, 10))
+        ctk.CTkButton(buttons, text="Conferma Spostamento", command=self._submit).pack(side="right", padx=(0, 10))
 
     def _submit(self) -> None:
         extra = {}
@@ -462,7 +462,7 @@ class ManagePlacesDialog(ctk.CTkToplevel):
         entry.bind("<Return>", lambda _e: self._add_place())
         entry.focus_set()
 
-        ctk.CTkButton(input_frame, text="Aggiungi (Invio)", command=self._add_place).pack(side="right")
+        ctk.CTkButton(input_frame, text="Aggiungi", command=self._add_place).pack(side="right")
 
         # Lista luoghi esistenti in CTkScrollableFrame
         ctk.CTkLabel(outer, text="LUOGHI ESISTENTI:", font=("Segoe UI", 11, "bold")).pack(anchor="w")

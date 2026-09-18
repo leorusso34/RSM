@@ -398,7 +398,7 @@ class InventoryApp(ctk.CTk):
         tree_frame.rowconfigure(0, weight=1)
         tree_frame.columnconfigure(0, weight=1)
 
-        tree.bind("<Double-1>", lambda _e: self.edit_selected())
+        tree.bind("<Double-1>", lambda e, t=tree: self._on_tree_double_click(e, t))
         tree.bind("<Button-3>", lambda e: self._on_right_click(e, tree))
         tree.bind("<Delete>", lambda _e: self.delete_selected())
         tree.bind("<<TreeviewSelect>>", lambda _e: self._update_action_states())
@@ -446,9 +446,10 @@ class InventoryApp(ctk.CTk):
                 self.context_menu.add_separator()
                 self.context_menu.add_command(label="Completa Vendita", command=self.complete_selected_sales)
 
-            self.context_menu.add_separator()
-            self.context_menu.add_command(label="Cerca su eBay", command=self._search_selected_on_ebay)
-            self.context_menu.add_command(label="Prezzo Medio eBay", command=self._show_ebay_price_dialog)
+            if st in (STATUS_STOCK, STATUS_PREORDER):
+                self.context_menu.add_separator()
+                self.context_menu.add_command(label="Cerca su eBay", command=self._search_selected_on_ebay)
+                self.context_menu.add_command(label="Prezzo Medio eBay", command=self._show_ebay_price_dialog)
             self.context_menu.add_separator()
             self.context_menu.add_command(label="Elimina", command=self.delete_selected)
 
@@ -671,7 +672,7 @@ class InventoryApp(ctk.CTk):
                 if len(title) > 60: title = title[:57] + "...)"
                 p_qty = sum(r["quantity"] or 1 for r in b_rows)
                 p_purchased = sum(r["purchased_price"] * (r["quantity"] or 1) for r in b_rows)
-                p_sold = sum((r["sold_price"] or 0) * (r["quantity"] or 1) for r in b_rows)
+                p_sold = sum((r["sold_price"] or 0) for r in b_rows)
                 p_fees = sum(r["fees"] * (r["quantity"] or 1) for r in b_rows)
                 p_profit, p_roi = calculate_profit(p_purchased, p_sold, p_fees, 1)
                 p_values = (
@@ -958,6 +959,22 @@ class InventoryApp(ctk.CTk):
             return None
         self.edit_selected()
         return "break"
+
+    def _on_tree_double_click(self, event: Any, tree: ttk.Treeview) -> None:
+        """
+        Gestisce il doppio click sulla tabella:
+        - Su una riga bundle padre: espande il nodo mostrando i prodotti figli.
+        - Su una riga normale o figlio di bundle: apre il dialog di modifica.
+        """
+        item = tree.identify_row(event.y)
+        if not item:
+            return
+        if str(item).startswith("bundle_"):
+            # Toggle apri/chiudi — return "break" impedisce a Tkinter di eseguire
+            # un secondo toggle nativo che annullerebbe il nostro
+            tree.item(item, open=not tree.item(item, "open"))
+            return "break"
+        self.edit_selected()
 
     def edit_selected(self) -> None:
         ids = self.selected_ids()

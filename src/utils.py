@@ -115,18 +115,26 @@ def parse_date(value: Any, allow_empty: bool = True) -> str:
 def calculate_profit(purchased_price: Any, sold_price: Optional[Any], fees: Any = Decimal("0"), quantity: int = 1) -> Tuple[Decimal, Decimal]:
     """
     Calcola il profitto totale netto e il ROI % per un articolo venduto.
-    Profitto unitario = sold_price - purchased_price - fees
-    Profitto totale = profitto unitario * quantity
-    ROI % = (profitto unitario / purchased_price) * 100
+
+    - purchased_price : prezzo di acquisto UNITARIO
+    - sold_price      : prezzo di vendita TOTALE incassato (non per unità)
+    - fees            : commissioni UNITARIE della transazione
+    - quantity        : quantità venduta
+
+    Profitto totale = sold_price - (purchased_price + fees) * quantity
+    ROI % = (sold_price / quantity - purchased_price - fees) / purchased_price * 100
     """
     purchased = purchased_price if isinstance(purchased_price, Decimal) else Decimal(str(purchased_price))
     sold = sold_price if isinstance(sold_price, Decimal) else (Decimal(str(sold_price)) if sold_price is not None else None)
     fee_amount = fees if isinstance(fees, Decimal) else Decimal(str(fees))
+    qty = Decimal(str(quantity)) if quantity and quantity > 0 else Decimal("1")
+
     if sold is None or purchased <= 0:
         return Decimal("0"), Decimal("0")
 
-    unit_profit = sold - purchased - fee_amount
-    total_profit = unit_profit * quantity
+    total_profit = sold - (purchased + fee_amount) * qty
+    unit_sold = sold / qty
+    unit_profit = unit_sold - purchased - fee_amount
     roi = (unit_profit / purchased) * 100 if purchased > 0 else Decimal("0")
     return total_profit.quantize(Decimal("0.01")), roi.quantize(Decimal("0.01"))
 
