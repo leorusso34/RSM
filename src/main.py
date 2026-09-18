@@ -31,7 +31,8 @@ def main() -> None:
 
     try:
         app = InventoryApp()
-        app.after(50, lambda: (app.deiconify(), app.state("zoomed")))
+        app.update_idletasks()
+        app.after(0, lambda: app.state("zoomed"))
         app.mainloop()
     except sqlite3.Error as exc:
         root = tk.Tk()

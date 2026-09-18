@@ -27,6 +27,7 @@ from ..updater import check_for_updates
 from .update_dialog import UpdateDialog
 
 
+
 class InventoryApp(ctk.CTk):
     """Finestra principale dell'applicazione di gestione inventario RSM."""
 

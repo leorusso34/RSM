@@ -183,8 +183,9 @@ def apply_update_and_restart(
     status_callback: Optional[Callable[[str], None]] = None,
 ) -> None:
     """
-    Esegue il download dello zip di aggiornamento, estrae i file e avvia lo script
-    di sostituzione Windows garantendo la preservazione del database locale e del config.json.
+    Esegue il download dello zip di aggiornamento, estrae i file e avvia uno script
+    Python di sostituzione che gira in background garantendo la preservazione del
+    database locale e del config.json.
     """
     temp_dir = Path(tempfile.mkdtemp(prefix="rsm_update_"))
     zip_dest = temp_dir / "update.zip"
@@ -214,58 +215,131 @@ def apply_update_and_restart(
         with zipfile.ZipFile(zip_dest, "r") as z:
             z.extractall(extract_dir)
 
-        # Se lo zip contiene una cartella radice (es. 'RSM/' o 'dist/RSM/'), usiamo quella
+        # Se lo zip contiene una cartella radice (es. 'RSM/'), usiamo quella
         source_root = extract_dir
         subfolders = [f for f in extract_dir.iterdir() if f.is_dir()]
         if len(subfolders) == 1 and not any(f.is_file() for f in extract_dir.iterdir()):
             source_root = subfolders[0]
 
-        target_app_dir = PROJECT_DIR.resolve()
+        # Determina la directory di destinazione corretta:
+        # - Se gira come exe compilato (PyInstaller): è la cartella dell'eseguibile stesso
+        # - Se gira come script Python (sviluppo/testing): è dist/RSM/ nella root del progetto
+        if getattr(sys, "frozen", False):
+            target_app_dir = Path(sys.executable).resolve().parent
+        else:
+            target_app_dir = (PROJECT_DIR / "dist" / "RSM").resolve()
 
         if status_callback:
-            status_callback("Riavvio dell'applicazione...")
+            status_callback("Avvio aggiornamento in background...")
 
-        # Genera lo script batch Windows per la sostituzione pulita a processo terminato
-        bat_script = temp_dir / "apply_update.bat"
-        bat_content = f"""@echo off
-chcp 65001 >nul
-title Aggiornamento RSM in corso...
+        # Percorso dell'interprete Python da usare nello script helper
+        python_exe = Path(sys.executable).resolve()
 
-echo Attesa chiusura di RSM...
-timeout /t 2 /nobreak >nul
+        # Genera lo script Python helper nella directory temp di sistema.
+        # subprocess.Popen con lista di argomenti e shell=False passa i percorsi
+        # direttamente a CreateProcess, gestendo correttamente gli spazi senza quoting manuale.
+        system_temp = Path(tempfile.gettempdir())
+        helper_script = system_temp / "rsm_apply_update.py"
 
-:: Termina forzatamente il processo se ancora attivo
-taskkill /f /im RSM.exe >nul 2>&1
-timeout /t 1 /nobreak >nul
+        helper_code = f"""\
+import os
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
 
-echo Applicazione nuovi file...
-:: Copia tutti i file aggiornati escludendo tassativamente la cartella dati e il config.json
-robocopy "{source_root}" "{target_app_dir}" /E /XF config.json /XD data >nul
+LOG = Path(r"{system_temp}") / "rsm_update.log"
 
-echo Pulizia file temporanei...
-rd /s /q "{temp_dir}" >nul 2>&1
+def log(msg):
+    with open(LOG, "a", encoding="utf-8") as f:
+        f.write(msg + "\\n")
 
-echo Riavvio di RSM...
-start "" "{target_app_dir}\\RSM.exe"
-exit
+log("=== RSM Update Helper avviato ===")
+
+source_root = Path(r"{source_root}")
+target_app_dir = Path(r"{target_app_dir}")
+temp_dir = Path(r"{temp_dir}")
+exe_path = target_app_dir / "RSM.exe"
+
+log(f"source_root  = {{source_root}}")
+log(f"target_dir   = {{target_app_dir}}")
+log(f"exe_path     = {{exe_path}}")
+
+# Attende che RSM si chiuda (max 10 secondi)
+log("Attesa chiusura RSM...")
+time.sleep(3)
+
+# Copia i file aggiornati, preservando config.json e data/
+log("Copia file aggiornati...")
+for item in source_root.iterdir():
+    name = item.name
+    if name in ("config.json", "data"):
+        log(f"  Saltato (preservato): {{name}}")
+        continue
+    dest = target_app_dir / name
+    try:
+        if item.is_dir():
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.copytree(item, dest)
+        else:
+            shutil.copy2(item, dest)
+        log(f"  Copiato: {{name}}")
+    except Exception as e:
+        log(f"  ERRORE copia {{name}}: {{e}}")
+
+# Pulizia cartella temporanea
+log("Pulizia temp...")
+try:
+    shutil.rmtree(temp_dir, ignore_errors=True)
+except Exception as e:
+    log(f"  ERRORE pulizia: {{e}}")
+
+# Rilancio applicazione
+log(f"Riavvio RSM: {{exe_path}}")
+if exe_path.exists():
+    try:
+        subprocess.Popen(
+            [str(exe_path)],
+            cwd=str(target_app_dir),
+            close_fds=True,
+        )
+        log("RSM riavviato con successo.")
+    except Exception as e:
+        log(f"ERRORE riavvio: {{e}}")
+else:
+    log(f"ERRORE: RSM.exe non trovato in {{target_app_dir}}")
+
+# Auto-eliminazione di questo script
+try:
+    os.remove(__file__)
+except Exception:
+    pass
 """
-        with open(bat_script, "w", encoding="utf-8") as f:
-            f.write(bat_content)
 
-        # Lancia lo script di aggiornamento in un processo separato indipendente
+        with open(helper_script, "w", encoding="utf-8") as f:
+            f.write(helper_code)
+
+        # Lancia lo script helper con pythonw.exe (no finestra console) se disponibile,
+        # altrimenti con python.exe + CREATE_NO_WINDOW
+        pythonw_exe = python_exe.parent / "pythonw.exe"
+        launcher = pythonw_exe if pythonw_exe.exists() else python_exe
+
         CREATE_NO_WINDOW = 0x08000000
         DETACHED_PROCESS = 0x00000008
-        flags = CREATE_NO_WINDOW | DETACHED_PROCESS if sys.platform == "win32" else 0
+        CREATE_NEW_PROCESS_GROUP = 0x00000200
+        flags = CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
 
         subprocess.Popen(
-            ["cmd.exe", "/c", str(bat_script)],
+            [str(launcher), str(helper_script)],
             creationflags=flags,
             close_fds=True,
             shell=False,
         )
 
-        # Chiude l'applicazione corrente in modo pulito
-        sys.exit(0)
+        # Chiude l'intero processo Python immediatamente per rilasciare tutti i file
+        os._exit(0)
 
     except Exception as exc:
         shutil.rmtree(temp_dir, ignore_errors=True)
