@@ -390,11 +390,11 @@ class InventoryApp(ctk.CTk):
                 stretch=True,
             )
 
-        yscroll = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+        yscroll = ctk.CTkScrollbar(tree_frame, orientation="vertical", command=tree.yview)
         tree.configure(yscrollcommand=yscroll.set)
 
         tree.grid(row=0, column=0, sticky="nsew")
-        yscroll.grid(row=0, column=1, sticky="ns")
+        yscroll.grid(row=0, column=1, sticky="ns", padx=(2, 0))
         tree_frame.rowconfigure(0, weight=1)
         tree_frame.columnconfigure(0, weight=1)
 

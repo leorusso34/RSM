@@ -572,6 +572,76 @@ class InventoryDatabase:
             })
         return result
 
+    def get_profit_by_platform(self) -> List[Dict[str, Any]]:
+        """Restituisce la ripartizione del profitto netto e volumi raggruppati per piattaforma di vendita."""
+        query = """
+            SELECT
+                CASE 
+                    WHEN TRIM(COALESCE(selling_place, '')) = '' THEN 'N.S.'
+                    ELSE TRIM(selling_place)
+                END as platform,
+                SUM(quantity) as total_qty,
+                SUM(quantity * purchased_price_cents) as total_cost,
+                SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
+                SUM(quantity * fees_cents) as total_fees
+            FROM products
+            WHERE status = ?
+            GROUP BY platform
+            ORDER BY (SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) - SUM(quantity * purchased_price_cents) - SUM(quantity * fees_cents)) DESC
+        """
+        rows = self.connection.execute(query, (STATUS_SOLD,)).fetchall()
+        result = []
+        for row in rows:
+            platform = row["platform"]
+            qty = row["total_qty"] or 0
+            cost = cents_to_money(row["total_cost"]) or Decimal("0")
+            revenue = cents_to_money(row["total_revenue"]) or Decimal("0")
+            fees = cents_to_money(row["total_fees"]) or Decimal("0")
+            profit = revenue - cost - fees
+
+            result.append({
+                "platform": platform,
+                "revenue": revenue.quantize(Decimal("0.01")),
+                "cost": cost.quantize(Decimal("0.01")),
+                "fees": fees.quantize(Decimal("0.01")),
+                "profit": profit.quantize(Decimal("0.01")),
+                "count": int(qty),
+            })
+        return result
+
+    def get_top_profitable_products(self, limit: int = 5) -> List[Dict[str, Any]]:
+        """Restituisce i top prodotti che hanno generato maggior profitto netto totale."""
+        query = """
+            SELECT
+                TRIM(name) as prod_name,
+                SUM(quantity) as total_qty,
+                SUM(quantity * purchased_price_cents) as total_cost,
+                SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
+                SUM(quantity * fees_cents) as total_fees
+            FROM products
+            WHERE status = ? AND TRIM(name) != ''
+            GROUP BY prod_name
+            HAVING (SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) - SUM(quantity * purchased_price_cents) - SUM(quantity * fees_cents)) > 0
+            ORDER BY (SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) - SUM(quantity * purchased_price_cents) - SUM(quantity * fees_cents)) DESC
+            LIMIT ?
+        """
+        rows = self.connection.execute(query, (STATUS_SOLD, limit)).fetchall()
+        result = []
+        for row in rows:
+            name = row["prod_name"]
+            qty = row["total_qty"] or 0
+            cost = cents_to_money(row["total_cost"]) or Decimal("0")
+            revenue = cents_to_money(row["total_revenue"]) or Decimal("0")
+            fees = cents_to_money(row["total_fees"]) or Decimal("0")
+            profit = revenue - cost - fees
+
+            result.append({
+                "name": name,
+                "profit": profit.quantize(Decimal("0.01")),
+                "count": int(qty),
+            })
+        return result
+
     def insert_many(self, records: List[Dict[str, Any]]) -> int:
         """Inserisce una lista di record in una singola transazione."""
         count = 0

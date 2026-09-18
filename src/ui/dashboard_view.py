@@ -7,6 +7,7 @@ from decimal import Decimal
 from tkinter import ttk
 from typing import Dict, List, Any
 import customtkinter as ctk
+from PIL import Image, ImageDraw, ImageTk
 
 from ..config import DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
 from ..database import InventoryDatabase
@@ -24,12 +25,12 @@ class DashboardView(ctk.CTkFrame):
 
     def _build_ui(self) -> None:
         c = DARK_THEME
-        container = ctk.CTkFrame(self, fg_color="transparent")
-        container.pack(fill="both", expand=True, padx=16, pady=12)
+        container = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        container.pack(fill="both", expand=True, padx=4, pady=4)
 
         # Griglia Carte KPI (4 schede)
         kpis_frame = ctk.CTkFrame(container, fg_color="transparent")
-        kpis_frame.pack(fill="x", pady=(0, 16))
+        kpis_frame.pack(fill="x", padx=12, pady=(8, 16))
 
         cards_data = [
             ("invested", "CAPITALE INVESTITO", "#2563eb"),
@@ -53,40 +54,75 @@ class DashboardView(ctk.CTkFrame):
             ctk.CTkLabel(card, text=label, font=("Segoe UI", 11, "bold"), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(8, 0))
             ctk.CTkLabel(card, textvariable=var_val, font=("Segoe UI", 18, "bold")).pack(anchor="w", padx=16, pady=(4, 12))
 
-        # Area dei Grafici (due colonne)
+        # Area dei Grafici (griglia dinamica a 2 colonne)
         self.charts_frame = ctk.CTkFrame(container, fg_color="transparent")
-        self.charts_frame.pack(fill="both", expand=True)
-        self.charts_frame.columnconfigure(0, weight=3)
-        self.charts_frame.columnconfigure(1, weight=2)
-        self.charts_frame.rowconfigure(0, weight=1)
+        self.charts_frame.pack(fill="both", expand=True, padx=12, pady=(0, 16))
+        self.charts_frame.columnconfigure(0, weight=1, uniform="chart_col")
+        self.charts_frame.columnconfigure(1, weight=1, uniform="chart_col")
 
         # Grafico 1: Bar Chart Profitto Mensile
-        self.chart1_card = ctk.CTkFrame(self.charts_frame, fg_color=c["bg_card"], corner_radius=10)
+        self.chart1_card = ctk.CTkFrame(self.charts_frame, fg_color=c["bg_card"], corner_radius=10, height=320)
 
         ctk.CTkLabel(self.chart1_card, text="ANDAMENTO PROFITTO MENSILE (€)", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=16, pady=(14, 0))
         ctk.CTkLabel(self.chart1_card, text="Utili netti generati per ciascun mese di vendita", font=("Segoe UI", 11), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(0, 10))
 
-        self.canvas_monthly = tk.Canvas(self.chart1_card, bg=c["bg_card"], highlightthickness=0)
+        self.canvas_monthly = tk.Canvas(self.chart1_card, bg=c["bg_card"], highlightthickness=0, height=230)
         self.canvas_monthly.pack(fill="both", expand=True, padx=4, pady=(0, 14))
 
         # Grafico 2: Distribution per Stato Prodotti
-        self.chart2_card = ctk.CTkFrame(self.charts_frame, fg_color=c["bg_card"], corner_radius=10)
+        self.chart2_card = ctk.CTkFrame(self.charts_frame, fg_color=c["bg_card"], corner_radius=10, height=320)
 
         ctk.CTkLabel(self.chart2_card, text="RIPARTIZIONE INVENTARIO (PEZZI)", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=16, pady=(14, 0))
         ctk.CTkLabel(self.chart2_card, text="Distribuzione volumi per stato", font=("Segoe UI", 11), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(0, 10))
 
-        self.canvas_dist = tk.Canvas(self.chart2_card, bg=c["bg_card"], highlightthickness=0)
+        self.canvas_dist = tk.Canvas(self.chart2_card, bg=c["bg_card"], highlightthickness=0, height=230)
         self.canvas_dist.pack(fill="both", expand=True, padx=4, pady=(0, 14))
+
+        # Grafico 3: Grafico a Torta Profitto per Piattaforma
+        self.chart3_card = ctk.CTkFrame(self.charts_frame, fg_color=c["bg_card"], corner_radius=10, height=320)
+
+        ctk.CTkLabel(self.chart3_card, text="PROFITTO PER PIATTAFORMA (€)", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=16, pady=(14, 0))
+        ctk.CTkLabel(self.chart3_card, text="Ripartizione del guadagno netto per canale di vendita", font=("Segoe UI", 11), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(0, 10))
+
+        self.canvas_platform = tk.Canvas(self.chart3_card, bg=c["bg_card"], highlightthickness=0, height=230)
+        self.canvas_platform.pack(fill="both", expand=True, padx=4, pady=(0, 14))
+
+        # Grafico 4: Volume Vendite nel Tempo (Pezzi per Mese)
+        self.chart4_card = ctk.CTkFrame(self.charts_frame, fg_color=c["bg_card"], corner_radius=10, height=320)
+
+        ctk.CTkLabel(self.chart4_card, text="VOLUME VENDITE NEL TEMPO (PEZZI)", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=16, pady=(14, 0))
+        ctk.CTkLabel(self.chart4_card, text="Distribuzione del numero di pezzi venduti per mese", font=("Segoe UI", 11), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(0, 10))
+
+        self.canvas_volume = tk.Canvas(self.chart4_card, bg=c["bg_card"], highlightthickness=0, height=230)
+        self.canvas_volume.pack(fill="both", expand=True, padx=4, pady=(0, 14))
+
+        # Grafico 5: Top Prodotti per Profitto
+        self.chart5_card = ctk.CTkFrame(self.charts_frame, fg_color=c["bg_card"], corner_radius=10, height=320)
+
+        ctk.CTkLabel(self.chart5_card, text="TOP PRODOTTI PER PROFITTO (€)", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=16, pady=(14, 0))
+        ctk.CTkLabel(self.chart5_card, text="Classifica dei prodotti con maggior utile netto generato", font=("Segoe UI", 11), text_color=c["fg_muted"]).pack(anchor="w", padx=16, pady=(0, 10))
+
+        self.canvas_top_products = tk.Canvas(self.chart5_card, bg=c["bg_card"], highlightthickness=0, height=230)
+        self.canvas_top_products.pack(fill="both", expand=True, padx=4, pady=(0, 14))
 
         self.chart_cards = {
             "monthly": self.chart1_card,
-            "dist": self.chart2_card
+            "dist": self.chart2_card,
+            "platform_pie": self.chart3_card,
+            "volume_monthly": self.chart4_card,
+            "top_products": self.chart5_card,
         }
 
         self._bind_context_menu(self.chart1_card, "monthly")
         self._bind_context_menu(self.canvas_monthly, "monthly")
         self._bind_context_menu(self.chart2_card, "dist")
         self._bind_context_menu(self.canvas_dist, "dist")
+        self._bind_context_menu(self.chart3_card, "platform_pie")
+        self._bind_context_menu(self.canvas_platform, "platform_pie")
+        self._bind_context_menu(self.chart4_card, "volume_monthly")
+        self._bind_context_menu(self.canvas_volume, "volume_monthly")
+        self._bind_context_menu(self.chart5_card, "top_products")
+        self._bind_context_menu(self.canvas_top_products, "top_products")
 
         self._bind_global_context_menu(self.charts_frame)
         self._bind_global_context_menu(container)
@@ -116,11 +152,12 @@ class DashboardView(ctk.CTkFrame):
 
     def _hide_chart(self, chart_id: str):
         import json
-        layout_str = self.db.get_setting("dashboard_layout", '["monthly", "dist"]')
+        default_layout = ["monthly", "dist", "platform_pie", "volume_monthly", "top_products"]
+        layout_str = self.db.get_setting("dashboard_layout", json.dumps(default_layout))
         try:
             layout = json.loads(layout_str)
         except Exception:
-            layout = ["monthly", "dist"]
+            layout = default_layout
         if chart_id in layout:
             layout.remove(chart_id)
             self.db.set_setting("dashboard_layout", json.dumps(layout))
@@ -128,20 +165,29 @@ class DashboardView(ctk.CTkFrame):
 
     def _apply_layout(self):
         import json
-        layout_str = self.db.get_setting("dashboard_layout", '["monthly", "dist"]')
+        default_layout = ["monthly", "dist", "platform_pie", "volume_monthly", "top_products"]
+        layout_str = self.db.get_setting("dashboard_layout", json.dumps(default_layout))
         try:
             layout = json.loads(layout_str)
         except Exception:
-            layout = ["monthly", "dist"]
+            layout = default_layout
+
         for card in self.chart_cards.values():
             card.grid_remove()
-        col = 0
-        for chart_id in layout:
-            if chart_id in self.chart_cards:
-                self.charts_frame.columnconfigure(col, weight=1)
-                padx = (0, 8) if col == 0 and len(layout) > 1 else (8, 0) if col > 0 else (0, 0)
-                self.chart_cards[chart_id].grid(row=0, column=col, sticky="nsew", padx=padx)
-                col += 1
+
+        active_charts = [cid for cid in layout if cid in self.chart_cards]
+        num_visible = len(active_charts)
+
+        for idx, chart_id in enumerate(active_charts):
+            card = self.chart_cards[chart_id]
+            if num_visible == 1:
+                card.grid(row=0, column=0, columnspan=2, sticky="nsew", padx=6, pady=6)
+            else:
+                r = idx // 2
+                c = idx % 2
+                padx = (0, 6) if c == 0 else (6, 0)
+                card.grid(row=r, column=c, columnspan=1, sticky="nsew", padx=padx, pady=6)
+
         self.charts_frame.update_idletasks()
         self.after(100, self.refresh)
 
@@ -150,8 +196,8 @@ class DashboardView(ctk.CTkFrame):
         c = DARK_THEME
         top = ctk.CTkToplevel(self, fg_color=c["bg_main"])
         top.title("Personalizza Dashboard")
-        center_window(top, 480, 460)
-        top.minsize(420, 380)
+        center_window(top, 480, 540)
+        top.minsize(420, 460)
         top.transient(self.winfo_toplevel())
         top.grab_set()
         apply_dark_titlebar(top)
@@ -163,20 +209,23 @@ class DashboardView(ctk.CTkFrame):
         ctk.CTkLabel(outer, text="Personalizza Dashboard", font=("Segoe UI", 16, "bold")).pack(anchor="w")
         ctk.CTkLabel(
             outer,
-            text="Attiva o disattiva i grafici e usa le frecce per riordinarli.",
+            text="Attiva o disattiva i grafici e trascina con il mouse per riordinarli.",
             font=("Segoe UI", 12),
             text_color=c["fg_muted"],
         ).pack(anchor="w", pady=(2, 14))
 
-        layout_str = self.db.get_setting("dashboard_layout", '["monthly", "dist"]')
+        layout_str = self.db.get_setting("dashboard_layout", '["monthly", "dist", "platform_pie", "volume_monthly", "top_products"]')
         try:
             current_layout = json.loads(layout_str)
         except Exception:
-            current_layout = ["monthly", "dist"]
+            current_layout = ["monthly", "dist", "platform_pie", "volume_monthly", "top_products"]
 
         all_charts = {
             "monthly": "Andamento Profitto Mensile",
             "dist": "Ripartizione Inventario (Pezzi)",
+            "platform_pie": "Profitto per Piattaforma (Grafico a Torta)",
+            "volume_monthly": "Volume Vendite nel Tempo (Pezzi per Mese)",
+            "top_products": "Top Prodotti per Profitto (€)",
         }
 
         temp_layout = current_layout.copy()
@@ -188,78 +237,114 @@ class DashboardView(ctk.CTkFrame):
         for ch in all_charts:
             chart_vars[ch] = tk.BooleanVar(value=(ch in current_layout))
 
-        # Contenitore per le card dei grafici perfettamente allineato ai margini
+        # Contenitore per le card dei grafici con supporto Drag & Drop
         cards_container = ctk.CTkFrame(
             outer,
             fg_color="transparent",
         )
         cards_container.pack(fill="both", expand=True, pady=(0, 16))
+        cards_container.columnconfigure(0, weight=1)
 
-        def move_item(index: int, direction: int):
-            new_idx = index + direction
-            if 0 <= new_idx < len(temp_layout):
-                temp_layout[index], temp_layout[new_idx] = (
-                    temp_layout[new_idx],
-                    temp_layout[index],
-                )
-                render_items()
+        drag_state = {"active": False, "cid": None}
+        card_widgets = {}
+        grip_labels = {}
 
-        def render_items():
-            for w in cards_container.winfo_children():
-                w.destroy()
-
+        def refresh_positions():
             for idx, cid in enumerate(temp_layout):
-                card = ctk.CTkFrame(
-                    cards_container,
+                card_widgets[cid].grid(row=idx, column=0, sticky="ew", pady=4)
+
+        def on_drag_start(event, cid):
+            drag_state["active"] = True
+            drag_state["cid"] = cid
+            card_widgets[cid].configure(
+                fg_color="#1e293b",
+                border_width=2,
+                border_color=c["accent"],
+            )
+            grip_labels[cid].configure(text_color="#60a5fa")
+
+        def on_drag_motion(event):
+            if not drag_state["active"] or not drag_state["cid"]:
+                return
+
+            mouse_y = event.y_root
+            dragged_cid = drag_state["cid"]
+            cur_idx = temp_layout.index(dragged_cid)
+
+            # Calcolo calibrato: confronta la posizione Y del cursore con i punti mediani reali delle altre schede
+            target_idx = 0
+            for i, cid in enumerate(temp_layout):
+                if cid == dragged_cid:
+                    continue
+                w = card_widgets[cid]
+                card_mid_y = w.winfo_rooty() + (w.winfo_height() / 2)
+                if mouse_y > card_mid_y:
+                    target_idx = i + 1 if i < cur_idx else i
+
+            target_idx = max(0, min(len(temp_layout) - 1, target_idx))
+
+            if target_idx != cur_idx:
+                temp_layout.remove(dragged_cid)
+                temp_layout.insert(target_idx, dragged_cid)
+                refresh_positions()
+
+        def on_drag_end(event):
+            if drag_state["cid"]:
+                cid = drag_state["cid"]
+                card_widgets[cid].configure(
                     fg_color=c["bg_card"],
-                    corner_radius=8,
                     border_width=1,
                     border_color=c["border"],
                 )
-                card.pack(fill="x", pady=4)
+                grip_labels[cid].configure(text_color=c["fg_muted"])
+            drag_state["active"] = False
+            drag_state["cid"] = None
 
-                # Switch moderno con label
-                switch = ctk.CTkSwitch(
-                    card,
-                    text=all_charts.get(cid, cid),
-                    variable=chart_vars[cid],
-                    font=("Segoe UI", 12, "bold"),
-                    text_color=c["fg_main"],
-                    progress_color=c["accent"],
-                )
-                switch.pack(side="left", padx=12, pady=10)
+        # Creazione singola e permanente dei widget (nessuna distruzione/ricostruzione = zero sfarfallio)
+        for idx, cid in enumerate(temp_layout):
+            card = ctk.CTkFrame(
+                cards_container,
+                fg_color=c["bg_card"],
+                corner_radius=8,
+                border_width=1,
+                border_color=c["border"],
+                cursor="fleur",
+            )
+            card_widgets[cid] = card
 
-                # Pulsanti freccia per riordinamento
-                btn_box = ctk.CTkFrame(card, fg_color="transparent")
-                btn_box.pack(side="right", padx=10, pady=6)
+            # Switch moderno con label
+            switch = ctk.CTkSwitch(
+                card,
+                text=all_charts.get(cid, cid),
+                variable=chart_vars[cid],
+                font=("Segoe UI", 12, "bold"),
+                text_color=c["fg_main"],
+                progress_color=c["accent"],
+            )
+            switch.pack(side="left", padx=12, pady=10)
 
-                btn_up = ctk.CTkButton(
-                    btn_box,
-                    text="▲",
-                    width=32,
-                    height=28,
-                    font=("Segoe UI", 10),
-                    fg_color="#374151",
-                    hover_color="#4b5563",
-                    state="normal" if idx > 0 else "disabled",
-                    command=lambda i=idx: move_item(i, -1),
-                )
-                btn_up.pack(side="left", padx=(0, 4))
+            # Grip Handle
+            grip_box = ctk.CTkFrame(card, fg_color="transparent")
+            grip_box.pack(side="right", padx=12, pady=6)
 
-                btn_down = ctk.CTkButton(
-                    btn_box,
-                    text="▼",
-                    width=32,
-                    height=28,
-                    font=("Segoe UI", 10),
-                    fg_color="#374151",
-                    hover_color="#4b5563",
-                    state="normal" if idx < len(temp_layout) - 1 else "disabled",
-                    command=lambda i=idx: move_item(i, 1),
-                )
-                btn_down.pack(side="left")
+            grip_lbl = ctk.CTkLabel(
+                grip_box,
+                text="⋮⋮",
+                font=("Segoe UI", 16, "bold"),
+                text_color=c["fg_muted"],
+                cursor="fleur",
+                width=28,
+            )
+            grip_lbl.pack(side="right")
+            grip_labels[cid] = grip_lbl
 
-        render_items()
+            # Bind degli eventi sul card e sulla maniglia
+            for widget in (card, grip_box, grip_lbl):
+                widget.bind("<ButtonPress-1>", lambda e, item_id=cid: on_drag_start(e, item_id))
+                widget.bind("<B1-Motion>", on_drag_motion)
+                widget.bind("<ButtonRelease-1>", on_drag_end)
+
+        refresh_positions()
 
         # Bottoni inferiori
         bottom_box = ctk.CTkFrame(outer, fg_color="transparent")
@@ -297,6 +382,9 @@ class DashboardView(ctk.CTkFrame):
         self.kpi_vars["roi_avg"].set(f"{totals['sold_roi']:.1f}% ({totals['sold_count']} v.)")
         self._draw_monthly_chart()
         self._draw_distribution_chart(totals)
+        self._draw_platform_pie_chart()
+        self._draw_monthly_volume_chart()
+        self._draw_top_products_chart()
 
     def _draw_monthly_chart(self) -> None:
         canvas = self.canvas_monthly
@@ -400,3 +488,329 @@ class DashboardView(ctk.CTkFrame):
             canvas.create_rectangle(margin_x, start_y, margin_x + 18, start_y + 18, fill=color, outline="")
             canvas.create_text(margin_x + 28, start_y + 9, text=f"{label}: {count} pz ({pct:.1f}%)", anchor="w", fill=DARK_THEME["fg_main"], font=("Segoe UI", 11, "bold"))
             start_y += 35
+
+    def _draw_platform_pie_chart(self) -> None:
+        """Disegna il grafico a torta del profitto per piattaforma/canale di vendita con legenda percentuali."""
+        canvas = self.canvas_platform
+        canvas.delete("all")
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        if width < 50 or height < 50:
+            self.after(100, self._draw_platform_pie_chart)
+            return
+
+        platforms = self.db.get_profit_by_platform()
+        positive_items = [p for p in platforms if p["profit"] > Decimal("0")]
+        total_positive_profit = sum((p["profit"] for p in positive_items), Decimal("0"))
+
+        if not platforms or total_positive_profit <= Decimal("0"):
+            canvas.create_text(
+                width / 2, height / 2,
+                text="Nessun profitto registrato per canale di vendita.",
+                fill=DARK_THEME["fg_muted"],
+                font=("Segoe UI", 10)
+            )
+            return
+
+        palette = [
+            "#2563eb",  # Blu Royal
+            "#10b981",  # Verde Smeraldo
+            "#f59e0b",  # Ambra / Oro
+            "#ec4899",  # Rosa Fucsia
+            "#8b5cf6",  # Viola
+            "#06b6d4",  # Ciano
+            "#f43f5e",  # Rosso Rose
+            "#64748b",  # Ardesia
+        ]
+
+        if len(positive_items) > 5:
+            main_items = positive_items[:4]
+            other_profit = sum((p["profit"] for p in positive_items[4:]), Decimal("0"))
+            other_count = sum(p["count"] for p in positive_items[4:])
+            slices = main_items + [{
+                "platform": "Altro",
+                "profit": other_profit,
+                "count": other_count
+            }]
+        else:
+            slices = positive_items
+
+        margin = 16
+        pie_center_x = min(width * 0.30, 105 + margin)
+        pie_center_y = height / 2
+        radius = min(pie_center_x - margin, (height / 2) - margin, 85)
+        radius = max(radius, 45)
+
+        # Rendering della torta in Alta Definizione (Supersampling 4x con filtro Lanczos per anti-aliasing)
+        img_size = int(radius * 2)
+        scale = 4
+        hi_res_size = img_size * scale
+
+        pie_img = Image.new("RGBA", (hi_res_size, hi_res_size), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(pie_img)
+
+        # In PIL gli angoli partono da ore 3 (0°) e avanzano in senso orario; ore 12 corrisponde a -90° (270°)
+        current_deg = -90.0
+        pad = 2 * scale
+        bbox = [pad, pad, hi_res_size - pad, hi_res_size - pad]
+
+        for idx, item in enumerate(slices):
+            color = palette[idx % len(palette)]
+            pct = float(item["profit"] / total_positive_profit)
+            extent = pct * 360.0
+
+            if extent >= 0.5:
+                draw.pieslice(
+                    bbox,
+                    start=current_deg,
+                    end=current_deg + extent,
+                    fill=color,
+                    outline=DARK_THEME["bg_card"],
+                    width=2 * scale
+                )
+                current_deg += extent
+
+        # Foro centrale donut in HD
+        inner_r = (hi_res_size / 2) * 0.44
+        center_pt = hi_res_size / 2
+        inner_bbox = [
+            center_pt - inner_r,
+            center_pt - inner_r,
+            center_pt + inner_r,
+            center_pt + inner_r,
+        ]
+        draw.ellipse(inner_bbox, fill=DARK_THEME["bg_card"], outline=DARK_THEME["bg_card"])
+
+        # Ricampionamento Lanczos per bordi ultra-definiti
+        smooth_pie = pie_img.resize((img_size, img_size), resample=Image.Resampling.LANCZOS)
+        self._pie_photo = ImageTk.PhotoImage(smooth_pie)
+
+        canvas.create_image(pie_center_x, pie_center_y, image=self._pie_photo, anchor="center")
+
+        legend_x = max(pie_center_x + radius + 18, width * 0.38)
+        item_height = 32
+        legend_y_start = max(16, (height - (len(slices) * item_height)) / 2)
+
+        for idx, item in enumerate(slices):
+            color = palette[idx % len(palette)]
+            pct = float(item["profit"] / total_positive_profit)
+
+            cur_y = legend_y_start + idx * item_height
+            canvas.create_rectangle(
+                legend_x, cur_y + 4,
+                legend_x + 14, cur_y + 18,
+                fill=color,
+                outline=""
+            )
+            plat_name = str(item["platform"])
+            if len(plat_name) > 16:
+                plat_name = plat_name[:14] + "..."
+
+            canvas.create_text(
+                legend_x + 22, cur_y + 11,
+                text=plat_name,
+                anchor="w",
+                fill=DARK_THEME["fg_main"],
+                font=("Segoe UI", 10, "bold")
+            )
+            val_text = f"{money(item['profit'])}  ({pct * 100:.1f}%)"
+            canvas.create_text(
+                width - 18, cur_y + 11,
+                text=val_text,
+                anchor="e",
+                fill=DARK_THEME["fg_muted"],
+                font=("Segoe UI", 10, "bold")
+            )
+
+    def _draw_monthly_volume_chart(self) -> None:
+        """Disegna la distribuzione del volume di pezzi venduti per mese nello stesso stile della ripartizione inventario."""
+        canvas = self.canvas_volume
+        canvas.delete("all")
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        if width < 50 or height < 50:
+            self.after(100, self._draw_monthly_volume_chart)
+            return
+
+        sales = self.db.get_monthly_sales()
+        valid_sales = [s for s in sales if s.get("count", 0) > 0]
+        total_qty = sum(s["count"] for s in valid_sales)
+
+        if not valid_sales or total_qty == 0:
+            canvas.create_text(
+                width / 2, height / 2,
+                text="Nessuna vendita registrata con data di vendita.",
+                fill=DARK_THEME["fg_muted"],
+                font=("Segoe UI", 10)
+            )
+            return
+
+        palette = [
+            "#2563eb",  # Blu
+            "#10b981",  # Smeraldo
+            "#f59e0b",  # Ambra
+            "#8b5cf6",  # Viola
+            "#ec4899",  # Rosa
+            "#06b6d4",  # Ciano
+            "#64748b",  # Grigio
+        ]
+
+        months_full = {
+            "01": "Gennaio", "02": "Febbraio", "03": "Marzo", "04": "Aprile",
+            "05": "Maggio", "06": "Giugno", "07": "Luglio", "08": "Agosto",
+            "09": "Settembre", "10": "Ottobre", "11": "Novembre", "12": "Dicembre"
+        }
+
+        chrono_items = sorted(valid_sales, key=lambda s: s["month"])
+        sorted_recent = sorted(valid_sales, key=lambda s: s["month"], reverse=True)
+
+        if len(sorted_recent) > 5:
+            main_months = sorted_recent[:4]
+            other_qty = sum(s["count"] for s in sorted_recent[4:])
+            items_to_show = main_months + [{
+                "month": "Mesi prec.",
+                "count": other_qty
+            }]
+        else:
+            items_to_show = sorted_recent
+
+        bar_y = 35
+        bar_h = 24
+        margin_x = 20
+        avail_w = width - 2 * margin_x
+        current_x = margin_x
+
+        for idx, s in enumerate(chrono_items):
+            count = s["count"]
+            if count > 0:
+                seg_w = (count / total_qty) * avail_w
+                color = palette[idx % len(palette)]
+                canvas.create_rectangle(current_x, bar_y, current_x + seg_w, bar_y + bar_h, fill=color, outline="")
+                current_x += seg_w
+
+        start_y = 85
+        item_spacing = 30
+        for idx, item in enumerate(items_to_show):
+            # Assegna colore coerente
+            color = palette[idx % len(palette)]
+            month_key = item["month"]
+            if len(month_key) >= 7 and "-" in month_key:
+                year_part, month_part = month_key[:4], month_key[5:7]
+                label_text = f"{months_full.get(month_part, month_part)} {year_part}"
+            else:
+                label_text = month_key
+
+            count = item["count"]
+            pct = (count / total_qty * 100) if total_qty > 0 else 0
+
+            canvas.create_rectangle(margin_x, start_y + 4, margin_x + 14, start_y + 18, fill=color, outline="")
+            canvas.create_text(
+                margin_x + 22, start_y + 11,
+                text=label_text,
+                anchor="w",
+                fill=DARK_THEME["fg_main"],
+                font=("Segoe UI", 10, "bold")
+            )
+            canvas.create_text(
+                width - margin_x, start_y + 11,
+                text=f"{count} pz  ({pct:.1f}%)",
+                anchor="e",
+                fill=DARK_THEME["fg_muted"],
+                font=("Segoe UI", 10, "bold")
+            )
+            start_y += item_spacing
+
+    def _draw_top_products_chart(self) -> None:
+        """Disegna la classifica a barre orizzontali dei top prodotti per utile netto generato."""
+        canvas = self.canvas_top_products
+        canvas.delete("all")
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        if width < 50 or height < 50:
+            self.after(100, self._draw_top_products_chart)
+            return
+
+        top_products = self.db.get_top_profitable_products(limit=5)
+        if not top_products:
+            canvas.create_text(
+                width / 2, height / 2,
+                text="Nessun prodotto venduto con profitto registrato.",
+                fill=DARK_THEME["fg_muted"],
+                font=("Segoe UI", 10)
+            )
+            return
+
+        max_profit = max((p["profit"] for p in top_products), default=Decimal("1"))
+        if max_profit <= 0:
+            max_profit = Decimal("1")
+
+        start_y = 14
+        item_spacing = 42
+        margin_left = 20
+        margin_right = 20
+
+        rank_colors = [
+            "#f59e0b",  # 1° Oro
+            "#94a3b8",  # 2° Argento
+            "#d97706",  # 3° Bronzo
+            "#64748b",  # 4° Ardesia
+            "#64748b",  # 5° Ardesia
+        ]
+
+        for idx, item in enumerate(top_products):
+            y = start_y + idx * item_spacing
+            rank_color = rank_colors[idx % len(rank_colors)]
+
+            # Badge posizione #1, #2...
+            canvas.create_text(
+                margin_left, y + 8,
+                text=f"#{idx + 1}",
+                anchor="w",
+                fill=rank_color,
+                font=("Segoe UI", 10, "bold")
+            )
+
+            # Nome Prodotto
+            prod_name = str(item["name"])
+            if len(prod_name) > 28:
+                prod_name = prod_name[:26] + "..."
+
+            canvas.create_text(
+                margin_left + 28, y + 8,
+                text=prod_name,
+                anchor="w",
+                fill=DARK_THEME["fg_main"],
+                font=("Segoe UI", 10, "bold")
+            )
+
+            # Profitto in € e quantità
+            profit_str = f"+ {money(item['profit'])}  ({item['count']} pz)"
+            canvas.create_text(
+                width - margin_right, y + 8,
+                text=profit_str,
+                anchor="e",
+                fill="#10b981",
+                font=("Segoe UI", 10, "bold")
+            )
+
+            # Barra orizzontale di avanzamento
+            bar_track_y = y + 21
+            bar_track_h = 6
+            bar_x_start = margin_left + 28
+            bar_max_w = width - margin_right - bar_x_start
+            bar_fill_w = max(4, float(item["profit"] / max_profit) * bar_max_w)
+
+            # Sfondo barra
+            canvas.create_rectangle(
+                bar_x_start, bar_track_y,
+                width - margin_right, bar_track_y + bar_track_h,
+                fill="#1f2937",
+                outline=""
+            )
+            # Riempimento barra in verde smeraldo
+            canvas.create_rectangle(
+                bar_x_start, bar_track_y,
+                bar_x_start + bar_fill_w, bar_track_y + bar_track_h,
+                fill="#10b981",
+                outline=""
+            )

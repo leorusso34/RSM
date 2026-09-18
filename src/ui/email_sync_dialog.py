@@ -132,11 +132,11 @@ class EmailSyncDialog(ctk.CTkToplevel):
         self.tree.column("store", width=140, anchor=tk.W)
         self.tree.column("date", width=95, anchor=tk.CENTER)
 
-        yscroll = ttk.Scrollbar(table_card, orient="vertical", command=self.tree.yview)
+        yscroll = ctk.CTkScrollbar(table_card, orientation="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=yscroll.set)
 
         self.tree.pack(side="left", fill="both", expand=True, padx=(2, 0), pady=2)
-        yscroll.pack(side="right", fill="y", padx=(0, 2), pady=2)
+        yscroll.pack(side="right", fill="y", padx=(2, 2), pady=2)
 
         # Barra inferiore con pulsante Salva
         bottom_bar = ctk.CTkFrame(container, fg_color="transparent")

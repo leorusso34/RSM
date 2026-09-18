@@ -334,3 +334,82 @@ def test_partial_sale_splits_record(tmp_path):
     assert sold_after["name"] == "Scarpa Test"
 
     db.close()
+
+
+def test_get_profit_by_platform(tmp_path):
+    db = InventoryDatabase(tmp_path / "inventory.db")
+    # Prodotto 1: venduto su eBay (2 pz, costo 50x2=100, incasso 160, fees 5x2=10 -> profitto 50)
+    db.save({
+        "name": "Prodotto eBay", "size": "M", "quantity": 2,
+        "purchased_price": Decimal("50.00"), "purchased_place": "Shop",
+        "selling_place": "eBay", "selling_price": Decimal("160.00"),
+        "sold_price": Decimal("160.00"), "fees": Decimal("5.00"),
+        "sold_date": "2026-09-01", "status": STATUS_SOLD, "release_date": "", "notes": "",
+    })
+    # Prodotto 2: venduto su Vinted (1 pz, costo 30, incasso 50, fees 0 -> profitto 20)
+    db.save({
+        "name": "Prodotto Vinted", "size": "L", "quantity": 1,
+        "purchased_price": Decimal("30.00"), "purchased_place": "Shop",
+        "selling_place": "Vinted", "selling_price": Decimal("50.00"),
+        "sold_price": Decimal("50.00"), "fees": Decimal("0.00"),
+        "sold_date": "2026-09-02", "status": STATUS_SOLD, "release_date": "", "notes": "",
+    })
+    # Prodotto 3: In stock (non deve essere incluso nel calcolo vendite)
+    db.save({
+        "name": "Prodotto Stock", "size": "S", "quantity": 1,
+        "purchased_price": Decimal("20.00"), "purchased_place": "Shop",
+        "selling_place": "eBay", "selling_price": Decimal("40.00"),
+        "sold_price": None, "fees": Decimal("0.00"),
+        "sold_date": "", "status": STATUS_STOCK, "release_date": "", "notes": "",
+    })
+
+    platforms = db.get_profit_by_platform()
+    assert len(platforms) == 2
+    ebay_data = next(p for p in platforms if p["platform"] == "eBay")
+    vinted_data = next(p for p in platforms if p["platform"] == "Vinted")
+
+    assert ebay_data["profit"] == Decimal("50.00")
+    assert ebay_data["count"] == 2
+    assert vinted_data["profit"] == Decimal("20.00")
+    assert vinted_data["count"] == 1
+    db.close()
+
+
+def test_get_top_profitable_products(tmp_path):
+    db = InventoryDatabase(tmp_path / "inventory.db")
+    # Prodotto A: profitto 100
+    db.save({
+        "name": "Nike Jordan 1", "size": "42", "quantity": 1,
+        "purchased_price": Decimal("100.00"), "purchased_place": "Shop",
+        "selling_place": "eBay", "selling_price": Decimal("200.00"),
+        "sold_price": Decimal("200.00"), "fees": Decimal("0.00"),
+        "sold_date": "2026-09-01", "status": STATUS_SOLD, "release_date": "", "notes": "",
+    })
+    # Prodotto B: profitto 150 (2 pz con costo 50x2=100, incasso 260, fees 5x2=10 -> profitto 150)
+    db.save({
+        "name": "Rolex Submariner", "size": "UNI", "quantity": 2,
+        "purchased_price": Decimal("50.00"), "purchased_place": "Shop",
+        "selling_place": "Chrono24", "selling_price": Decimal("260.00"),
+        "sold_price": Decimal("260.00"), "fees": Decimal("5.00"),
+        "sold_date": "2026-09-02", "status": STATUS_SOLD, "release_date": "", "notes": "",
+    })
+    # Prodotto C: in stock (non venduto)
+    db.save({
+        "name": "Moneta Oro", "size": "UNI", "quantity": 1,
+        "purchased_price": Decimal("50.00"), "purchased_place": "Shop",
+        "selling_place": "Shop", "selling_price": Decimal("300.00"),
+        "sold_price": None, "fees": Decimal("0.00"),
+        "sold_date": "", "status": STATUS_STOCK, "release_date": "", "notes": "",
+    })
+
+    top = db.get_top_profitable_products(limit=5)
+    assert len(top) == 2
+    assert top[0]["name"] == "Rolex Submariner"
+    assert top[0]["profit"] == Decimal("150.00")
+    assert top[0]["count"] == 2
+
+    assert top[1]["name"] == "Nike Jordan 1"
+    assert top[1]["profit"] == Decimal("100.00")
+    assert top[1]["count"] == 1
+    db.close()
+
