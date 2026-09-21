@@ -1,9 +1,0 @@
-{
-  "gemini_api_key": "GEMINI_API_KEY",
-  "email_sync_address": "test@gmail.com",
-  "email_sync_app_password": "abcdefghijklmnop",
-  "ebay_client_id": "EBAY_CLIENT_ID",
-  "ebay_client_secret": "EBAY_CLIENT_SECRET_ID",
-  "github_token": "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",
-  "dashboard_layout": "[\"dist\", \"top_products\", \"platform_pie\", \"monthly\", \"volume_monthly\"]"
-}
