@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "RSM"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 GITHUB_REPO = "leorusso34/RSM"
 
 # Stati prodotti
@@ -14,6 +14,25 @@ STATUS_STOCK = "In Stock"
 STATUS_PREORDER = "Pre-ordine"
 STATUS_SOLD = "Venduto"
 STATUS_COMPLETED = "Completato"
+
+# Mappa mesi abbreviati in italiano per grafici e statistiche
+MONTHS_SHORT_IT = {
+    "01": "GEN", "02": "FEB", "03": "MAR", "04": "APR",
+    "05": "MAG", "06": "GIU", "07": "LUG", "08": "AGO",
+    "09": "SET", "10": "OTT", "11": "NOV", "12": "DIC"
+}
+
+# Palette colori grafici condivisa per coerenza visiva
+CHART_PALETTE = [
+    "#2563eb",  # Blu Royal
+    "#10b981",  # Verde Smeraldo
+    "#f59e0b",  # Ambra / Oro
+    "#8b5cf6",  # Viola
+    "#ec4899",  # Rosa Fucsia
+    "#06b6d4",  # Ciano
+    "#f43f5e",  # Rosso Rose
+    "#64748b",  # Grigio Ardesia
+]
 
 DEFAULT_SELLING_PLACES = [
     "alias", "CardMarket", "Catawiki", "chrono24", "discord", "ebay",

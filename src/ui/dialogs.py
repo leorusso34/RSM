@@ -282,14 +282,15 @@ class ProductDialog(ctk.CTkToplevel):
 
     def _update_profit_preview(self) -> None:
         try:
-            buy = parse_money(self.vars["purchased_price"].get(), allow_empty=True) or 0.0
+            buy = parse_money(self.vars["purchased_price"].get(), allow_empty=True) or Decimal("0")
             sold = parse_money(self.vars["selling_price"].get(), allow_empty=True)
-            fees = parse_money(self.vars["fees"].get(), allow_empty=True) or 0.0
+            fees = parse_money(self.vars["fees"].get(), allow_empty=True) or Decimal("0")
             qty = parse_int(self.vars["quantity"].get(), 1)
-            if sold is not None and buy > 0:
+            if sold is not None and buy >= 0:
                 profit, roi = calculate_profit(buy, sold, fees, qty)
                 prefix = "+" if profit >= 0 else ""
-                self.profit_info_var.set(f"Profitto Netto Totale: {prefix}{money(profit)}   |   ROI: {roi:.1f}%")
+                roi_str = f"{roi:.1f}%" if buy > 0 else "-"
+                self.profit_info_var.set(f"Profitto Netto Totale: {prefix}{money(profit)}   |   ROI: {roi_str}")
             else:
                 self.profit_info_var.set("Inserisci il prezzo di vendita per calcolare profitto e ROI.")
         except Exception:
@@ -303,7 +304,7 @@ class ProductDialog(ctk.CTkToplevel):
             qty = parse_int(self.vars["quantity"].get(), 1)
             purchase = parse_money(self.vars["purchased_price"].get())
             sale = parse_money(self.vars["selling_price"].get(), allow_empty=True)
-            fees = parse_money(self.vars["fees"].get(), allow_empty=True) or 0.0
+            fees = parse_money(self.vars["fees"].get(), allow_empty=True) or Decimal("0")
             st = self.vars["status"].get()
             sold = sale if st == STATUS_SOLD else None
             if st == STATUS_SOLD and sold is None:

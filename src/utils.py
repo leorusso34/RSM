@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Optional, Tuple, List, Dict
 
-from .config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK, PROJECT_DIR
+from .config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK, PROJECT_DIR, MONTHS_SHORT_IT
 
 def parse_money(value: Any, allow_empty: bool = False) -> Optional[Decimal]:
     """Converte un importo monetario valido in Decimal con due decimali."""
@@ -111,6 +111,18 @@ def parse_date(value: Any, allow_empty: bool = True) -> str:
             continue
             
     raise ValueError(f"Formato data non supportato: {text}")
+            
+def format_month_label(month_key: Any) -> str:
+    """Formatta una stringa mese ISO (YYYY-MM) o data nel formato abbreviato compatto (es. 'SET \\'26')."""
+    text = str(month_key or "").strip()
+    if not text:
+        return ""
+    if len(text) >= 7 and "-" in text:
+        year_part = text[:4]
+        month_part = text[5:7]
+        short_name = MONTHS_SHORT_IT.get(month_part, month_part)
+        return f"{short_name} '{year_part[2:]}"
+    return text
 
 def calculate_profit(purchased_price: Any, sold_price: Optional[Any], fees: Any = Decimal("0"), quantity: int = 1) -> Tuple[Decimal, Decimal]:
     """
@@ -129,7 +141,7 @@ def calculate_profit(purchased_price: Any, sold_price: Optional[Any], fees: Any 
     fee_amount = fees if isinstance(fees, Decimal) else Decimal(str(fees))
     qty = Decimal(str(quantity)) if quantity and quantity > 0 else Decimal("1")
 
-    if sold is None or purchased <= 0:
+    if sold is None or purchased < 0:
         return Decimal("0"), Decimal("0")
 
     total_profit = sold - (purchased + fee_amount) * qty
@@ -192,7 +204,7 @@ def export_to_csv(filepath: str, products: List[dict]) -> int:
     """Esporta una lista di prodotti in un file CSV formattato per Excel."""
     headers = [
         "ID", "NOME", "TAGLIA", "QUANTITÀ", "PREZZO ACQUISTO", "LUOGO ACQUISTO",
-        "LUOGO VENDITA", "PREZZO VENDITA ESTIMATO", "PREZZO VENDITA EFFETTIVO",
+        "LUOGO VENDITA", "PREZZO VENDITA TOTALE (PREVISTO)", "PREZZO VENDITA TOTALE (EFFETTIVO)",
         "COMMISSIONI/SPESE", "DATA VENDITA", "STATO", "DATA USCITA", "NOTE"
     ]
     with open(filepath, "w", newline="", encoding="utf-8-sig") as handle:

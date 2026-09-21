@@ -6,7 +6,7 @@ from pathlib import Path
 from src.config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
 from src.database import InventoryDatabase
 from src.ui.main_window import InventoryApp
-from src.utils import calculate_profit, export_to_csv, read_spreadsheet_raw, parse_int, parse_money
+from src.utils import calculate_profit, export_to_csv, read_spreadsheet_raw, parse_int, parse_money, format_month_label
 
 
 def product(name="Test", status=STATUS_STOCK):
@@ -25,6 +25,10 @@ def test_money_and_profit_are_strict():
     assert parse_money("€ 12,50") == Decimal("12.50")
     assert parse_money("1.234") == Decimal("1234.00")
     assert calculate_profit(Decimal("100"), Decimal("0"), Decimal("5"), 2)[0] == Decimal("-210.00")
+    # Prodotto a costo zero (es. regalo/omaggio venduto a 50€ con 2€ fees)
+    profit_zero_cost, roi_zero_cost = calculate_profit(Decimal("0.00"), Decimal("50.00"), Decimal("2.00"), 1)
+    assert profit_zero_cost == Decimal("48.00")
+    assert roi_zero_cost == Decimal("0.00")
     try:
         parse_money("abc100")
     except ValueError:
@@ -412,4 +416,20 @@ def test_get_top_profitable_products(tmp_path):
     assert top[1]["profit"] == Decimal("100.00")
     assert top[1]["count"] == 1
     db.close()
+
+
+def test_format_month_label_and_csv_headers(tmp_path):
+    assert format_month_label("2026-09") == "SET '26"
+    assert format_month_label("2026-06") == "GIU '26"
+    assert format_month_label("2026-01") == "GEN '26"
+    assert format_month_label("2025-12-15") == "DIC '25"
+    assert format_month_label("") == ""
+
+    csv_file = tmp_path / "test_headers.csv"
+    export_to_csv(str(csv_file), [product()])
+    with csv_file.open(encoding="utf-8-sig", newline="") as handle:
+        headers = next(csv.reader(handle, delimiter=";"))
+        assert "PREZZO VENDITA TOTALE (PREVISTO)" in headers
+        assert "PREZZO VENDITA TOTALE (EFFETTIVO)" in headers
+
 

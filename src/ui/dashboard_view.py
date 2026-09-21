@@ -9,9 +9,9 @@ from typing import Dict, List, Any
 import customtkinter as ctk
 from PIL import Image, ImageDraw, ImageTk
 
-from ..config import DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
+from ..config import DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK, CHART_PALETTE, MONTHS_SHORT_IT
 from ..database import InventoryDatabase
-from ..utils import money, center_window, apply_dark_titlebar
+from ..utils import money, center_window, apply_dark_titlebar, format_month_label
 
 
 class DashboardView(ctk.CTkFrame):
@@ -21,6 +21,7 @@ class DashboardView(ctk.CTkFrame):
         super().__init__(parent, fg_color="transparent")
         self.db = db
         self.kpi_vars: Dict[str, tk.StringVar] = {}
+        self._resize_after_id = None
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -129,6 +130,23 @@ class DashboardView(ctk.CTkFrame):
         self._bind_global_context_menu(self)
 
         self._apply_layout()
+        self.bind("<Configure>", self._on_configure)
+
+    def _on_configure(self, event=None) -> None:
+        """Ridisegna i grafici in modo reattivo quando la vista cambia dimensione o torna visibile."""
+        if not self.winfo_viewable():
+            return
+        if self._resize_after_id:
+            try:
+                self.after_cancel(self._resize_after_id)
+            except Exception:
+                pass
+        self._resize_after_id = self.after(150, self._delayed_refresh)
+
+    def _delayed_refresh(self) -> None:
+        self._resize_after_id = None
+        if self.winfo_viewable():
+            self.refresh()
 
     def _bind_global_context_menu(self, widget: tk.Widget):
         menu = tk.Menu(self, tearoff=0, bg=DARK_THEME["bg_card"], fg=DARK_THEME["fg_main"], activebackground=DARK_THEME["accent"])
@@ -386,13 +404,16 @@ class DashboardView(ctk.CTkFrame):
         self._draw_monthly_volume_chart()
         self._draw_top_products_chart()
 
-    def _draw_monthly_chart(self) -> None:
+    def _draw_monthly_chart(self, retry_count: int = 0) -> None:
         canvas = self.canvas_monthly
         canvas.delete("all")
         width = canvas.winfo_width()
         height = canvas.winfo_height()
         if width < 50 or height < 50:
-            self.after(100, self._draw_monthly_chart)
+            if not self.winfo_viewable():
+                return
+            if retry_count < 5:
+                self.after(100, lambda: self._draw_monthly_chart(retry_count + 1))
             return
         sales = self.db.get_monthly_sales()
         if not sales:
@@ -416,7 +437,7 @@ class DashboardView(ctk.CTkFrame):
             y_val = margin_top + plot_height * (i / 3)
             profit_val = max_profit - profit_range * (Decimal(i) / Decimal("3"))
             canvas.create_line(margin_left, y_val, width - margin_right, y_val, fill=DARK_THEME["border"], dash=(2, 2))
-            canvas.create_text(margin_left - 8, y_val, text=f"\u20ac{int(profit_val)}", anchor="e", fill=DARK_THEME["fg_muted"], font=("Segoe UI", 9, "bold"))
+            canvas.create_text(margin_left - 8, y_val, text=f"€{int(profit_val)}", anchor="e", fill=DARK_THEME["fg_muted"], font=("Segoe UI", 9, "bold"))
         zero_y = margin_top + float(max_profit / profit_range) * plot_height
         for idx, item in enumerate(sales):
             x0 = margin_left + bar_gap + idx * (bar_width + bar_gap)
@@ -425,39 +446,24 @@ class DashboardView(ctk.CTkFrame):
             y_profit = margin_top + float((max_profit - profit) / profit_range) * plot_height
             y0 = min(zero_y, y_profit)
             y1 = max(zero_y, y_profit)
-            bar_color = "#10b981" if profit >= 0 else "#ef4444"
+            bar_color = "#ef4444" if profit < 0 else CHART_PALETTE[idx % len(CHART_PALETTE)]
             canvas.create_rectangle(x0, y0, x1, y1, fill=bar_color, outline=bar_color, width=1)
             
-            month_key = item["month"]
-            month_label = month_key
-            if len(month_key) >= 7 and "-" in month_key:
-                year_part, month_part = month_key[:4], month_key[5:7]
-                months_it = {
-                    "01": "Gen", "02": "Feb", "03": "Mar", "04": "Apr",
-                    "05": "Mag", "06": "Giu", "07": "Lug", "08": "Ago",
-                    "09": "Set", "10": "Ott", "11": "Nov", "12": "Dic"
-                }
-                months_full = {
-                    "01": "Gennaio", "02": "Febbraio", "03": "Marzo", "04": "Aprile",
-                    "05": "Maggio", "06": "Giugno", "07": "Luglio", "08": "Agosto",
-                    "09": "Settembre", "10": "Ottobre", "11": "Novembre", "12": "Dicembre"
-                }
-                if bar_width >= 55:
-                    month_label = f"{months_full.get(month_part, month_part)} {year_part}"
-                else:
-                    month_label = f"{months_it.get(month_part, month_part)} '{year_part[2:]}"
-
+            month_label = format_month_label(item["month"])
             canvas.create_text((x0 + x1) / 2, y1 + 16, text=month_label, fill=DARK_THEME["fg_main"], font=("Segoe UI", 10, "bold"))
             if bar_width >= 25:
-                canvas.create_text((x0 + x1) / 2, y0 - 8, text=f"\u20ac{int(profit)}", fill=DARK_THEME["fg_main"], font=("Segoe UI", 9, "bold"))
+                canvas.create_text((x0 + x1) / 2, y0 - 8, text=f"€{int(profit)}", fill=DARK_THEME["fg_main"], font=("Segoe UI", 9, "bold"))
 
-    def _draw_distribution_chart(self, totals: Dict[str, Any]) -> None:
+    def _draw_distribution_chart(self, totals: Dict[str, Any], retry_count: int = 0) -> None:
         canvas = self.canvas_dist
         canvas.delete("all")
         width = canvas.winfo_width()
         height = canvas.winfo_height()
         if width < 50 or height < 50:
-            self.after(100, lambda: self._draw_distribution_chart(totals))
+            if not self.winfo_viewable():
+                return
+            if retry_count < 5:
+                self.after(100, lambda: self._draw_distribution_chart(totals, retry_count + 1))
             return
         stock_c = totals["stock_count"]
         pre_c = totals["preorder_count"]
@@ -489,14 +495,17 @@ class DashboardView(ctk.CTkFrame):
             canvas.create_text(margin_x + 28, start_y + 9, text=f"{label}: {count} pz ({pct:.1f}%)", anchor="w", fill=DARK_THEME["fg_main"], font=("Segoe UI", 11, "bold"))
             start_y += 35
 
-    def _draw_platform_pie_chart(self) -> None:
+    def _draw_platform_pie_chart(self, retry_count: int = 0) -> None:
         """Disegna il grafico a torta del profitto per piattaforma/canale di vendita con legenda percentuali."""
         canvas = self.canvas_platform
         canvas.delete("all")
         width = canvas.winfo_width()
         height = canvas.winfo_height()
         if width < 50 or height < 50:
-            self.after(100, self._draw_platform_pie_chart)
+            if not self.winfo_viewable():
+                return
+            if retry_count < 5:
+                self.after(100, lambda: self._draw_platform_pie_chart(retry_count + 1))
             return
 
         platforms = self.db.get_profit_by_platform()
@@ -512,16 +521,7 @@ class DashboardView(ctk.CTkFrame):
             )
             return
 
-        palette = [
-            "#2563eb",  # Blu Royal
-            "#10b981",  # Verde Smeraldo
-            "#f59e0b",  # Ambra / Oro
-            "#ec4899",  # Rosa Fucsia
-            "#8b5cf6",  # Viola
-            "#06b6d4",  # Ciano
-            "#f43f5e",  # Rosso Rose
-            "#64748b",  # Ardesia
-        ]
+        palette = CHART_PALETTE
 
         if len(positive_items) > 5:
             main_items = positive_items[:4]
@@ -622,14 +622,17 @@ class DashboardView(ctk.CTkFrame):
                 font=("Segoe UI", 10, "bold")
             )
 
-    def _draw_monthly_volume_chart(self) -> None:
+    def _draw_monthly_volume_chart(self, retry_count: int = 0) -> None:
         """Disegna la distribuzione del volume di pezzi venduti per mese nello stesso stile della ripartizione inventario."""
         canvas = self.canvas_volume
         canvas.delete("all")
         width = canvas.winfo_width()
         height = canvas.winfo_height()
         if width < 50 or height < 50:
-            self.after(100, self._draw_monthly_volume_chart)
+            if not self.winfo_viewable():
+                return
+            if retry_count < 5:
+                self.after(100, lambda: self._draw_monthly_volume_chart(retry_count + 1))
             return
 
         sales = self.db.get_monthly_sales()
@@ -645,23 +648,6 @@ class DashboardView(ctk.CTkFrame):
             )
             return
 
-        palette = [
-            "#2563eb",  # Blu
-            "#10b981",  # Smeraldo
-            "#f59e0b",  # Ambra
-            "#8b5cf6",  # Viola
-            "#ec4899",  # Rosa
-            "#06b6d4",  # Ciano
-            "#64748b",  # Grigio
-        ]
-
-        months_full = {
-            "01": "Gennaio", "02": "Febbraio", "03": "Marzo", "04": "Aprile",
-            "05": "Maggio", "06": "Giugno", "07": "Luglio", "08": "Agosto",
-            "09": "Settembre", "10": "Ottobre", "11": "Novembre", "12": "Dicembre"
-        }
-
-        chrono_items = sorted(valid_sales, key=lambda s: s["month"])
         sorted_recent = sorted(valid_sales, key=lambda s: s["month"], reverse=True)
 
         if len(sorted_recent) > 5:
@@ -674,31 +660,32 @@ class DashboardView(ctk.CTkFrame):
         else:
             items_to_show = sorted_recent
 
+        # Mappa univoca 1:1 di ogni elemento visualizzato al rispettivo colore dedicato
+        item_colors = {}
+        for idx, it in enumerate(items_to_show):
+            item_colors[it["month"]] = CHART_PALETTE[idx % len(CHART_PALETTE)]
+
         bar_y = 35
         bar_h = 24
         margin_x = 20
         avail_w = width - 2 * margin_x
         current_x = margin_x
 
-        for idx, s in enumerate(chrono_items):
-            count = s["count"]
+        # Disegna la barra orizzontale superiore garantendo identici colori e corrispondenza
+        for it in items_to_show:
+            count = it["count"]
             if count > 0:
                 seg_w = (count / total_qty) * avail_w
-                color = palette[idx % len(palette)]
+                color = item_colors.get(it["month"], CHART_PALETTE[0])
                 canvas.create_rectangle(current_x, bar_y, current_x + seg_w, bar_y + bar_h, fill=color, outline="")
                 current_x += seg_w
 
         start_y = 85
         item_spacing = 30
-        for idx, item in enumerate(items_to_show):
-            # Assegna colore coerente
-            color = palette[idx % len(palette)]
+        for item in items_to_show:
+            color = item_colors.get(item["month"], CHART_PALETTE[0])
             month_key = item["month"]
-            if len(month_key) >= 7 and "-" in month_key:
-                year_part, month_part = month_key[:4], month_key[5:7]
-                label_text = f"{months_full.get(month_part, month_part)} {year_part}"
-            else:
-                label_text = month_key
+            label_text = format_month_label(month_key) if month_key != "Mesi prec." else "Mesi prec."
 
             count = item["count"]
             pct = (count / total_qty * 100) if total_qty > 0 else 0
@@ -720,14 +707,17 @@ class DashboardView(ctk.CTkFrame):
             )
             start_y += item_spacing
 
-    def _draw_top_products_chart(self) -> None:
+    def _draw_top_products_chart(self, retry_count: int = 0) -> None:
         """Disegna la classifica a barre orizzontali dei top prodotti per utile netto generato."""
         canvas = self.canvas_top_products
         canvas.delete("all")
         width = canvas.winfo_width()
         height = canvas.winfo_height()
         if width < 50 or height < 50:
-            self.after(100, self._draw_top_products_chart)
+            if not self.winfo_viewable():
+                return
+            if retry_count < 5:
+                self.after(100, lambda: self._draw_top_products_chart(retry_count + 1))
             return
 
         top_products = self.db.get_top_profitable_products(limit=5)
