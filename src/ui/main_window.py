@@ -673,7 +673,7 @@ class InventoryApp(ctk.CTk):
                 p_qty = sum(r["quantity"] or 1 for r in b_rows)
                 p_purchased = sum(r["purchased_price"] * (r["quantity"] or 1) for r in b_rows)
                 p_sold = sum((r["sold_price"] or 0) for r in b_rows)
-                p_fees = sum(r["fees"] * (r["quantity"] or 1) for r in b_rows)
+                p_fees = sum((r["fees"] or Decimal("0")) for r in b_rows)
                 p_profit, p_roi = calculate_profit(p_purchased, p_sold, p_fees, 1)
                 p_values = (
                     title, "-", p_qty, money(p_purchased), "-",

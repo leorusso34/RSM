@@ -130,11 +130,11 @@ def calculate_profit(purchased_price: Any, sold_price: Optional[Any], fees: Any 
 
     - purchased_price : prezzo di acquisto UNITARIO
     - sold_price      : prezzo di vendita TOTALE incassato (non per unità)
-    - fees            : commissioni UNITARIE della transazione
+    - fees            : commissioni / spese di spedizione TOTALI della vendita (non per unità)
     - quantity        : quantità venduta
 
-    Profitto totale = sold_price - (purchased_price + fees) * quantity
-    ROI % = (sold_price / quantity - purchased_price - fees) / purchased_price * 100
+    Profitto totale = sold_price - (purchased_price * quantity) - fees
+    ROI % = (Profitto totale / (purchased_price * quantity)) * 100
     """
     purchased = purchased_price if isinstance(purchased_price, Decimal) else Decimal(str(purchased_price))
     sold = sold_price if isinstance(sold_price, Decimal) else (Decimal(str(sold_price)) if sold_price is not None else None)
@@ -144,10 +144,9 @@ def calculate_profit(purchased_price: Any, sold_price: Optional[Any], fees: Any 
     if sold is None or purchased < 0:
         return Decimal("0"), Decimal("0")
 
-    total_profit = sold - (purchased + fee_amount) * qty
-    unit_sold = sold / qty
-    unit_profit = unit_sold - purchased - fee_amount
-    roi = (unit_profit / purchased) * 100 if purchased > 0 else Decimal("0")
+    total_cost = purchased * qty
+    total_profit = sold - total_cost - fee_amount
+    roi = (total_profit / total_cost) * 100 if total_cost > 0 else Decimal("0")
     return total_profit.quantize(Decimal("0.01")), roi.quantize(Decimal("0.01"))
 
 def normalize_header(value: Any) -> str:

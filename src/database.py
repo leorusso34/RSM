@@ -472,7 +472,7 @@ class InventoryDatabase:
                 SUM(quantity) as total_qty,
                 SUM(quantity * purchased_price_cents) as total_cost,
                 SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
-                SUM(quantity * fees_cents) as total_fees
+                SUM(fees_cents) as total_fees
             FROM products
             GROUP BY status, is_completed
         """
@@ -547,7 +547,7 @@ class InventoryDatabase:
                 SUM(quantity) as total_qty,
                 SUM(quantity * purchased_price_cents) as total_cost,
                 SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
-                SUM(quantity * fees_cents) as total_fees
+                SUM(fees_cents) as total_fees
             FROM products
             WHERE status = ? AND is_completed = 1 AND sold_date != ''
             GROUP BY month_key
@@ -583,11 +583,11 @@ class InventoryDatabase:
                 SUM(quantity) as total_qty,
                 SUM(quantity * purchased_price_cents) as total_cost,
                 SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
-                SUM(quantity * fees_cents) as total_fees
+                SUM(fees_cents) as total_fees
             FROM products
             WHERE status = ?
             GROUP BY platform
-            ORDER BY (SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) - SUM(quantity * purchased_price_cents) - SUM(quantity * fees_cents)) DESC
+            ORDER BY (SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) - SUM(quantity * purchased_price_cents) - SUM(fees_cents)) DESC
         """
         rows = self.connection.execute(query, (STATUS_SOLD,)).fetchall()
         result = []
@@ -617,12 +617,12 @@ class InventoryDatabase:
                 SUM(quantity) as total_qty,
                 SUM(quantity * purchased_price_cents) as total_cost,
                 SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) as total_revenue,
-                SUM(quantity * fees_cents) as total_fees
+                SUM(fees_cents) as total_fees
             FROM products
             WHERE status = ? AND TRIM(name) != ''
             GROUP BY prod_name
-            HAVING (SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) - SUM(quantity * purchased_price_cents) - SUM(quantity * fees_cents)) > 0
-            ORDER BY (SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) - SUM(quantity * purchased_price_cents) - SUM(quantity * fees_cents)) DESC
+            HAVING (SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) - SUM(quantity * purchased_price_cents) - SUM(fees_cents)) > 0
+            ORDER BY (SUM(COALESCE(sold_price_cents, selling_price_cents, 0)) - SUM(quantity * purchased_price_cents) - SUM(fees_cents)) DESC
             LIMIT ?
         """
         rows = self.connection.execute(query, (STATUS_SOLD, limit)).fetchall()

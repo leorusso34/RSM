@@ -24,7 +24,7 @@ def product(name="Test", status=STATUS_STOCK):
 def test_money_and_profit_are_strict():
     assert parse_money("€ 12,50") == Decimal("12.50")
     assert parse_money("1.234") == Decimal("1234.00")
-    assert calculate_profit(Decimal("100"), Decimal("0"), Decimal("5"), 2)[0] == Decimal("-210.00")
+    assert calculate_profit(Decimal("100"), Decimal("0"), Decimal("5"), 2)[0] == Decimal("-205.00")
     # Prodotto a costo zero (es. regalo/omaggio venduto a 50€ con 2€ fees)
     profit_zero_cost, roi_zero_cost = calculate_profit(Decimal("0.00"), Decimal("50.00"), Decimal("2.00"), 1)
     assert profit_zero_cost == Decimal("48.00")
@@ -342,12 +342,12 @@ def test_partial_sale_splits_record(tmp_path):
 
 def test_get_profit_by_platform(tmp_path):
     db = InventoryDatabase(tmp_path / "inventory.db")
-    # Prodotto 1: venduto su eBay (2 pz, costo 50x2=100, incasso 160, fees 5x2=10 -> profitto 50)
+    # Prodotto 1: venduto su eBay (2 pz, costo 50x2=100, incasso 160, fees totali 10 -> profitto 50)
     db.save({
         "name": "Prodotto eBay", "size": "M", "quantity": 2,
         "purchased_price": Decimal("50.00"), "purchased_place": "Shop",
         "selling_place": "eBay", "selling_price": Decimal("160.00"),
-        "sold_price": Decimal("160.00"), "fees": Decimal("5.00"),
+        "sold_price": Decimal("160.00"), "fees": Decimal("10.00"),
         "sold_date": "2026-09-01", "status": STATUS_SOLD, "release_date": "", "notes": "",
     })
     # Prodotto 2: venduto su Vinted (1 pz, costo 30, incasso 50, fees 0 -> profitto 20)
@@ -389,12 +389,12 @@ def test_get_top_profitable_products(tmp_path):
         "sold_price": Decimal("200.00"), "fees": Decimal("0.00"),
         "sold_date": "2026-09-01", "status": STATUS_SOLD, "release_date": "", "notes": "",
     })
-    # Prodotto B: profitto 150 (2 pz con costo 50x2=100, incasso 260, fees 5x2=10 -> profitto 150)
+    # Prodotto B: profitto 150 (2 pz con costo 50x2=100, incasso 260, fees totali 10 -> profitto 150)
     db.save({
         "name": "Rolex Submariner", "size": "UNI", "quantity": 2,
         "purchased_price": Decimal("50.00"), "purchased_place": "Shop",
         "selling_place": "Chrono24", "selling_price": Decimal("260.00"),
-        "sold_price": Decimal("260.00"), "fees": Decimal("5.00"),
+        "sold_price": Decimal("260.00"), "fees": Decimal("10.00"),
         "sold_date": "2026-09-02", "status": STATUS_SOLD, "release_date": "", "notes": "",
     })
     # Prodotto C: in stock (non venduto)
@@ -431,5 +431,46 @@ def test_format_month_label_and_csv_headers(tmp_path):
         headers = next(csv.reader(handle, delimiter=";"))
         assert "PREZZO VENDITA TOTALE (PREVISTO)" in headers
         assert "PREZZO VENDITA TOTALE (EFFETTIVO)" in headers
+
+
+def test_multiple_quantity_single_shipping_fees(tmp_path):
+    """Verifica che la spedizione/fees rimanga singola e non venga moltiplicata per la quantita."""
+    # 2 pezzi comprati a 100€ ciascuno (costo 200€), venduti a 250€ totali con 10€ di spedizione totale
+    profit, roi = calculate_profit(
+        purchased_price=Decimal("100.00"),
+        sold_price=Decimal("250.00"),
+        fees=Decimal("10.00"),
+        quantity=2,
+    )
+    # Profitto atteso = 250 - (100 * 2) - 10 = 40€
+    assert profit == Decimal("40.00")
+    # ROI atteso = (40 / 200) * 100 = 20%
+    assert roi == Decimal("20.00")
+
+    # 3 pezzi comprati a 50€ ciascuno (costo 150€), venduti a 200€ con 15€ di spedizione totale
+    profit_3, roi_3 = calculate_profit(
+        purchased_price=Decimal("50.00"),
+        sold_price=Decimal("200.00"),
+        fees=Decimal("15.00"),
+        quantity=3,
+    )
+    # Profitto atteso = 200 - (50 * 3) - 15 = 35€
+    assert profit_3 == Decimal("35.00")
+    assert roi_3 == Decimal("23.33")
+
+    # Verifica nel DB
+    db = InventoryDatabase(tmp_path / "inventory.db")
+    db.save({
+        "name": "Pacco 2 Prodotti", "size": "L", "quantity": 2,
+        "purchased_price": Decimal("100.00"), "purchased_place": "Shop",
+        "selling_place": "StockX", "selling_price": Decimal("250.00"),
+        "sold_price": Decimal("250.00"), "fees": Decimal("10.00"),
+        "sold_date": "2026-09-10", "status": STATUS_SOLD, "release_date": "", "notes": "",
+    })
+
+    t = db.totals()
+    assert t["sold_profit"] == Decimal("40.00")
+    assert t["sold_roi"] == Decimal("20.00")
+    db.close()
 
 
