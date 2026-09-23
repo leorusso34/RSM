@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "RSM"
-APP_VERSION = "1.3.1"
+APP_VERSION = "1.3.2"
 GITHUB_REPO = "leorusso34/RSM"
 
 # Stati prodotti
