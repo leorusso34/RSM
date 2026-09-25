@@ -14,7 +14,7 @@ import customtkinter as ctk
 from ..config import APP_NAME, APP_VERSION, DB_PATH, DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK, STATUS_COMPLETED, PROJECT_DIR, GITHUB_REPO
 from ..database import InventoryDatabase
 from .dashboard_view import DashboardView
-from .dialogs import BulkStatusDialog, ProductDialog
+from .dialogs import BulkStatusDialog, PartialStockMoveDialog, ProductDialog
 from .ai_dialog import AIDialog
 from .email_sync_dialog import EmailSyncDialog
 from .theme import setup_app_theme
@@ -427,6 +427,8 @@ class InventoryApp(ctk.CTk):
         if item:
             if item not in tree.selection():
                 tree.selection_set(item)
+            tree.focus(item)
+            tree.focus_set()
             self._update_action_states()
 
             self.context_menu.delete(0, "end")
@@ -725,9 +727,13 @@ class InventoryApp(ctk.CTk):
                 )
                 tree.insert("", "end", iid=str(row["id"]), values=values, tags=("stripe",) if len(tree.get_children()) % 2 else ())
 
+            restored = False
             for s_id in selected:
                 if tree.exists(s_id):
                     tree.selection_add(s_id)
+                    if not restored:
+                        tree.focus(s_id)
+                        restored = True
 
         self.status_bar_var.set("Vista aggiornata")
 
@@ -886,13 +892,26 @@ class InventoryApp(ctk.CTk):
             self.refresh()
             if last_target in self.status_to_tab_name:
                 self.notebook.set(self.status_to_tab_name[last_target])
-            tree = self.trees[last_target]
-            if tree.exists(str(created_ids[-1])):
-                tree.selection_set(str(created_ids[-1]))
-                tree.see(str(created_ids[-1]))
+            self._focus_tree_item(last_target, str(created_ids[-1]))
             self._push_undo(f"Aggiunti {len(created_ids)} prodotti AI", lambda nids=created_ids: self._undo_insert(nids))
             n = len(created_ids)
             self.status_bar_var.set(f"{n} prodott{'o aggiunto' if n == 1 else 'i aggiunti'} con successo")
+
+    def _focus_tree_item(self, status: str, item_id: str) -> None:
+        """Seleziona un elemento nella tabella, posiziona il cursore di focus e assegna il focus da tastiera."""
+        if not status or status not in self.trees:
+            return
+        tree = self.trees[status]
+        if tree.exists(item_id):
+            tree.selection_set(item_id)
+            tree.focus(item_id)
+            tree.see(item_id)
+            tree.focus_set()
+            # Assicura il focus widget e focus item anche dopo che il window manager ha chiuso la finestra modale
+            self.after(30, lambda: (
+                tree.focus(item_id) if tree.exists(item_id) else None,
+                tree.focus_set()
+            ))
 
     def add_product(self) -> None:
         cur_st = self.current_status() or STATUS_STOCK
@@ -905,12 +924,13 @@ class InventoryApp(ctk.CTk):
             self.refresh()
             if target in self.status_to_tab_name:
                 self.notebook.set(self.status_to_tab_name[target])
-            tree = self.trees[target]
-            if tree.exists(str(new_id)):
-                tree.selection_set(str(new_id))
-                tree.see(str(new_id))
+            self._focus_tree_item(target, str(new_id))
             self._push_undo(f"Aggiunto '{dialog.result.get('name')}'", lambda nids=[new_id]: self._undo_insert(nids))
             self.status_bar_var.set("Prodotto aggiunto con successo")
+        else:
+            cur_st = self.current_status()
+            if cur_st and cur_st in self.trees:
+                self.trees[cur_st].focus_set()
 
     def sort_tree(self, status: str, column: str) -> None:
         """Ordina la tabella selezionata localmente, mantenendo il tipo numerico."""
@@ -969,6 +989,8 @@ class InventoryApp(ctk.CTk):
         item = tree.identify_row(event.y)
         if not item:
             return
+        tree.focus(item)
+        tree.focus_set()
         if str(item).startswith("bundle_"):
             # Toggle apri/chiudi — return "break" impedisce a Tkinter di eseguire
             # un secondo toggle nativo che annullerebbe il nostro
@@ -1023,17 +1045,24 @@ class InventoryApp(ctk.CTk):
             self.refresh()
             if last_target and last_target in self.status_to_tab_name:
                 self.notebook.set(self.status_to_tab_name[last_target])
-            if last_id and last_target and last_target in self.trees:
-                tree = self.trees[last_target]
-                if tree.exists(str(last_id)):
-                    tree.selection_set(str(last_id))
-                    tree.see(str(last_id))
+            if last_id and last_target:
+                self._focus_tree_item(last_target, str(last_id))
             self._push_undo(
                 f"Modificati {len(modified_old_records)} prodotti",
                 lambda recs=modified_old_records: self._undo_update(recs)
             )
             count = len(modified_old_records)
             self.status_bar_var.set(f"{count} prodott{'o modificato' if count == 1 else 'i modificati'} con successo")
+        else:
+            cur_st = self.current_status()
+            if cur_st and cur_st in self.trees:
+                tree = self.trees[cur_st]
+                sel = tree.selection()
+                if sel:
+                    self._focus_tree_item(cur_st, str(sel[0]))
+                else:
+                    tree.focus_set()
+
 
     def _clone_record(self, record: dict, force_status: Optional[str] = None) -> int:
         record_copy = dict(record)
@@ -1115,19 +1144,139 @@ class InventoryApp(ctk.CTk):
         ids = self.selected_ids()
         if not ids:
             return
+
+        # I prodotti parte di una Vendita Multipla non possono essere spostati singolarmente
         for prod_id in ids:
             record = self.db.get(prod_id)
             if record and record.get("bundle_id"):
-                messagebox.showinfo("Azione non consentita", "Uno o più prodotti selezionati fanno parte di una Vendita Multipla.\nNon puoi spostarli in Magazzino separatamente.\n\nSe vuoi annullare la vendita, elimina l'intera Vendita Multipla e ricrea i prodotti.", parent=self)
+                messagebox.showinfo(
+                    "Azione non consentita",
+                    "Uno o più prodotti selezionati fanno parte di una Vendita Multipla.\n"
+                    "Non puoi spostarli in Magazzino separatamente.\n\n"
+                    "Se vuoi annullare la vendita, elimina l'intera Vendita Multipla e ricrea i prodotti.",
+                    parent=self,
+                )
                 return
-        if messagebox.askyesno("Conferma spostamento", f"Spostare {len(ids)} prodotti in 'In Magazzino'?", parent=self):
-            old_records = [dict(self.db.get(i)) for i in ids if self.db.get(i)]
-            self.db.update_status_many(ids, STATUS_STOCK)
+
+        if len(ids) == 1:
+            # --- Singolo prodotto ---
+            prod_id = ids[0]
+            record = self.db.get(prod_id)
+            if not record:
+                return
+            original_qty = record.get("quantity", 1) or 1
+            old_records = [dict(record)]
+
+            if original_qty > 1:
+                # Quantità multipla: apre la dialog per scegliere quante unità spostare
+                dialog = PartialStockMoveDialog(self, record.get("name", ""), original_qty)
+                self.wait_window(dialog)
+                if dialog.result is None:
+                    return
+                chosen_qty = dialog.result
+            else:
+                # Quantità 1: nessuna scelta possibile, sposta direttamente
+                chosen_qty = 1
+
+            # Cerca se esiste già un record compatibile in magazzino (da fondere)
+            match = self.db.find_matching_stock_record(record, exclude_id=prod_id)
+
+            if chosen_qty < original_qty:
+                # --- Spostamento parziale ---
+                remaining = original_qty - chosen_qty
+
+                if match:
+                    # Fonde con il record esistente: incrementa la quantità e aggiorna l'originale
+                    old_match_qty = match.get("quantity", 1) or 1
+                    self.db.merge_into_stock_record(match["id"], chosen_qty)
+                    updated_original = dict(record)
+                    updated_original["quantity"] = remaining
+                    self.db.save(updated_original, prod_id)
+                    self._push_undo(
+                        "Spostamento parziale in magazzino (merge)",
+                        lambda recs=old_records, mid=match["id"], mq=old_match_qty: (
+                            self._undo_update(recs),
+                            self.db.merge_into_stock_record(mid, -(chosen_qty)),
+                            self.refresh(),
+                        ),
+                    )
+                    self.status_bar_var.set(
+                        f"Aggiunti {chosen_qty} pz al record esistente in magazzino"
+                        f" — restano {remaining} pz in pre-ordine"
+                    )
+                else:
+                    # Nessun record compatibile: crea una nuova riga in magazzino
+                    new_record = dict(record)
+                    new_record.pop("id", None)
+                    new_record["quantity"] = chosen_qty
+                    new_record["status"] = STATUS_STOCK
+                    new_record["sold_price"] = None
+                    new_record["sold_date"] = ""
+                    new_record["fees"] = Decimal("0")
+                    new_record["release_date"] = ""
+                    new_record["bundle_id"] = ""
+                    new_id = self.db.save(new_record)
+                    updated_original = dict(record)
+                    updated_original["quantity"] = remaining
+                    self.db.save(updated_original, prod_id)
+                    undo_ids = [new_id] if new_id else []
+                    self._push_undo(
+                        "Spostamento parziale in magazzino",
+                        lambda recs=old_records, nids=undo_ids: (
+                            self._undo_update(recs),
+                            self.db.delete_many(nids) if nids else None,
+                            self.refresh(),
+                        ),
+                    )
+                    self.status_bar_var.set(
+                        f"Spostati {chosen_qty} pz in magazzino"
+                        f" — restano {remaining} pz in pre-ordine"
+                    )
+            else:
+                # --- Spostamento totale ---
+                if match:
+                    # Fonde con il record esistente: incrementa e rimuove l'originale
+                    self.db.merge_into_stock_record(match["id"], chosen_qty)
+                    self.db.delete(prod_id)
+                    self._push_undo(
+                        "Spostamento in magazzino (merge)",
+                        lambda recs=old_records, mid=match["id"], cq=chosen_qty: (
+                            self.db.merge_into_stock_record(mid, -cq),
+                            self._undo_delete(recs),
+                            self.refresh(),
+                        ),
+                    )
+                    self.status_bar_var.set("Prodotto aggiunto al record esistente in magazzino")
+                else:
+                    # Nessun record compatibile: semplice cambio di stato
+                    self.db.update_status_many([prod_id], STATUS_STOCK)
+                    self._push_undo(
+                        "Spostamento in magazzino",
+                        lambda recs=old_records: self._undo_update(recs),
+                    )
+                    self.status_bar_var.set("Prodotto spostato in magazzino")
+
             self.refresh()
             self.notebook.set("Magazzino")
-            if old_records:
-                self._push_undo("Spostamento in magazzino", lambda recs=old_records: self._undo_update(recs))
-            self.status_bar_var.set(f"{len(ids)} prodotti spostati in magazzino")
+
+        else:
+            # --- Selezione multipla: conferma e sposta tutto in blocco ---
+            if messagebox.askyesno(
+                "Conferma spostamento",
+                f"Spostare {len(ids)} prodotti in 'In Magazzino'?",
+                parent=self,
+            ):
+                old_records = [dict(self.db.get(i)) for i in ids if self.db.get(i)]
+                self.db.update_status_many(ids, STATUS_STOCK)
+                self.refresh()
+                self.notebook.set("Magazzino")
+                if old_records:
+                    self._push_undo(
+                        "Spostamento in magazzino",
+                        lambda recs=old_records: self._undo_update(recs),
+                    )
+                self.status_bar_var.set(f"{len(ids)} prodotti spostati in magazzino")
+
 
     def move_selected_to_sold(self) -> None:
         ids = self.selected_ids()

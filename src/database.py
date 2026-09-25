@@ -410,6 +410,58 @@ class InventoryDatabase:
             cursor = self.connection.execute(query, params)
             return cursor.rowcount
 
+    def find_matching_stock_record(
+        self,
+        source: Dict[str, Any],
+        exclude_id: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Cerca in magazzino un record già esistente compatibile con *source*.
+
+        Un record è considerato compatibile se coincidono:
+          - name (case-insensitive, trim)
+          - size
+          - purchased_price_cents
+          - purchased_place
+          - bundle_id = '' (non fa parte di una Vendita Multipla)
+
+        Restituisce il record trovato (come dizionario pubblico) oppure None.
+        """
+        pp_cents = money_to_cents(source.get("purchased_price"))
+        exclude_clause = f"AND id != {int(exclude_id)}" if exclude_id is not None else ""
+
+        params: List[Any] = [
+            str(source.get("name", "")).strip(),
+            str(source.get("size", "")),
+            pp_cents,
+            str(source.get("purchased_place", "")),
+            STATUS_STOCK,
+        ]
+
+        query = f"""
+            SELECT * FROM products
+            WHERE TRIM(name) = TRIM(?) COLLATE NOCASE
+              AND size = ?
+              AND purchased_price_cents = ?
+              AND purchased_place = ?
+              AND status = ?
+              AND bundle_id = ''
+              {exclude_clause}
+            ORDER BY id ASC
+            LIMIT 1
+        """
+        row = self.connection.execute(query, params).fetchone()
+        return self._row_to_product(row) if row else None
+
+
+    def merge_into_stock_record(self, target_id: int, add_qty: int) -> None:
+        """Incrementa la quantità di un record in magazzino esistente."""
+        with self.connection:
+            self.connection.execute(
+                "UPDATE products SET quantity = quantity + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (add_qty, target_id),
+            )
+
     def get_distinct_places(self) -> Tuple[List[str], List[str]]:
         """Restituisce i luoghi di acquisto e vendita unici, combinando default, DB e custom_places."""
         purchased_db = [

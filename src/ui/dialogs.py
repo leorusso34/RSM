@@ -420,6 +420,104 @@ class BulkStatusDialog(ctk.CTkToplevel):
         self.destroy()
 
 
+class PartialStockMoveDialog(ctk.CTkToplevel):
+    """
+    Finestra per scegliere quante unità di un prodotto spostare in magazzino.
+    Mostra una combobox con i valori da 1 alla quantità massima disponibile,
+    con la quantità massima preselezionata di default.
+    """
+
+    def __init__(self, parent: tk.Misc, product_name: str, max_qty: int) -> None:
+        super().__init__(parent, fg_color=DARK_THEME["bg_main"])
+        self.result: Optional[int] = None
+        self.max_qty = max_qty
+
+        self.title("Sposta in Magazzino")
+        center_window(self, 420, 265)
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+        apply_dark_titlebar(self)
+
+        self._build(product_name, max_qty)
+        self.bind("<Return>", lambda _e: self._submit())
+        self.bind("<Escape>", lambda _e: self.destroy())
+
+    def _build(self, product_name: str, max_qty: int) -> None:
+        c = DARK_THEME
+        outer = ctk.CTkFrame(self, fg_color="transparent")
+        outer.pack(fill="both", expand=True, padx=26, pady=22)
+
+        ctk.CTkLabel(
+            outer,
+            text="Sposta in Magazzino",
+            font=("Segoe UI", 15, "bold"),
+            anchor="w",
+        ).pack(fill="x")
+
+        ctk.CTkLabel(
+            outer,
+            text=product_name,
+            font=("Segoe UI", 12),
+            text_color=c["fg_muted"],
+            anchor="w",
+        ).pack(fill="x", pady=(2, 14))
+
+        ctk.CTkLabel(
+            outer,
+            text=f"Quantità disponibile: {max_qty} pz",
+            font=("Segoe UI", 11),
+            text_color=c["fg_muted"],
+            anchor="w",
+        ).pack(fill="x", pady=(0, 6))
+
+        ctk.CTkLabel(
+            outer,
+            text="Quantità da spostare in magazzino:",
+            font=("Segoe UI", 11, "bold"),
+            anchor="w",
+        ).pack(fill="x", pady=(0, 4))
+
+        self.var_qty = tk.StringVar(value=str(max_qty))
+        combo = ctk.CTkComboBox(
+            outer,
+            variable=self.var_qty,
+            values=[str(i) for i in range(1, max_qty + 1)],
+            font=("Segoe UI", 12),
+            state="readonly",
+        )
+        combo.pack(fill="x", pady=(0, 4))
+        combo.focus_set()
+
+        buttons = ctk.CTkFrame(outer, fg_color="transparent")
+        buttons.pack(fill="x", side="bottom", pady=(16, 0))
+        ctk.CTkButton(
+            buttons,
+            text="Annulla",
+            command=self.destroy,
+            fg_color="#374151",
+            hover_color="#4b5563",
+        ).pack(side="right")
+        ctk.CTkButton(
+            buttons,
+            text="Conferma Spostamento",
+            command=self._submit,
+            fg_color=DARK_THEME["accent"],
+            hover_color=DARK_THEME["accent_hover"],
+            font=("Segoe UI", 12, "bold"),
+        ).pack(side="right", padx=(0, 10))
+
+    def _submit(self) -> None:
+        try:
+            qty = int(self.var_qty.get())
+            if qty < 1 or qty > self.max_qty:
+                raise ValueError()
+        except ValueError:
+            return
+        self.result = qty
+        self.destroy()
+
+
 class ManagePlacesDialog(ctk.CTkToplevel):
     """Finestra per la gestione dei luoghi di vendita."""
 
