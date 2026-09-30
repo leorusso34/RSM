@@ -1330,12 +1330,23 @@ class InventoryApp(ctk.CTk):
                 self.refresh()
                 self.notebook.set("Vendite Attive")
         else:
-            dialog = BulkStatusDialog(self, len(ids), STATUS_SOLD)
+            places = self.db.get_distinct_places()
+            existing_places = {r.get("selling_place", "").strip() for r in old_records if r.get("selling_place", "").strip()}
+            default_place = next(iter(existing_places)) if len(existing_places) == 1 else ""
+            dialog = BulkStatusDialog(
+                self,
+                len(ids),
+                STATUS_SOLD,
+                selling_places=places[1],
+                default_place=default_place,
+            )
             self.wait_window(dialog)
             if dialog.result is not None:
                 self.db.update_status_many(ids, STATUS_SOLD, extra_data=dialog.result)
                 self.refresh()
                 self.notebook.set("Vendite Attive")
+                if STATUS_SOLD in self.trees:
+                    self.trees[STATUS_SOLD].focus_set()
                 if old_records:
                     self._push_undo(f"Spostamento {len(ids)} prodotti in vendita", lambda recs=old_records: self._undo_update(recs))
                 self.status_bar_var.set(f"{len(ids)} prodotti contrassegnati come venduti")

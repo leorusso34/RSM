@@ -473,4 +473,79 @@ def test_multiple_quantity_single_shipping_fees(tmp_path):
     assert t["sold_roi"] == Decimal("20.00")
     db.close()
 
+
+def test_bulk_status_move_with_selling_place(tmp_path):
+    """Verifica che lo spostamento di massa a STATUS_SOLD aggiorni correttamente il luogo di vendita."""
+    db = InventoryDatabase(tmp_path / "inventory.db")
+    d1 = product(name="P1", status=STATUS_STOCK)
+    d1["selling_place"] = ""
+    p1 = db.save(d1)
+
+    d2 = product(name="P2", status=STATUS_STOCK)
+    d2["selling_place"] = ""
+    p2 = db.save(d2)
+
+    extra_data = {
+        "sold_price": Decimal("25.00"),
+        "fees": Decimal("2.50"),
+        "sold_date": "2026-09-26",
+        "selling_place": "Vinted",
+        "bundle_id": "bundle-1234",
+    }
+    db.update_status_many([p1, p2], STATUS_SOLD, extra_data=extra_data)
+
+    r1 = db.get(p1)
+    r2 = db.get(p2)
+    assert r1["status"] == STATUS_SOLD
+    assert r1["selling_place"] == "Vinted"
+    assert r1["sold_date"] == "2026-09-26"
+    assert r1["sold_price"] == Decimal("25.00")
+    assert r1["bundle_id"] == "bundle-1234"
+
+    assert r2["status"] == STATUS_SOLD
+    assert r2["selling_place"] == "Vinted"
+    assert r2["sold_date"] == "2026-09-26"
+    assert r2["sold_price"] == Decimal("25.00")
+    assert r2["bundle_id"] == "bundle-1234"
+    db.close()
+
+
+def test_scrollable_dropdown_behavior():
+    """Verifica che CTkScrollableDropdown apra, chiuda e imposti correttamente i valori sul combobox."""
+    import time
+    import customtkinter as ctk
+    from src.ui.dialogs import CTkScrollableDropdown
+
+    root = None
+    for attempt in range(3):
+        try:
+            root = ctk.CTk()
+            break
+        except Exception:
+            time.sleep(0.15)
+    if root is None:
+        import pytest
+        pytest.skip("Tcl/Tk non disponibile nell'ambiente di test")
+
+    root.withdraw()
+    cb = ctk.CTkComboBox(root, values=["Negozio A", "Negozio B", "Negozio C"])
+    cb.pack()
+    dd = CTkScrollableDropdown(cb)
+    root.update()
+
+    assert not dd.is_open()
+    dd.open()
+    root.update()
+    assert dd.is_open()
+
+    # Seleziona un valore
+    dd._select("Negozio B")
+    root.update()
+    assert cb.get() == "Negozio B"
+    assert not dd.is_open()
+
+    root.destroy()
+
+
+
 

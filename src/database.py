@@ -397,6 +397,9 @@ class InventoryDatabase:
             if "bundle_id" in extra_data:
                 extra_sql += ", bundle_id = ?"
                 params.append(extra_data["bundle_id"])
+            if "selling_place" in extra_data:
+                extra_sql += ", selling_place = ?"
+                params.append(str(extra_data["selling_place"]).strip())
 
         if new_status == STATUS_STOCK:
             extra_sql += ", release_date = '', sold_price_cents = NULL, sold_date = '', fees_cents = 0, bundle_id = '', is_completed = 0"

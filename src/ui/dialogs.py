@@ -17,6 +17,218 @@ from ..config import PROJECT_DIR, DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STAT
 from ..utils import calculate_profit, money, parse_date, parse_int, parse_money, center_window, apply_dark_titlebar
 
 
+class CTkScrollableDropdown:
+    """
+    Menu a tendina personalizzato con barra di scorrimento nativa e supporto
+    completo per rotellina del mouse (scroll) per widget CTkComboBox.
+    Sostituisce il menu popup standard di Tkinter per permettere lo scorrimento
+    fluido degli elenchi lunghi (es. luoghi di acquisto/vendita).
+    """
+
+    def __init__(self, combo: ctk.CTkComboBox, max_height: int = 500) -> None:
+        self.combo = combo
+        self.max_height = max_height
+        self._popup: Optional[tk.Toplevel] = None
+        self._scroll_frame: Optional[ctk.CTkScrollableFrame] = None
+        self._bind_click_id: Optional[str] = None
+        self._bind_esc_id: Optional[str] = None
+        self._bind_wheel_id: Optional[str] = None
+        self._bind_conf_id: Optional[str] = None
+
+        self.combo._open_dropdown_menu = self.open
+        if hasattr(self.combo, "_dropdown_menu") and self.combo._dropdown_menu:
+            self.combo._dropdown_menu.close = self.close
+
+        if hasattr(self.combo, "_entry") and self.combo._entry:
+            self.combo._entry.bind("<Down>", lambda _e: self.open(), add="+")
+
+        self.combo.bind("<Destroy>", lambda _e: self.close(), add="+")
+
+    def is_open(self) -> bool:
+        return bool(self._popup and self._popup.winfo_exists())
+
+    def open(self) -> None:
+        if self.is_open():
+            self.close()
+            return
+
+        raw_values = getattr(self.combo, "_values", None) or self.combo.cget("values") or []
+        seen = set()
+        values = []
+        for v in raw_values:
+            s = str(v).strip()
+            if s and s not in seen:
+                seen.add(s)
+                values.append(s)
+
+        if not values:
+            return
+
+        self.combo.update_idletasks()
+        rx = self.combo.winfo_rootx()
+        ry = self.combo.winfo_rooty()
+        ch = self.combo.winfo_height()
+        cw = self.combo.winfo_width()
+
+        w = max(cw, 180)
+        item_h = 28
+        padding = 10
+        needed_h = len(values) * (item_h + 2) + padding
+        h = min(needed_h, self.max_height)
+
+        screen_h = self.combo.winfo_screenheight()
+        screen_w = self.combo.winfo_screenwidth()
+
+        space_below = max(0, screen_h - (ry + ch + 15))
+        space_above = max(0, ry - 15)
+
+        # Se verso il basso sfora lo schermo, valuta se posizionarlo sopra o adattare l'altezza
+        if ry + ch + h + 10 > screen_h:
+            if space_above > space_below and space_above >= 180:
+                h = min(h, space_above)
+                y = ry - h - 2
+            else:
+                h = min(h, space_below)
+                y = ry + ch + 2
+        else:
+            y = ry + ch + 2
+
+        x = rx
+        if x + w > screen_w - 10:
+            x = max(10, screen_w - w - 10)
+
+        self._popup = tk.Toplevel(self.combo)
+        self._popup.overrideredirect(True)
+        self._popup.attributes("-topmost", True)
+        self._popup.geometry(f"{w}x{h}+{x}+{y}")
+
+        c = DARK_THEME
+        outer = ctk.CTkFrame(
+            self._popup,
+            fg_color=c["bg_card"],
+            border_width=1,
+            border_color="#334155",
+            corner_radius=8,
+        )
+        outer.pack(fill="both", expand=True)
+
+        self._scroll_frame = ctk.CTkScrollableFrame(
+            outer,
+            fg_color="transparent",
+            corner_radius=0,
+            scrollbar_button_color=c.get("fg_subtle", "#475569"),
+            scrollbar_button_hover_color=c.get("fg_muted", "#8b9bb4"),
+        )
+        self._scroll_frame.pack(fill="both", expand=True, padx=2, pady=2)
+
+        current_val = self.combo.get().strip()
+        target_idx = None
+
+        for idx, val in enumerate(values):
+            is_selected = (val == current_val)
+            if is_selected:
+                target_idx = idx
+
+            btn = ctk.CTkButton(
+                self._scroll_frame,
+                text=val,
+                anchor="w",
+                height=item_h,
+                fg_color=c["accent"] if is_selected else "transparent",
+                hover_color=c["accent_hover"],
+                text_color="#ffffff" if is_selected else c["fg_main"],
+                font=("Segoe UI", 12),
+                corner_radius=4,
+                command=lambda v=val: self._select(v),
+            )
+            btn.pack(fill="x", pady=1, padx=2)
+
+        if target_idx is not None and len(values) > 1:
+            fraction = max(0.0, min(1.0, (target_idx - 1) / max(len(values), 1)))
+            self._popup.after(20, lambda f=fraction: self._scroll_to(f))
+
+        top = self.combo.winfo_toplevel()
+        self._bind_click_id = top.bind("<ButtonPress-1>", self._on_outside_click, add="+")
+        self._bind_esc_id = top.bind("<Escape>", lambda _e: self.close(), add="+")
+        self._bind_wheel_id = top.bind("<MouseWheel>", self._on_outside_scroll, add="+")
+        self._bind_conf_id = top.bind("<Configure>", self._on_parent_configure, add="+")
+
+        self.combo._close_on_next_click = True
+
+    def _scroll_to(self, fraction: float) -> None:
+        if self.is_open() and self._scroll_frame:
+            try:
+                self._scroll_frame._parent_canvas.yview_moveto(fraction)
+            except Exception:
+                pass
+
+    def _select(self, val: str) -> None:
+        self.combo.set(val)
+        if hasattr(self.combo, "_command") and self.combo._command:
+            self.combo._command(val)
+        self.close()
+
+    def _on_outside_click(self, event) -> None:
+        if not self.is_open():
+            return
+        px, py = event.x_root, event.y_root
+        x1 = self._popup.winfo_rootx()
+        y1 = self._popup.winfo_rooty()
+        x2 = x1 + self._popup.winfo_width()
+        y2 = y1 + self._popup.winfo_height()
+
+        cx1 = self.combo.winfo_rootx()
+        cy1 = self.combo.winfo_rooty()
+        cx2 = cx1 + self.combo.winfo_width()
+        cy2 = cy1 + self.combo.winfo_height()
+
+        if not (x1 <= px <= x2 and y1 <= py <= y2) and not (cx1 <= px <= cx2 and cy1 <= py <= cy2):
+            self.close()
+
+    def _on_outside_scroll(self, event) -> None:
+        if not self.is_open():
+            return
+        px, py = event.x_root, event.y_root
+        x1 = self._popup.winfo_rootx()
+        y1 = self._popup.winfo_rooty()
+        x2 = x1 + self._popup.winfo_width()
+        y2 = y1 + self._popup.winfo_height()
+        if not (x1 <= px <= x2 and y1 <= py <= y2):
+            self.close()
+
+    def _on_parent_configure(self, event) -> None:
+        if not self.is_open():
+            return
+        if event.widget == self.combo.winfo_toplevel():
+            self.close()
+
+    def close(self) -> None:
+        if self.is_open():
+            try:
+                top = self.combo.winfo_toplevel()
+                if self._bind_click_id:
+                    top.unbind("<ButtonPress-1>", self._bind_click_id)
+                    self._bind_click_id = None
+                if self._bind_esc_id:
+                    top.unbind("<Escape>", self._bind_esc_id)
+                    self._bind_esc_id = None
+                if self._bind_wheel_id:
+                    top.unbind("<MouseWheel>", self._bind_wheel_id)
+                    self._bind_wheel_id = None
+                if self._bind_conf_id:
+                    top.unbind("<Configure>", self._bind_conf_id)
+                    self._bind_conf_id = None
+            except Exception:
+                pass
+            try:
+                self._popup.destroy()
+            except Exception:
+                pass
+        self._popup = None
+        if hasattr(self.combo, "_close_on_next_click"):
+            self.combo._close_on_next_click = False
+
+
 class ProductDialog(ctk.CTkToplevel):
     """Finestra di dialogo per la creazione o modifica di un singolo prodotto."""
 
@@ -162,6 +374,7 @@ class ProductDialog(ctk.CTkToplevel):
 
         self.selling_place_combo = ctk.CTkComboBox(form, variable=self.vars["selling_place"], values=self.selling_places, font=("Segoe UI", 12))
         self.selling_place_combo.grid(row=7, column=0, sticky="ew", padx=(0, 6))
+        CTkScrollableDropdown(self.selling_place_combo)
 
         self._field_entry(form, "PREZZO VENDITA TOTALE (€)", "selling_price", 3, 1)
 
@@ -234,6 +447,7 @@ class ProductDialog(ctk.CTkToplevel):
         )
         combo = ctk.CTkComboBox(parent, variable=self.vars[key], values=values, font=("Segoe UI", 12))
         combo.grid(row=e_row, column=column, sticky="ew", padx=px)
+        CTkScrollableDropdown(combo)
         return combo
 
     def _open_manage_places(self) -> None:
@@ -339,11 +553,31 @@ class ProductDialog(ctk.CTkToplevel):
 class BulkStatusDialog(ctk.CTkToplevel):
     """Finestra di dialogo per la modifica di massa dello stato dei prodotti selezionati."""
 
-    def __init__(self, parent: tk.Misc, count: int, target_status: str) -> None:
+    def __init__(
+        self,
+        parent: tk.Misc,
+        count: int,
+        target_status: str,
+        selling_places: Optional[List[str]] = None,
+        default_place: str = "",
+    ) -> None:
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.result: Optional[Dict[str, Any]] = None
         self.count = count
         self.target_status = target_status
+
+        if selling_places is not None:
+            self.selling_places = list(selling_places)
+        else:
+            parent_db = getattr(parent, "db", None)
+            if parent_db:
+                _, self.selling_places = parent_db.get_distinct_places()
+            else:
+                from ..config import DEFAULT_SELLING_PLACES
+                self.selling_places = list(DEFAULT_SELLING_PLACES)
+
+        if not default_place and self.selling_places:
+            default_place = self.selling_places[0]
 
         self.title("Spostamento di massa")
         center_window(self, 520, 460)
@@ -354,10 +588,11 @@ class BulkStatusDialog(ctk.CTkToplevel):
 
         self.var_sold_price = tk.StringVar()
         self.var_fees = tk.StringVar(value="0,00")
-        self.var_sold_date = tk.StringVar(value=datetime.now().strftime("%Y-%m-%d"))
+        self.var_selling_place = tk.StringVar(value=default_place)
 
         self._build()
         self.bind("<Return>", lambda _e: self._submit())
+        self.bind("<Escape>", lambda _e: self.destroy())
 
     def _build(self) -> None:
         c = DARK_THEME
@@ -389,8 +624,15 @@ class BulkStatusDialog(ctk.CTkToplevel):
             ctk.CTkLabel(form, text="Commissioni/Spese TOTALI (€):", font=("Segoe UI", 11, "bold")).pack(anchor="w")
             ctk.CTkEntry(form, textvariable=self.var_fees, font=("Segoe UI", 12)).pack(fill="x", pady=(2, 10))
 
-            ctk.CTkLabel(form, text="Data di vendita (AAAA-MM-GG):", font=("Segoe UI", 11, "bold")).pack(anchor="w")
-            ctk.CTkEntry(form, textvariable=self.var_sold_date, font=("Segoe UI", 12)).pack(fill="x", pady=(2, 10))
+            ctk.CTkLabel(form, text="Luogo di vendita:", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+            combo_place = ctk.CTkComboBox(
+                form,
+                variable=self.var_selling_place,
+                values=self.selling_places,
+                font=("Segoe UI", 12),
+            )
+            combo_place.pack(fill="x", pady=(2, 10))
+            CTkScrollableDropdown(combo_place)
 
         buttons = ctk.CTkFrame(outer, fg_color="transparent")
         buttons.pack(fill="x", side="bottom", pady=(20, 0))
@@ -403,14 +645,14 @@ class BulkStatusDialog(ctk.CTkToplevel):
             try:
                 sp_total = parse_money(self.var_sold_price.get(), allow_empty=True)
                 fees_total = parse_money(self.var_fees.get(), allow_empty=True) or Decimal("0")
-                dt = self.var_sold_date.get().strip()
                 if sp_total is None:
                     raise ValueError("Per i prodotti venduti e obbligatorio il prezzo di vendita totale.")
-                dt = parse_date(dt)
+                selling_place = self.var_selling_place.get().strip()
                 count_dec = Decimal(str(self.count))
                 extra["sold_price"] = (sp_total / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if self.count > 0 else sp_total
                 extra["fees"] = (fees_total / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if self.count > 0 else fees_total
-                extra["sold_date"] = dt
+                extra["sold_date"] = datetime.now().strftime("%Y-%m-%d")
+                extra["selling_place"] = selling_place
                 import uuid
                 extra["bundle_id"] = str(uuid.uuid4())
             except ValueError as exc:

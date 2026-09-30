@@ -467,16 +467,15 @@ class DashboardView(ctk.CTkFrame):
             return
         stock_c = totals["stock_count"]
         pre_c = totals["preorder_count"]
-        sold_c = totals["sold_count"]
-        total = stock_c + pre_c + sold_c
+        active_c = totals.get("sold_count_active", 0)
+        total = stock_c + pre_c + active_c
         if total == 0:
             canvas.create_text(width / 2, height / 2, text="Nessun articolo presente nel database.", fill=DARK_THEME["fg_muted"], font=("Segoe UI", 10))
             return
         categories = [
             ("In Magazzino", stock_c, "#059669"),
             ("Pre-ordini", pre_c, "#d97706"),
-            ("Vendite Attive", totals.get("sold_count_active", 0), "#2563eb"),
-            ("Completate", totals.get("sold_count_completed", 0), "#db2777"),
+            ("Vendite Attive", active_c, "#2563eb"),
         ]
         bar_y = 40
         bar_h = 30
