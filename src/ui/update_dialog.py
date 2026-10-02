@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Finestra modale di dialogo per la notifica e il download degli aggiornamenti di RSM.
 """

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Dialog per la visualizzazione dei prezzi di mercato eBay di un prodotto."""
 
 import threading

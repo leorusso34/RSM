@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Gestione database SQLite e migrazioni per RSM."""
 
 import json

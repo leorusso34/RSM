@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Finestra di dialogo per l'importazione Excel con AI per RSM."""
 
 import tkinter as tk

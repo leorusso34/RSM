@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Vista Dashboard e Grafici Statistici per RSM."""
 
 import tkinter as tk

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Modulo per la verifica, download e applicazione automatica degli aggiornamenti di RSM.
 """

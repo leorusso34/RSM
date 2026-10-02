@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Finestra di dialogo per la sincronizzazione ordini via email Gmail."""
 
 import threading

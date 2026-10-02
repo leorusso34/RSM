@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Modulo per la sincronizzazione ordini via email tramite Gmail IMAP e Gemini AI."""
 
 import email

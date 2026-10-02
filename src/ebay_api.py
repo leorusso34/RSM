@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Modulo di integrazione con le API eBay per RSM.
 

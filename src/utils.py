@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Utility di formattazione, calcolo e I/O per RSM."""
 
 import csv

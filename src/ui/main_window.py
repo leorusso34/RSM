@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Finestra principale dell'applicazione InventoryApp per RSM."""
 
 import sqlite3

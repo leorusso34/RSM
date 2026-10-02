@@ -144,18 +144,24 @@ def test_email_sync_dialog_initialization(tmp_path):
     db = InventoryDatabase(tmp_path / "test_email.db")
     db.set_setting("email_sync_address", "test@gmail.com")
     db.set_setting("email_sync_app_password", "abcdefghijklmnop")
-    
-    app = InventoryApp()
-    app.update_idletasks()
-    
-    dialog = EmailSyncDialog(app, db, lambda: None)
-    dialog.update_idletasks()
-    assert dialog.var_email.get() == "test@gmail.com"
-    assert dialog.var_password.get() == "abcdefghijklmnop"
-    
-    dialog.destroy()
-    app.destroy()
-    db.close()
+
+    try:
+        app = InventoryApp()
+    except Exception:
+        import pytest
+        db.close()
+        pytest.skip("Tcl/Tk non disponibile nell'ambiente di test senza display")
+
+    try:
+        app.update_idletasks()
+        dialog = EmailSyncDialog(app, db, lambda: None)
+        dialog.update_idletasks()
+        assert dialog.var_email.get() == "test@gmail.com"
+        assert dialog.var_password.get() == "abcdefghijklmnop"
+        dialog.destroy()
+    finally:
+        app.destroy()
+        db.close()
 
 
 def test_external_config_json_priority(tmp_path, monkeypatch):

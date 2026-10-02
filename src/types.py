@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Definizioni dei tipi per RSM."""
 
 from decimal import Decimal

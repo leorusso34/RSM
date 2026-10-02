@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Finestra di dialogo per l'inserimento rapido tramite Intelligenza Artificiale con CustomTkinter."""
 
 import sys

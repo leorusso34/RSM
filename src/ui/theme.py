@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Configurazione tema scuro tramite CustomTkinter."""
 
 import tkinter as tk

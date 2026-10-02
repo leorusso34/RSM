@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Entry point principale per RSM."""
 
 import ctypes

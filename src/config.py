@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
 """Configurazione e costanti per RSM."""
 
 import sys
 from pathlib import Path
 
 APP_NAME = "RSM"
-APP_VERSION = "1.3.3"
+APP_VERSION = "1.4.0"
 GITHUB_REPO = "leorusso34/RSM"
 
 # Stati prodotti

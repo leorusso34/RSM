@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Script per la build dell'eseguibile Windows tramite PyInstaller per RSM."""
 
 import json

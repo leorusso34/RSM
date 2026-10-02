@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Modulo ottimizzato per il riconoscimento vocale rapido tramite Gemini 3.1 Flash Lite e Google Speech API.
 Usa sounddevice per la cattura a 16kHz Mono e supporta interruzione istantanea e trimming del silenzio.

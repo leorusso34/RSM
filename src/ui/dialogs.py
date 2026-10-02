@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Finestre di dialogo per RSM."""
 
 import sqlite3
