@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Vista Dashboard e Grafici Statistici per RSM."""
 
 import tkinter as tk
 from decimal import Decimal
-from tkinter import ttk
-from typing import Dict, List, Any
+from typing import Any
+
 import customtkinter as ctk
 from PIL import Image, ImageDraw, ImageTk
 
-from ..config import DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK, CHART_PALETTE, MONTHS_SHORT_IT
+from ..config import (
+    CHART_PALETTE,
+    DARK_THEME,
+)
 from ..database import InventoryDatabase
-from ..utils import money, center_window, apply_dark_titlebar, format_month_label
+from ..utils import apply_dark_titlebar, center_window, format_month_label, money
 
 
 class DashboardView(ctk.CTkFrame):
@@ -20,7 +22,7 @@ class DashboardView(ctk.CTkFrame):
     def __init__(self, parent: tk.Widget, db: InventoryDatabase) -> None:
         super().__init__(parent, fg_color="transparent")
         self.db = db
-        self.kpi_vars: Dict[str, tk.StringVar] = {}
+        self.kpi_vars: dict[str, tk.StringVar] = {}
         self._resize_after_id = None
         self._build_ui()
 
@@ -139,7 +141,7 @@ class DashboardView(ctk.CTkFrame):
         if self._resize_after_id:
             try:
                 self.after_cancel(self._resize_after_id)
-            except Exception:
+            except (tk.TclError, ValueError):
                 pass
         self._resize_after_id = self.after(150, self._delayed_refresh)
 
@@ -174,7 +176,7 @@ class DashboardView(ctk.CTkFrame):
         layout_str = self.db.get_setting("dashboard_layout", json.dumps(default_layout))
         try:
             layout = json.loads(layout_str)
-        except Exception:
+        except (json.JSONDecodeError, ValueError, TypeError):
             layout = default_layout
         if chart_id in layout:
             layout.remove(chart_id)
@@ -187,7 +189,7 @@ class DashboardView(ctk.CTkFrame):
         layout_str = self.db.get_setting("dashboard_layout", json.dumps(default_layout))
         try:
             layout = json.loads(layout_str)
-        except Exception:
+        except (json.JSONDecodeError, ValueError, TypeError):
             layout = default_layout
 
         for card in self.chart_cards.values():
@@ -235,7 +237,7 @@ class DashboardView(ctk.CTkFrame):
         layout_str = self.db.get_setting("dashboard_layout", '["monthly", "dist", "platform_pie", "volume_monthly", "top_products"]')
         try:
             current_layout = json.loads(layout_str)
-        except Exception:
+        except (json.JSONDecodeError, ValueError, TypeError):
             current_layout = ["monthly", "dist", "platform_pie", "volume_monthly", "top_products"]
 
         all_charts = {
@@ -425,17 +427,17 @@ class DashboardView(ctk.CTkFrame):
         margin_right = 20
         plot_width = width - margin_left - margin_right
         plot_height = height - margin_top - margin_bottom
-        max_profit = max((s["profit"] for s in sales), default=Decimal("0"))
-        min_profit = min((s["profit"] for s in sales), default=Decimal("0"))
-        max_profit = max(max_profit, Decimal("10"))
-        min_profit = min(min_profit, Decimal("0"))
+        max_profit = max((s["profit"] for s in sales), default=Decimal(0))
+        min_profit = min((s["profit"] for s in sales), default=Decimal(0))
+        max_profit = max(max_profit, Decimal(10))
+        min_profit = min(min_profit, Decimal(0))
         profit_range = max_profit - min_profit
         num_bars = len(sales)
         bar_gap = 14
         bar_width = max(20, min(70, (plot_width - (num_bars + 1) * bar_gap) / max(num_bars, 1)))
         for i in range(4):
             y_val = margin_top + plot_height * (i / 3)
-            profit_val = max_profit - profit_range * (Decimal(i) / Decimal("3"))
+            profit_val = max_profit - profit_range * (Decimal(i) / Decimal(3))
             canvas.create_line(margin_left, y_val, width - margin_right, y_val, fill=DARK_THEME["border"], dash=(2, 2))
             canvas.create_text(margin_left - 8, y_val, text=f"€{int(profit_val)}", anchor="e", fill=DARK_THEME["fg_muted"], font=("Segoe UI", 9, "bold"))
         zero_y = margin_top + float(max_profit / profit_range) * plot_height
@@ -454,7 +456,7 @@ class DashboardView(ctk.CTkFrame):
             if bar_width >= 25:
                 canvas.create_text((x0 + x1) / 2, y0 - 8, text=f"€{int(profit)}", fill=DARK_THEME["fg_main"], font=("Segoe UI", 9, "bold"))
 
-    def _draw_distribution_chart(self, totals: Dict[str, Any], retry_count: int = 0) -> None:
+    def _draw_distribution_chart(self, totals: dict[str, Any], retry_count: int = 0) -> None:
         canvas = self.canvas_dist
         canvas.delete("all")
         width = canvas.winfo_width()
@@ -508,10 +510,10 @@ class DashboardView(ctk.CTkFrame):
             return
 
         platforms = self.db.get_profit_by_platform()
-        positive_items = [p for p in platforms if p["profit"] > Decimal("0")]
-        total_positive_profit = sum((p["profit"] for p in positive_items), Decimal("0"))
+        positive_items = [p for p in platforms if p["profit"] > Decimal(0)]
+        total_positive_profit = sum((p["profit"] for p in positive_items), Decimal(0))
 
-        if not platforms or total_positive_profit <= Decimal("0"):
+        if not platforms or total_positive_profit <= Decimal(0):
             canvas.create_text(
                 width / 2, height / 2,
                 text="Nessun profitto registrato per canale di vendita.",
@@ -524,7 +526,7 @@ class DashboardView(ctk.CTkFrame):
 
         if len(positive_items) > 5:
             main_items = positive_items[:4]
-            other_profit = sum((p["profit"] for p in positive_items[4:]), Decimal("0"))
+            other_profit = sum((p["profit"] for p in positive_items[4:]), Decimal(0))
             other_count = sum(p["count"] for p in positive_items[4:])
             slices = main_items + [{
                 "platform": "Altro",
@@ -729,9 +731,9 @@ class DashboardView(ctk.CTkFrame):
             )
             return
 
-        max_profit = max((p["profit"] for p in top_products), default=Decimal("1"))
+        max_profit = max((p["profit"] for p in top_products), default=Decimal(1))
         if max_profit <= 0:
-            max_profit = Decimal("1")
+            max_profit = Decimal(1)
 
         start_y = 14
         item_spacing = 42

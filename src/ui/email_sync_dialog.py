@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Finestra di dialogo per la sincronizzazione ordini via email Gmail."""
 
 import threading
 import tkinter as tk
-from tkinter import ttk, messagebox
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from tkinter import messagebox, ttk
+from typing import Any
+
 import customtkinter as ctk
 
 from ..config import DARK_THEME, STATUS_PREORDER
@@ -16,7 +16,12 @@ from ..email_sync import (
     parse_order_email_with_gemini,
     test_gmail_connection,
 )
-from ..utils import apply_dark_titlebar, apply_window_icon, center_window, money, parse_money
+from ..utils import (
+    apply_dark_titlebar,
+    center_window,
+    money,
+    parse_money,
+)
 
 
 class EmailSyncDialog(ctk.CTkToplevel):
@@ -26,8 +31,8 @@ class EmailSyncDialog(ctk.CTkToplevel):
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.db = db
         self.on_success_callback = on_success_callback
-        self.extracted_products: List[Dict[str, Any]] = []
-        self.processed_uids: List[str] = []
+        self.extracted_products: list[dict[str, Any]] = []
+        self.processed_uids: list[str] = []
         self.is_scanning = False
 
         self.title("Sincronizzazione Email Ordini")
@@ -243,7 +248,8 @@ class EmailSyncDialog(ctk.CTkToplevel):
                 new_uids = []
 
                 for idx, em in enumerate(new_emails, 1):
-                    self.after(0, lambda i=idx, t=total_emails, s=em.get('subject', ''): self.var_status_msg.set(
+                    subj = em.get("subject", "")
+                    self.after(0, lambda i=idx, t=total_emails, s=subj: self.var_status_msg.set(
                         f"Analisi con AI ({i}/{t}): {s[:35]}..."
                     ))
                     try:
@@ -251,17 +257,18 @@ class EmailSyncDialog(ctk.CTkToplevel):
                         if prods:
                             new_found_products.extend(prods)
                             new_uids.append(em["uid"])
-                    except Exception as err:
+                    except Exception as err:  # noqa: BLE001
                         print(f"Errore parsing email UID {em.get('uid')}: {err}")
 
                 self.after(0, lambda: self._on_scan_success(new_found_products, new_uids))
 
-            except Exception as exc:
-                self.after(0, lambda: self._on_scan_error(str(exc)))
+            except Exception as exc:  # noqa: BLE001
+                err_msg = str(exc)
+                self.after(0, lambda msg=err_msg: self._on_scan_error(msg))
 
         threading.Thread(target=_scan_thread, daemon=True).start()
 
-    def _on_scan_success(self, new_products: List[Dict[str, Any]], new_uids: List[str]) -> None:
+    def _on_scan_success(self, new_products: list[dict[str, Any]], new_uids: list[str]) -> None:
         self._stop_progress()
         added_count = 0
 
@@ -271,7 +278,7 @@ class EmailSyncDialog(ctk.CTkToplevel):
             try:
                 price_dec = parse_money(p.get("purchased_price", 0))
                 price_str = money(price_dec)
-            except Exception:
+            except (ValueError, TypeError, ArithmeticError):
                 price_str = str(p.get("purchased_price", "0,00"))
 
             self.tree.insert("", "end", values=(
@@ -334,7 +341,7 @@ class EmailSyncDialog(ctk.CTkToplevel):
         saved_count = 0
         for p in self.extracted_products:
             try:
-                purchase_val = parse_money(p.get("purchased_price", 0)) or Decimal("0")
+                purchase_val = parse_money(p.get("purchased_price", 0)) or Decimal(0)
                 qty = int(p.get("quantity", 1))
                 if qty <= 0:
                     qty = 1
@@ -348,7 +355,7 @@ class EmailSyncDialog(ctk.CTkToplevel):
                     "selling_place": "",
                     "selling_price": None,
                     "sold_price": None,
-                    "fees": Decimal("0"),
+                    "fees": Decimal(0),
                     "sold_date": "",
                     "status": STATUS_PREORDER,
                     "release_date": str(p.get("release_date", "")).strip(),
@@ -356,7 +363,7 @@ class EmailSyncDialog(ctk.CTkToplevel):
                 }
                 self.db.save(product_record)
                 saved_count += 1
-            except Exception as e:
+            except (ValueError, KeyError, OSError) as e:
                 print(f"Errore salvataggio prodotto pre-ordine: {e}")
 
         # Segna le email lette su Gmail in background

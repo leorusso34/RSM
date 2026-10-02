@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Dialog per la visualizzazione dei prezzi di mercato eBay di un prodotto."""
 
 import threading
 import tkinter as tk
+from collections.abc import Callable
 from decimal import Decimal
-from typing import Callable, Dict, Optional
 
 import customtkinter as ctk
 
 from ..config import DARK_THEME
-from ..utils import apply_dark_titlebar, center_window, money
 from ..ebay_api import fetch_market_prices, open_search_in_browser
+from ..utils import apply_dark_titlebar, center_window
 
 
 class EbayPriceDialog(ctk.CTkToplevel):
@@ -32,7 +31,7 @@ class EbayPriceDialog(ctk.CTkToplevel):
         product_size: str,
         client_id: str,
         client_secret: str,
-        on_apply_price: Optional[Callable[[Decimal], None]] = None,
+        on_apply_price: Callable[[Decimal], None] | None = None,
     ) -> None:
         """
         Args:
@@ -51,7 +50,7 @@ class EbayPriceDialog(ctk.CTkToplevel):
         self._client_id     = client_id
         self._client_secret = client_secret
         self._on_apply_price = on_apply_price
-        self._result: Optional[Dict] = None
+        self._result: dict | None = None
 
         self.title("Prezzi di Mercato eBay")
         center_window(self, 460, 320)
@@ -158,7 +157,7 @@ class EbayPriceDialog(ctk.CTkToplevel):
             text_color=DARK_THEME["fg_muted"],
         ).pack(pady=28)
 
-    def _show_results(self, result: Dict) -> None:
+    def _show_results(self, result: dict) -> None:
         self._clear_content()
         c = DARK_THEME
 
@@ -220,10 +219,10 @@ class EbayPriceDialog(ctk.CTkToplevel):
                 self._client_secret,
             )
             self.after(0, lambda: self._on_fetch_success(result))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             self.after(0, lambda msg=str(exc): self._on_fetch_error(msg))
 
-    def _on_fetch_success(self, result: Dict) -> None:
+    def _on_fetch_success(self, result: dict) -> None:
         self._result = result
         self._show_results(result)
         if self._on_apply_price:

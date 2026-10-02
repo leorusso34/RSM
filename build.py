@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Script per la build dell'eseguibile Windows tramite PyInstaller per RSM."""
 
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -15,7 +13,7 @@ def main() -> None:
 
     # Assicurati che PyInstaller sia installato
     try:
-        import PyInstaller
+        import PyInstaller  # noqa: F401
     except ImportError:
         print("Installazione di PyInstaller in corso...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
@@ -103,7 +101,7 @@ def main() -> None:
                 loaded = json.load(f)
                 if isinstance(loaded, dict):
                     final_config_data.update(loaded)
-        except Exception:
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
             pass
         backup_config.unlink(missing_ok=True)
 
@@ -114,7 +112,7 @@ def main() -> None:
                 loaded = json.load(f)
                 if isinstance(loaded, dict):
                     final_config_data.update(loaded)
-        except Exception:
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
             pass
 
     if final_config_data:

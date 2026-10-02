@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Modulo per la verifica, download e applicazione automatica degli aggiornamenti di RSM.
 """
@@ -14,13 +13,14 @@ import sys
 import tempfile
 import urllib.parse
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any
 
 from .config import APP_VERSION, GITHUB_REPO, PROJECT_DIR
 
 
-def parse_version_tuple(version_str: str) -> Tuple[int, ...]:
+def parse_version_tuple(version_str: str) -> tuple[int, ...]:
     """
     Estrae una tupla di interi da una stringa di versione (es. 'v1.2.0' -> (1, 2, 0)).
     Consente confronti semantici corretti (es. (1, 10, 0) > (1, 2, 0)).
@@ -40,7 +40,7 @@ def check_for_updates(
     current_version: str = APP_VERSION,
     repo: str = GITHUB_REPO,
     github_token: str = "",
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """
     Controlla in modo sicuro se è disponibile una nuova versione su GitHub Releases.
 
@@ -105,15 +105,15 @@ def check_for_updates(
             "size_bytes": zip_asset.get("size", 0),
             "is_api_asset": is_api_asset,
         }
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
 def download_file_with_redirects(
     url: str,
     dest_path: Path,
-    headers: Optional[Dict[str, str]] = None,
-    progress_callback: Optional[Callable[[float], None]] = None,
+    headers: dict[str, str] | None = None,
+    progress_callback: Callable[[float], None] | None = None,
     max_redirects: int = 5,
 ) -> None:
     """
@@ -179,8 +179,8 @@ def download_file_with_redirects(
 def apply_update_and_restart(
     download_url: str,
     github_token: str = "",
-    progress_callback: Optional[Callable[[float], None]] = None,
-    status_callback: Optional[Callable[[str], None]] = None,
+    progress_callback: Callable[[float], None] | None = None,
+    status_callback: Callable[[str], None] | None = None,
 ) -> None:
     """
     Esegue il download dello zip di aggiornamento, estrae i file e avvia uno script
@@ -328,6 +328,6 @@ def apply_update_and_restart(
         # Chiude l'intero processo immediatamente per rilasciare tutti i file
         os._exit(0)
 
-    except Exception as exc:
+    except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
-        raise exc
+        raise

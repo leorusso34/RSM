@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Modulo ottimizzato per il riconoscimento vocale rapido tramite Gemini 3.1 Flash Lite e Google Speech API.
 Usa sounddevice per la cattura a 16kHz Mono e supporta interruzione istantanea e trimming del silenzio.
@@ -7,14 +6,14 @@ Usa sounddevice per la cattura a 16kHz Mono e supporta interruzione istantanea e
 
 import io
 import threading
-from typing import Callable, Optional
+from collections.abc import Callable
 
 
-def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> Optional[str]:
+def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> str | None:
     """Tenta la trascrizione fedele e veloce dell'audio tramite l'API Gemini 3.1 Flash Lite."""
     import base64
-    import json
     import http.client
+    import json
 
     try:
         b64_audio = base64.b64encode(wav_bytes).decode("utf-8")
@@ -50,13 +49,13 @@ def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> Optional[str]:
             resp = conn.getresponse()
             if resp.status == 200:
                 result = json.loads(resp.read().decode("utf-8"))
-                if "candidates" in result and result["candidates"]:
+                if result.get("candidates"):
                     text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
                     if text:
                         return text
         finally:
             conn.close()
-    except Exception:
+    except (OSError, http.client.HTTPException, json.JSONDecodeError, ValueError, KeyError):
         pass
     return None
 
@@ -67,7 +66,7 @@ class SpeechTranscriber:
     def __init__(self) -> None:
         self._stop_event = threading.Event()
         self._is_recording = False
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
 
     @property
     def is_recording(self) -> bool:
@@ -91,9 +90,9 @@ class SpeechTranscriber:
 
         def _run():
             try:
-                import sounddevice as sd
                 import numpy as np
                 import scipy.io.wavfile as wav_io
+                import sounddevice as sd
                 import speech_recognition as sr
             except ImportError as e:
                 self._is_recording = False
@@ -155,7 +154,7 @@ class SpeechTranscriber:
                 text = recognizer.recognize_google(audio, language=language)
                 on_result(text)
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._is_recording = False
                 name = type(e).__name__
                 msg = str(e)

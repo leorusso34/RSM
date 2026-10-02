@@ -1,12 +1,12 @@
-import json
 import http.client
-import socket
+import json
 import re
-from datetime import datetime
-from typing import Any, List, Dict
+import socket
+from datetime import datetime, timezone
+from typing import Any
 
 
-def _safe_parse_json_products(raw_content: str) -> List[Dict[str, Any]]:
+def _safe_parse_json_products(raw_content: str) -> list[dict[str, Any]]:
     """
     Decodifica in modo resiliente il payload JSON dei prodotti restituito dall'AI.
     Se la risposta è stata troncata ai limiti di token, ripara automaticamente
@@ -48,14 +48,14 @@ def _safe_parse_json_products(raw_content: str) -> List[Dict[str, Any]]:
             obj = json.loads(match.group(0))
             if isinstance(obj, dict) and obj.get("name"):
                 objects.append(obj)
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             pass
     if objects:
         return objects
 
     raise ValueError(f"Impossibile interpretare la risposta AI come elenco prodotti JSON: {raw_content[:200]}...")
 
-def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
+def parse_product_with_ai(prompt: str, api_key: str) -> list[dict[str, Any]]:
     """
     Invia la richiesta testuale all'API di Gemini per estrarre i dati di UNO O PIÙ prodotti.
     Restituisce una lista di dizionari, uno per prodotto.
@@ -125,14 +125,14 @@ def parse_product_with_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
             return _safe_parse_json_products(content)
         else:
             raise ValueError(f"Risposta inaspettata: {resp_data}")
-    except Exception as e:
-        raise RuntimeError(f"Errore di connessione: {str(e)}")
+    except (OSError, http.client.HTTPException, ValueError) as e:
+        raise RuntimeError(f"Errore di connessione: {e!s}")
     finally:
         socket.setdefaulttimeout(_prev_timeout)
         conn.close()
 
 
-def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> List[Dict[str, Any]]:
+def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> list[dict[str, Any]]:
     """
     Analizza l'intero contenuto testuale di un file Excel/CSV con una singola
     chiamata a Gemini e restituisce la lista di prodotti estratti in formato JSON.
@@ -146,7 +146,7 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
     - Restituisce TUTTI i prodotti trovati nella tabella, uno per riga dati.
     - Se user_hint è fornito, viene trattato come istruzione prioritaria aggiuntiva.
     """
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_str = datetime.now(tz=timezone.utc).astimezone().date().isoformat()
     host = "generativelanguage.googleapis.com"
     path = f"/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
 
@@ -244,9 +244,9 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> Lis
             return _safe_parse_json_products(content)
         else:
             raise ValueError(f"Risposta AI inaspettata: {resp_data}")
-    except (socket.timeout, TimeoutError) as e:
+    except TimeoutError:
         raise RuntimeError("Tempo scaduto: il server AI ha impiegato più di 3 minuti ad analizzare il file. Riprova tra poco.")
-    except Exception as e:
+    except (OSError, http.client.HTTPException, ValueError) as e:
         err_msg = str(e)
         if "timed out" in err_msg.lower():
             raise RuntimeError("Tempo scaduto: l'analisi ha superato il tempo massimo. Riprova.")

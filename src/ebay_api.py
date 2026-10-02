@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Modulo di integrazione con le API eBay per RSM.
 
@@ -14,8 +13,6 @@ import http.client
 import json
 import urllib.parse
 import webbrowser
-from typing import Dict, Optional, Tuple
-
 
 # ---------------------------------------------------------------------------
 # Costanti API eBay
@@ -130,7 +127,7 @@ def fetch_market_prices(
     client_id: str,
     client_secret: str,
     limit: int = 100,
-) -> Dict:
+) -> dict:
     """
     Recupera i prezzi delle inserzioni eBay attive per un prodotto e
     restituisce un riepilogo con min, media e max.

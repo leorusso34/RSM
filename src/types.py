@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Definizioni dei tipi per RSM."""
 
-from typing import TypedDict, Optional
 from decimal import Decimal
+from typing import TypedDict
+
 
 class ProductRecord(TypedDict, total=False):
     id: int
@@ -14,10 +14,10 @@ class ProductRecord(TypedDict, total=False):
     purchased_price_cents: int
     purchased_place: str
     selling_place: str
-    selling_price: Optional[Decimal]
-    selling_price_cents: Optional[int]
-    sold_price: Optional[Decimal]
-    sold_price_cents: Optional[int]
+    selling_price: Decimal | None
+    selling_price_cents: int | None
+    sold_price: Decimal | None
+    sold_price_cents: int | None
     fees: Decimal
     fees_cents: int
     sold_date: str

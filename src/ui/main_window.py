@@ -1,31 +1,50 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Finestra principale dell'applicazione InventoryApp per RSM."""
 
+import sqlite3
 import threading
 import tkinter as tk
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
-from typing import Dict, List, Optional
+from typing import Any, ClassVar
+
 import customtkinter as ctk
 
-from ..config import APP_NAME, APP_VERSION, DB_PATH, DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK, STATUS_COMPLETED, PROJECT_DIR, GITHUB_REPO
+from ..ai_agent import parse_excel_with_ai
+from ..config import (
+    APP_NAME,
+    APP_VERSION,
+    DARK_THEME,
+    DB_PATH,
+    GITHUB_REPO,
+    PROJECT_DIR,
+    STATUS_COMPLETED,
+    STATUS_PREORDER,
+    STATUS_SOLD,
+    STATUS_STOCK,
+)
 from ..database import InventoryDatabase
+from ..ebay_api import open_search_in_browser
+from ..updater import check_for_updates
+from ..utils import (
+    apply_window_icon,
+    calculate_profit,
+    center_window,
+    export_to_csv,
+    money,
+    parse_money,
+    read_spreadsheet_raw,
+)
+from .ai_dialog import AIDialog
 from .dashboard_view import DashboardView
 from .dialogs import BulkStatusDialog, PartialStockMoveDialog, ProductDialog
-from .ai_dialog import AIDialog
-from .email_sync_dialog import EmailSyncDialog
-from .theme import setup_app_theme
-from ..utils import export_to_csv, money, read_spreadsheet_raw, parse_money, calculate_profit, center_window, apply_window_icon
-from .excel_import_dialog import ExcelImportDialog, ExcelHintDialog
-from ..ai_agent import parse_excel_with_ai
-from ..ebay_api import open_search_in_browser
 from .ebay_price_dialog import EbayPriceDialog
-from ..updater import check_for_updates
+from .email_sync_dialog import EmailSyncDialog
+from .excel_import_dialog import ExcelHintDialog, ExcelImportDialog
+from .theme import setup_app_theme
 from .update_dialog import UpdateDialog
-
 
 
 class InventoryApp(ctk.CTk):
@@ -36,7 +55,7 @@ class InventoryApp(ctk.CTk):
         "selling_place", "sale_price", "fees", "profit", "roi", "sold_date"
     )
 
-    HEADINGS = {
+    HEADINGS: ClassVar[dict[str, str]] = {
         "name": "NOME PRODOTTO",
         "size": "TAGLIA",
         "quantity": "Q.TÀ",
@@ -50,7 +69,7 @@ class InventoryApp(ctk.CTk):
         "sold_date": "DATA VENDITA",
     }
 
-    TAB_NAMES = ["Magazzino", "Pre-ordini", "Vendite Attive", "Vendite Completate", "Dashboard & Grafici"]
+    TAB_NAMES: ClassVar[list[str]] = ["Magazzino", "Pre-ordini", "Vendite Attive", "Vendite Completate", "Dashboard & Grafici"]
 
     def __init__(self) -> None:
         super().__init__()
@@ -77,11 +96,11 @@ class InventoryApp(ctk.CTk):
         ]
         self.sort_var = tk.StringVar(value=self.sort_options[0])
 
-        self.current_sort: Dict[str, tuple[str, bool]] = {}
-        self.trees: Dict[str, ttk.Treeview] = {}
-        self._clipboard_ids: List[int] = []
-        self._undo_stack: List[tuple[str, Any]] = []
-        self._update_info: Optional[Dict[str, Any]] = None
+        self.current_sort: dict[str, tuple[str, bool]] = {}
+        self.trees: dict[str, ttk.Treeview] = {}
+        self._clipboard_ids: list[int] = []
+        self._undo_stack: list[tuple[str, Any]] = []
+        self._update_info: dict[str, Any] | None = None
         self.status_tabs = [STATUS_STOCK, STATUS_PREORDER, STATUS_SOLD, STATUS_COMPLETED]
 
         self.tab_name_to_status = {
@@ -129,8 +148,9 @@ class InventoryApp(ctk.CTk):
         logo_box.pack(side="left", padx=16, pady=8)
 
         try:
-            from PIL import Image
             import sys
+
+            from PIL import Image
             logo_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_logo.png"
             if not logo_path.exists():
                 logo_path = PROJECT_DIR / "assets" / "app_logo.png"
@@ -139,7 +159,7 @@ class InventoryApp(ctk.CTk):
             img = Image.open(logo_path)
             self._header_logo = ctk.CTkImage(light_image=img, dark_image=img, size=(48, 48))
             ctk.CTkLabel(logo_box, image=self._header_logo, text="").pack(side="left")
-        except Exception:
+        except (OSError, ValueError):
             pass
 
         # Pulsante badge aggiornamento disponibile (inizialmente nascosto)
@@ -164,7 +184,7 @@ class InventoryApp(ctk.CTk):
             if ai_path.exists():
                 ai_pil = Image.open(ai_path).convert("RGBA")
                 self._ai_btn_img = ctk.CTkImage(light_image=ai_pil, dark_image=ai_pil, size=(18, 18))
-        except Exception:
+        except (OSError, ValueError):
             pass
 
         actions = ctk.CTkFrame(header, fg_color="transparent")
@@ -182,7 +202,7 @@ class InventoryApp(ctk.CTk):
         # 2. KPI Cards
         kpis = ctk.CTkFrame(container, fg_color="transparent")
         kpis.pack(fill="x", pady=(0, 14))
-        self.kpi_vars: Dict[str, tk.StringVar] = {}
+        self.kpi_vars: dict[str, tk.StringVar] = {}
 
         cards = [
             ("stock_total", "STOCK TOTALE (\u20ac)", "#2563eb"),
@@ -231,7 +251,7 @@ class InventoryApp(ctk.CTk):
             fg_color="#374151",
             button_color="#4b5563",
             button_hover_color="#64748b",
-            command=lambda _v: self.refresh_tables(),
+            command=self._on_sort_combo_changed,
         )
         self.sort_combo.pack(side="left")
 
@@ -271,8 +291,8 @@ class InventoryApp(ctk.CTk):
         self.tab_container = ctk.CTkFrame(container, fg_color=c["bg_card"], corner_radius=10, border_width=1, border_color=c["border"])
         self.tab_container.pack(side="top", fill="both", expand=True)
 
-        self.tab_frames: Dict[str, ctk.CTkFrame] = {}
-        self.tab_buttons: Dict[str, ctk.CTkButton] = {}
+        self.tab_frames: dict[str, ctk.CTkFrame] = {}
+        self.tab_buttons: dict[str, ctk.CTkButton] = {}
         self.current_tab_name = "Magazzino"
 
         tabs_info = [
@@ -323,8 +343,8 @@ class InventoryApp(ctk.CTk):
     def set_tab(self, name: str) -> None:
         if name not in self.tab_frames:
             return
+        tab_changed = (name != getattr(self, "current_tab_name", None))
         self.current_tab_name = name
-        c = DARK_THEME
 
         for key, frame in self.tab_frames.items():
             if key == name:
@@ -337,6 +357,14 @@ class InventoryApp(ctk.CTk):
                 btn.configure(fg_color="#2563eb", text_color="#ffffff", hover_color="#1d4ed8")
             else:
                 btn.configure(fg_color="transparent", text_color="#e2e8f0", hover_color="#1e293b")
+
+        if tab_changed:
+            # Resetta l'ordinamento solo al cambio effettivo di scheda
+            if hasattr(self, "sort_var") and hasattr(self, "sort_options"):
+                self.sort_var.set(self.sort_options[0])
+            if hasattr(self, "current_sort"):
+                self.current_sort.clear()
+            self.refresh_tables()
 
         if name == "Dashboard & Grafici" and hasattr(self, "dashboard_view"):
             self.dashboard_view.refresh()
@@ -563,6 +591,11 @@ class InventoryApp(ctk.CTk):
             self.filter_panel.pack(fill="x", padx=14, pady=(0, 10))
             self.btn_toggle_filters.configure(text="Filtri Avanzati \u25b2")
 
+    def _on_sort_combo_changed(self, _val=None) -> None:
+        if hasattr(self, "current_sort"):
+            self.current_sort.clear()
+        self.refresh_tables()
+
     def _reset_filters(self) -> None:
         self.search_var.set("")
         self.filter_purchased_place_var.set("")
@@ -571,16 +604,18 @@ class InventoryApp(ctk.CTk):
         self.filter_max_price_var.set("")
         if hasattr(self, "sort_var") and hasattr(self, "sort_options"):
             self.sort_var.set(self.sort_options[0])
+        if hasattr(self, "current_sort"):
+            self.current_sort.clear()
         self.refresh()
 
-    def current_status(self) -> Optional[str]:
+    def current_status(self) -> str | None:
         return self.tab_name_to_status.get(self.notebook.get())
 
-    def current_tree(self) -> Optional[ttk.Treeview]:
+    def current_tree(self) -> ttk.Treeview | None:
         st = self.current_status()
         return self.trees.get(st) if st else None
 
-    def selected_ids(self) -> List[int]:
+    def selected_ids(self) -> list[int]:
         tree = self.current_tree()
         if not tree:
             return []
@@ -675,7 +710,7 @@ class InventoryApp(ctk.CTk):
                 p_qty = sum(r["quantity"] or 1 for r in b_rows)
                 p_purchased = sum(r["purchased_price"] * (r["quantity"] or 1) for r in b_rows)
                 p_sold = sum((r["sold_price"] or 0) for r in b_rows)
-                p_fees = sum((r["fees"] or Decimal("0")) for r in b_rows)
+                p_fees = sum((r["fees"] or Decimal(0)) for r in b_rows)
                 p_profit, p_roi = calculate_profit(p_purchased, p_sold, p_fees, 1)
                 p_values = (
                     title, "-", p_qty, money(p_purchased), "-",
@@ -706,9 +741,9 @@ class InventoryApp(ctk.CTk):
             elif sort_mode == "Nome (Z-A)":
                 normal_rows.sort(key=lambda r: str(r.get("name", "")).casefold(), reverse=True)
             elif sort_mode == "Prezzo acquisto (Min-Max)":
-                normal_rows.sort(key=lambda r: r.get("purchased_price", Decimal("0")) or Decimal("0"))
+                normal_rows.sort(key=lambda r: r.get("purchased_price", Decimal(0)) or Decimal(0))
             elif sort_mode == "Prezzo acquisto (Max-Min)":
-                normal_rows.sort(key=lambda r: r.get("purchased_price", Decimal("0")) or Decimal("0"), reverse=True)
+                normal_rows.sort(key=lambda r: r.get("purchased_price", Decimal(0)) or Decimal(0), reverse=True)
 
             for row in normal_rows:
                 qty = row["quantity"] or 1
@@ -726,6 +761,12 @@ class InventoryApp(ctk.CTk):
                     row["sold_date"],
                 )
                 tree.insert("", "end", iid=str(row["id"]), values=values, tags=("stripe",) if len(tree.get_children()) % 2 else ())
+
+            # Se e attivo un ordinamento per colonna sulla tabella, riapplicalo
+            if hasattr(self, "current_sort") and status_key in self.current_sort:
+                col, asc = self.current_sort[status_key]
+                if col:
+                    self.sort_tree(status_key, col, ascending=asc)
 
             restored = False
             for s_id in selected:
@@ -829,7 +870,7 @@ class InventoryApp(ctk.CTk):
                             if name == "Vendite Attive":
                                 self.after(50, self.move_selected_to_sold)
                             break
-                except Exception:
+                except (tk.TclError, AttributeError):
                     pass
             else:
                 if not (event.state & 0x0001 or event.state & 0x0004):
@@ -852,7 +893,7 @@ class InventoryApp(ctk.CTk):
         if count == 0:
             self.lbl_selected_info.configure(text="0 prodotti selezionati")
             return
-        total_cost = Decimal("0")
+        total_cost = Decimal(0)
         total_qty = 0
         for item_id in ids:
             prod = self.db.get(item_id)
@@ -860,7 +901,7 @@ class InventoryApp(ctk.CTk):
                 qty = prod.get("quantity", 1) or 1
                 total_cost += prod["purchased_price"] * qty
                 total_qty += qty
-        avg_cost = total_cost / total_qty if total_qty else Decimal("0")
+        avg_cost = total_cost / total_qty if total_qty else Decimal(0)
         self.lbl_selected_info.configure(text=f"{count} selezionati | Totale: {money(total_cost)} | Media: {money(avg_cost)}")
 
     def open_email_sync(self) -> None:
@@ -891,7 +932,9 @@ class InventoryApp(ctk.CTk):
         if created_ids and last_target:
             self.refresh()
             if last_target in self.status_to_tab_name:
-                self.notebook.set(self.status_to_tab_name[last_target])
+                target_tab = self.status_to_tab_name[last_target]
+                if self.current_tab_name != target_tab:
+                    self.notebook.set(target_tab)
             self._focus_tree_item(last_target, str(created_ids[-1]))
             self._push_undo(f"Aggiunti {len(created_ids)} prodotti AI", lambda nids=created_ids: self._undo_insert(nids))
             n = len(created_ids)
@@ -923,7 +966,9 @@ class InventoryApp(ctk.CTk):
             target = dialog.result["status"]
             self.refresh()
             if target in self.status_to_tab_name:
-                self.notebook.set(self.status_to_tab_name[target])
+                target_tab = self.status_to_tab_name[target]
+                if self.current_tab_name != target_tab:
+                    self.notebook.set(target_tab)
             self._focus_tree_item(target, str(new_id))
             self._push_undo(f"Aggiunto '{dialog.result.get('name')}'", lambda nids=[new_id]: self._undo_insert(nids))
             self.status_bar_var.set("Prodotto aggiunto con successo")
@@ -932,28 +977,41 @@ class InventoryApp(ctk.CTk):
             if cur_st and cur_st in self.trees:
                 self.trees[cur_st].focus_set()
 
-    def sort_tree(self, status: str, column: str) -> None:
+    def sort_tree(self, status: str, column: str, ascending: bool | None = None) -> None:
         """Ordina la tabella selezionata localmente, mantenendo il tipo numerico."""
         tree = self.trees.get(status)
         if not tree:
             return
-        previous = self.current_sort.get(status, ("", True))
-        ascending = not previous[1] if previous[0] == column else True
+        if ascending is None:
+            previous = self.current_sort.get(status, ("", True))
+            ascending = not previous[1] if previous[0] == column else True
         self.current_sort[status] = (column, ascending)
         items = [(tree.set(item, column), item) for item in tree.get_children("")]
         numeric_columns = {"quantity", "purchased_price", "sale_price", "fees", "profit", "roi"}
         if column in numeric_columns:
             def sort_value(item: tuple[str, str]) -> tuple[int, object]:
-                raw = item[0].replace("€", "").replace(".", "").replace(",", ".").replace("%", "").strip()
+                raw = str(item[0] or "").replace("€", "").replace(".", "").replace(",", ".").replace("%", "").strip()
                 try:
                     return (0, float(raw))
                 except ValueError:
-                    return (1, 0)
+                    return (1, 0.0)
         else:
             def sort_value(item: tuple[str, str]) -> tuple[int, object]:
-                return (0, item[0].casefold())
+                val = str(item[0] or "").strip()
+                if not val or val == "-":
+                    return (1, "")
+                return (0, val.casefold())
+
         for _, item in sorted(items, key=sort_value, reverse=not ascending):
             tree.move(item, "", "end")
+
+        if hasattr(tree, "item"):
+            for idx, item in enumerate(tree.get_children("")):
+                tags = ("stripe",) if idx % 2 == 1 else ()
+                try:
+                    tree.item(item, tags=tags)
+                except (tk.TclError, AttributeError):
+                    pass
 
     def _focus_search(self, event=None) -> str:
         """Porta il focus sulla barra di ricerca e seleziona il testo esistente per cercare subito."""
@@ -964,11 +1022,11 @@ class InventoryApp(ctk.CTk):
                 self.search_entry._entry.icursor("end")
             else:
                 self.search_entry.select_range(0, "end")
-        except Exception:
+        except (tk.TclError, AttributeError):
             pass
         return "break"
 
-    def _on_e_press(self, event=None) -> Optional[str]:
+    def _on_e_press(self, event=None) -> str | None:
         focused = self.focus_get()
         if focused and (
             isinstance(focused, (tk.Entry, ttk.Entry))
@@ -1044,7 +1102,9 @@ class InventoryApp(ctk.CTk):
         if modified_old_records:
             self.refresh()
             if last_target and last_target in self.status_to_tab_name:
-                self.notebook.set(self.status_to_tab_name[last_target])
+                target_tab = self.status_to_tab_name[last_target]
+                if self.current_tab_name != target_tab:
+                    self.notebook.set(target_tab)
             if last_id and last_target:
                 self._focus_tree_item(last_target, str(last_id))
             self._push_undo(
@@ -1064,7 +1124,7 @@ class InventoryApp(ctk.CTk):
                     tree.focus_set()
 
 
-    def _clone_record(self, record: dict, force_status: Optional[str] = None) -> int:
+    def _clone_record(self, record: dict, force_status: str | None = None) -> int:
         record_copy = dict(record)
         record_copy.pop("id", None)
         record_copy["name"] = f"{record_copy['name']} (Copia)"
@@ -1212,7 +1272,7 @@ class InventoryApp(ctk.CTk):
                     new_record["status"] = STATUS_STOCK
                     new_record["sold_price"] = None
                     new_record["sold_date"] = ""
-                    new_record["fees"] = Decimal("0")
+                    new_record["fees"] = Decimal(0)
                     new_record["release_date"] = ""
                     new_record["bundle_id"] = ""
                     new_id = self.db.save(new_record)
@@ -1362,19 +1422,19 @@ class InventoryApp(ctk.CTk):
         if not self._undo_stack:
             self.status_bar_var.set("Nessuna azione da annullare")
             return
-        desc, action_fn = self._undo_stack.pop()
+        _desc, action_fn = self._undo_stack.pop()
         try:
             action_fn()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             self.status_bar_var.set(f"Impossibile annullare: {exc}")
 
-    def _undo_insert(self, inserted_ids: List[int]) -> None:
+    def _undo_insert(self, inserted_ids: list[int]) -> None:
         if inserted_ids:
             self.db.delete_many(inserted_ids)
             self.refresh()
             self.status_bar_var.set(f"Annullato: rimossi {len(inserted_ids)} prodotti aggiunti")
 
-    def _undo_update(self, old_records: List[Dict[str, Any]]) -> None:
+    def _undo_update(self, old_records: list[dict[str, Any]]) -> None:
         for rec in old_records:
             pid = rec.get("id")
             if pid:
@@ -1382,7 +1442,7 @@ class InventoryApp(ctk.CTk):
         self.refresh()
         self.status_bar_var.set(f"Annullato: ripristinate modifiche per {len(old_records)} prodotti")
 
-    def _undo_delete(self, deleted_records: List[Dict[str, Any]]) -> None:
+    def _undo_delete(self, deleted_records: list[dict[str, Any]]) -> None:
         restored = 0
         for rec in deleted_records:
             self.db.save(rec)
@@ -1393,7 +1453,7 @@ class InventoryApp(ctk.CTk):
     def export_csv(self) -> None:
         path = filedialog.asksaveasfilename(
             parent=self, title="Esporta prodotti in CSV", defaultextension=".csv",
-            filetypes=[("File CSV", "*.csv")], initialfile=f"russo_stock_{datetime.now():%Y%m%d_%H%M}.csv",
+            filetypes=[("File CSV", "*.csv")], initialfile=f"russo_stock_{datetime.now(tz=timezone.utc).astimezone():%Y%m%d_%H%M}.csv",
         )
         if not path:
             return
@@ -1453,7 +1513,7 @@ class InventoryApp(ctk.CTk):
                     return
                 products = parse_excel_with_ai(raw_text, api_key, user_hint=user_hint)
                 self.after(0, lambda: _on_ai_done(products))
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 err = str(exc)
                 self.after(0, lambda: messagebox.showerror(
                     "Errore Importazione AI",
@@ -1497,14 +1557,14 @@ class InventoryApp(ctk.CTk):
             return
         target = filedialog.asksaveasfilename(
             parent=self, title="Salva Backup Sicuro SQLite", defaultextension=".db",
-            filetypes=[("Database SQLite", "*.db")], initialfile=f"russo_stock_backup_{datetime.now():%Y%m%d_%H%M}.db",
+            filetypes=[("Database SQLite", "*.db")], initialfile=f"russo_stock_backup_{datetime.now(tz=timezone.utc).astimezone():%Y%m%d_%H%M}.db",
         )
         if target:
             try:
                 self.db.backup_database_safe(Path(target))
                 self.status_bar_var.set("Backup del database completato")
                 messagebox.showinfo("Backup Completato in Sicurezza", f"Backup atomico SQLite creato con successo:\n{target}", parent=self)
-            except Exception as exc:
+            except (sqlite3.Error, OSError) as exc:
                 messagebox.showerror("Errore Backup", str(exc), parent=self)
 
     def _check_updates_background(self) -> None:
@@ -1519,7 +1579,7 @@ class InventoryApp(ctk.CTk):
 
         threading.Thread(target=worker, args=(token, repo), daemon=True).start()
 
-    def _on_update_found(self, update_info: Dict[str, Any]) -> None:
+    def _on_update_found(self, update_info: dict[str, Any]) -> None:
         """Mostra il badge dell'aggiornamento accanto al logo."""
         self._update_info = update_info
         ver = update_info.get("version", "")

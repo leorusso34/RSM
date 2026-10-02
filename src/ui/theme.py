@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Configurazione tema scuro tramite CustomTkinter."""
 
 import tkinter as tk
 from tkinter import ttk
+
 import customtkinter as ctk
 
 from ..config import DARK_THEME

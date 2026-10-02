@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Finestra di dialogo per l'importazione Excel con AI per RSM."""
 
-import threading
 import tkinter as tk
-from tkinter import ttk
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Dict, List
+from tkinter import ttk
+from typing import Any
+
 import customtkinter as ctk
 
 from ..config import DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
@@ -21,7 +20,7 @@ class ExcelImportDialog(ctk.CTkToplevel):
     Stilata come EmailSyncDialog: dark card, padding, stessi font e colori.
     """
 
-    def __init__(self, parent: tk.Misc, db: Any, products: List[Dict[str, Any]]) -> None:
+    def __init__(self, parent: tk.Misc, db: Any, products: list[dict[str, Any]]) -> None:
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.db = db
         self.products = products
@@ -114,7 +113,7 @@ class ExcelImportDialog(ctk.CTkToplevel):
             price_val = p.get("purchased_price", 0) or 0
             try:
                 price_str = money(Decimal(str(price_val)))
-            except Exception:
+            except (ValueError, TypeError, ArithmeticError):
                 price_str = str(price_val)
 
             self.tree.insert("", "end", values=(
@@ -183,7 +182,7 @@ class ExcelImportDialog(ctk.CTkToplevel):
 
                 sold_date   = str(p.get("sold_date",    "") or "").strip()
                 if db_status == STATUS_SOLD and not sold_date:
-                    sold_date = datetime.now().strftime("%Y-%m-%d")
+                    sold_date = datetime.now(tz=timezone.utc).astimezone().date().isoformat()
                 release_date = str(p.get("release_date", "") or "").strip()
                 notes        = str(p.get("notes",        "") or "").strip()
 
@@ -204,7 +203,7 @@ class ExcelImportDialog(ctk.CTkToplevel):
                 }
                 self.db.save(record)
                 saved += 1
-            except Exception as e:
+            except (ValueError, KeyError, OSError) as e:
                 print(f"[ExcelImportDialog] Errore salvataggio prodotto: {e}")
 
         self.confirmed = True

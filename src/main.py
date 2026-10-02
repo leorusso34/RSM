@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Entry point principale per RSM."""
 
+import ctypes
 import sqlite3
 import tkinter as tk
 from tkinter import messagebox
-
-import ctypes
 
 from .config import APP_NAME
 from .ui.main_window import InventoryApp
@@ -17,16 +15,16 @@ def main() -> None:
     try:
         app_id = "russostock.rsm.app.1.0"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
-    except Exception:
+    except (AttributeError, OSError):
         pass
 
     # 2. Abilita il supporto High DPI su Windows per testi e grafica nitidi
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    except Exception:
+    except (AttributeError, OSError):
         try:
             ctypes.windll.user32.SetProcessDPIAware()
-        except Exception:
+        except (AttributeError, OSError):
             pass
 
     try:

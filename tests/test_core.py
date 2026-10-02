@@ -547,5 +547,93 @@ def test_scrollable_dropdown_behavior():
     root.destroy()
 
 
+def test_sort_persistence_on_save_and_reset_on_tab_change():
+    """Verifica che l'ordinamento (sia dropdown sort_var che colonna current_sort)
+    non si resetti salvando un prodotto o aggiornando la stessa scheda,
+    ma si resetti solo quando si cambia effettivamente scheda."""
+    class DummyVar:
+        def __init__(self, val):
+            self._val = val
+        def get(self):
+            return self._val
+        def set(self, val):
+            self._val = val
+
+    class DummyButton:
+        def configure(self, **kwargs):
+            pass
+
+    class DummyFrame:
+        def pack(self, **kwargs):
+            pass
+        def pack_forget(self):
+            pass
+
+    refreshed_count = 0
+    def dummy_refresh_tables(*args, **kwargs):
+        nonlocal refreshed_count
+        refreshed_count += 1
+
+    app_stub = type("StubApp", (), {
+        "tab_frames": {"Magazzino": DummyFrame(), "Vendite Attive": DummyFrame()},
+        "tab_buttons": {"Magazzino": DummyButton(), "Vendite Attive": DummyButton()},
+        "sort_options": [
+            "Data inserimento (Recenti)",
+            "Data inserimento (Meno recenti)",
+            "Prezzo acquisto (Crescente)",
+            "Prezzo acquisto (Decrescente)",
+        ],
+        "current_tab_name": "Magazzino",
+        "current_sort": {},
+        "refresh_tables": dummy_refresh_tables,
+        "_update_action_states": lambda self: None,
+        "set_tab": InventoryApp.set_tab,
+    })()
+    app_stub.sort_var = DummyVar(app_stub.sort_options[2])  # "Prezzo acquisto (Crescente)"
+    app_stub.current_sort = {STATUS_STOCK: ("purchased_price", True)}
+
+    # Chiamata a set_tab con la STESSA scheda (es. dopo salvataggio prodotto che resta in Magazzino)
+    app_stub.set_tab("Magazzino")
+    assert app_stub.sort_var.get() == "Prezzo acquisto (Crescente)"
+    assert app_stub.current_sort == {STATUS_STOCK: ("purchased_price", True)}
+
+    # Cambio scheda a "Vendite Attive": ora deve resettarsi ai valori predefiniti
+    app_stub.set_tab("Vendite Attive")
+    assert app_stub.current_tab_name == "Vendite Attive"
+    assert app_stub.sort_var.get() == "Data inserimento (Recenti)"
+    assert app_stub.current_sort == {}
+
+
+def test_sort_tree_with_explicit_ascending():
+    """Verifica che sort_tree con ascending esplicito preservi l'ordine senza invertirlo."""
+    class FakeTree:
+        def __init__(self):
+            self.rows = {"1": {"purchased_price": "100.00"}, "2": {"purchased_price": "50.00"}}
+            self.moves = []
+
+        def set(self, item, column):
+            return self.rows[item][column]
+
+        def get_children(self, _root):
+            return tuple(self.rows)
+
+        def move(self, item, _parent, _index):
+            self.moves.append(item)
+
+    fake_tree = FakeTree()
+    controller = type("Controller", (), {"trees": {STATUS_STOCK: fake_tree}, "current_sort": {STATUS_STOCK: ("purchased_price", True)}})()
+    # Ordinamento crescente esplicito
+    InventoryApp.sort_tree(controller, STATUS_STOCK, "purchased_price", ascending=True)
+    assert fake_tree.moves == ["2", "1"]
+    assert controller.current_sort[STATUS_STOCK] == ("purchased_price", True)
+
+    fake_tree.moves = []
+    # Riassegnazione con ascending=True non inverte (come farebbe un click header), mantiene True
+    InventoryApp.sort_tree(controller, STATUS_STOCK, "purchased_price", ascending=True)
+    assert fake_tree.moves == ["2", "1"]
+    assert controller.current_sort[STATUS_STOCK] == ("purchased_price", True)
+
+
+
 
 

@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Finestre di dialogo per RSM."""
 
 import sqlite3
-import tkinter as tk
-from datetime import datetime
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Any, Dict, List, Optional, Tuple
-from tkinter import ttk, messagebox
 import sys
+import tkinter as tk
+from datetime import datetime, timezone
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
-from PIL import Image
-import customtkinter as ctk
+from tkinter import messagebox
+from typing import Any
 
-from ..config import PROJECT_DIR, DARK_THEME, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
-from ..utils import calculate_profit, money, parse_date, parse_int, parse_money, center_window, apply_dark_titlebar
+import customtkinter as ctk
+from PIL import Image
+
+from ..config import DARK_THEME, PROJECT_DIR, STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
+from ..utils import (
+    apply_dark_titlebar,
+    calculate_profit,
+    center_window,
+    money,
+    parse_date,
+    parse_int,
+    parse_money,
+)
 
 
 class CTkScrollableDropdown:
@@ -28,12 +36,12 @@ class CTkScrollableDropdown:
     def __init__(self, combo: ctk.CTkComboBox, max_height: int = 500) -> None:
         self.combo = combo
         self.max_height = max_height
-        self._popup: Optional[tk.Toplevel] = None
-        self._scroll_frame: Optional[ctk.CTkScrollableFrame] = None
-        self._bind_click_id: Optional[str] = None
-        self._bind_esc_id: Optional[str] = None
-        self._bind_wheel_id: Optional[str] = None
-        self._bind_conf_id: Optional[str] = None
+        self._popup: tk.Toplevel | None = None
+        self._scroll_frame: ctk.CTkScrollableFrame | None = None
+        self._bind_click_id: str | None = None
+        self._bind_esc_id: str | None = None
+        self._bind_wheel_id: str | None = None
+        self._bind_conf_id: str | None = None
 
         self.combo._open_dropdown_menu = self.open
         if hasattr(self.combo, "_dropdown_menu") and self.combo._dropdown_menu:
@@ -159,7 +167,7 @@ class CTkScrollableDropdown:
         if self.is_open() and self._scroll_frame:
             try:
                 self._scroll_frame._parent_canvas.yview_moveto(fraction)
-            except Exception:
+            except (tk.TclError, AttributeError):
                 pass
 
     def _select(self, val: str) -> None:
@@ -218,11 +226,11 @@ class CTkScrollableDropdown:
                 if self._bind_conf_id:
                     top.unbind("<Configure>", self._bind_conf_id)
                     self._bind_conf_id = None
-            except Exception:
+            except (tk.TclError, AttributeError):
                 pass
             try:
                 self._popup.destroy()
-            except Exception:
+            except (tk.TclError, AttributeError):
                 pass
         self._popup = None
         if hasattr(self.combo, "_close_on_next_click"):
@@ -236,11 +244,11 @@ class ProductDialog(ctk.CTkToplevel):
         self,
         parent: tk.Misc,
         initial_status: str,
-        autocomplete_places: Tuple[List[str], List[str]] = ([], []),
-        record: Optional[sqlite3.Row] = None,
+        autocomplete_places: tuple[list[str], list[str]] = ([], []),
+        record: sqlite3.Row | None = None,
     ) -> None:
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
-        self.result: Optional[Dict[str, Any]] = None
+        self.result: dict[str, Any] | None = None
         self.record = record
         self.purchased_places, self.selling_places = autocomplete_places
 
@@ -255,7 +263,7 @@ class ProductDialog(ctk.CTkToplevel):
         self.vars = {
             "name": tk.StringVar(value=rec["name"] if rec else ""),
             "size": tk.StringVar(value=rec["size"] if rec else ""),
-            "quantity": tk.StringVar(value=str(rec["quantity"]) if rec and "quantity" in rec.keys() else "1"),
+            "quantity": tk.StringVar(value=str(rec["quantity"]) if rec and "quantity" in rec else "1"),
             "purchased_price": tk.StringVar(value=f'{rec["purchased_price"]:.2f}'.replace(".", ",") if rec else ""),
             "purchased_place": tk.StringVar(value=rec["purchased_place"] if rec else ""),
             "selling_place": tk.StringVar(value=rec["selling_place"] if rec else ""),
@@ -263,13 +271,13 @@ class ProductDialog(ctk.CTkToplevel):
                 value=f'{rec["selling_price"]:.2f}'.replace(".", ",") if rec and rec["selling_price"] is not None else ""
             ),
             "sold_price": tk.StringVar(
-                value=f'{rec["sold_price"]:.2f}'.replace(".", ",") if rec and "sold_price" in rec.keys() and rec["sold_price"] is not None else ""
+                value=f'{rec["sold_price"]:.2f}'.replace(".", ",") if rec and "sold_price" in rec and rec["sold_price"] is not None else ""
             ),
             "fees": tk.StringVar(
-                value=f'{rec["fees"]:.2f}'.replace(".", ",") if rec and "fees" in rec.keys() and rec["fees"] is not None else "0,00"
+                value=f'{rec["fees"]:.2f}'.replace(".", ",") if rec and "fees" in rec and rec["fees"] is not None else "0,00"
             ),
             "sold_date": tk.StringVar(
-                value=rec["sold_date"] if rec and "sold_date" in rec.keys() and rec["sold_date"] else ""
+                value=rec["sold_date"] if rec and "sold_date" in rec and rec["sold_date"] else ""
             ),
             "status": tk.StringVar(value=rec["status"] if rec else initial_status),
             "release_date": tk.StringVar(value=rec["release_date"] if rec else ""),
@@ -298,7 +306,7 @@ class ProductDialog(ctk.CTkToplevel):
                 hover_pil = Image.new("RGBA", pil_gear.size, (241, 245, 249, 255))
                 hover_pil.putalpha(ga)
                 self._gear_img_hover = ctk.CTkImage(light_image=hover_pil, dark_image=hover_pil, size=(13, 13))
-            except Exception:
+            except (OSError, ValueError):
                 pass
 
         self._build()
@@ -309,7 +317,7 @@ class ProductDialog(ctk.CTkToplevel):
         self.bind("<Control-Return>", lambda _e: self._submit())
         self.after(80, self._focus_name)
 
-    def _on_return(self, event=None) -> Optional[str]:
+    def _on_return(self, event=None) -> str | None:
         """Salva il prodotto alla pressione del tasto Invio (lascia il comportamento a capo solo se l'utente e nel box Note)."""
         if event and hasattr(self, "notes") and self.notes:
             textbox = getattr(self.notes, "_textbox", None)
@@ -438,7 +446,7 @@ class ProductDialog(ctk.CTkToplevel):
         entry.grid(row=e_row, column=column, columnspan=span, sticky="ew", padx=px)
         return entry
 
-    def _field_combo(self, parent: tk.Widget, label: str, key: str, values: List[str], group_row: int, column: int):
+    def _field_combo(self, parent: tk.Widget, label: str, key: str, values: list[str], group_row: int, column: int):
         l_row = group_row * 2
         e_row = l_row + 1
         px = (0, 6) if column == 0 else (6, 0)
@@ -475,7 +483,7 @@ class ProductDialog(ctk.CTkToplevel):
             self.lbl_sold_date.configure(text_color=c["fg_main"])
             self.profit_card.grid()
             if not self.vars["sold_date"].get():
-                self.vars["sold_date"].set(datetime.now().strftime("%Y-%m-%d"))
+                self.vars["sold_date"].set(datetime.now(tz=timezone.utc).astimezone().date().isoformat())
         elif st == STATUS_PREORDER:
             self.entry_fees.configure(state="disabled")
             self.entry_sold_date.configure(state="disabled")
@@ -496,9 +504,9 @@ class ProductDialog(ctk.CTkToplevel):
 
     def _update_profit_preview(self) -> None:
         try:
-            buy = parse_money(self.vars["purchased_price"].get(), allow_empty=True) or Decimal("0")
+            buy = parse_money(self.vars["purchased_price"].get(), allow_empty=True) or Decimal(0)
             sold = parse_money(self.vars["selling_price"].get(), allow_empty=True)
-            fees = parse_money(self.vars["fees"].get(), allow_empty=True) or Decimal("0")
+            fees = parse_money(self.vars["fees"].get(), allow_empty=True) or Decimal(0)
             qty = parse_int(self.vars["quantity"].get(), 1)
             if sold is not None and buy >= 0:
                 profit, roi = calculate_profit(buy, sold, fees, qty)
@@ -507,7 +515,7 @@ class ProductDialog(ctk.CTkToplevel):
                 self.profit_info_var.set(f"Profitto Netto Totale: {prefix}{money(profit)}   |   ROI: {roi_str}")
             else:
                 self.profit_info_var.set("Inserisci il prezzo di vendita per calcolare profitto e ROI.")
-        except Exception:
+        except (ValueError, TypeError, ArithmeticError):
             self.profit_info_var.set("Impossibile calcolare il profitto con i dati correnti.")
 
     def _submit(self) -> None:
@@ -518,12 +526,12 @@ class ProductDialog(ctk.CTkToplevel):
             qty = parse_int(self.vars["quantity"].get(), 1)
             purchase = parse_money(self.vars["purchased_price"].get())
             sale = parse_money(self.vars["selling_price"].get(), allow_empty=True)
-            fees = parse_money(self.vars["fees"].get(), allow_empty=True) or Decimal("0")
+            fees = parse_money(self.vars["fees"].get(), allow_empty=True) or Decimal(0)
             st = self.vars["status"].get()
             sold = sale if st == STATUS_SOLD else None
             if st == STATUS_SOLD and sold is None:
                 raise ValueError("Per i prodotti venduti e obbligatorio inserire il Prezzo di Vendita.")
-            rec_rd = self.record.get("release_date", "") if self.record and "release_date" in self.record.keys() and self.record["release_date"] else ""
+            rec_rd = self.record.get("release_date", "") if self.record and "release_date" in self.record and self.record["release_date"] else ""
             release_date = parse_date(rec_rd)
             sold_date = self.vars["sold_date"].get().strip()
             sold_date = parse_date(sold_date)
@@ -558,11 +566,11 @@ class BulkStatusDialog(ctk.CTkToplevel):
         parent: tk.Misc,
         count: int,
         target_status: str,
-        selling_places: Optional[List[str]] = None,
+        selling_places: list[str] | None = None,
         default_place: str = "",
     ) -> None:
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
-        self.result: Optional[Dict[str, Any]] = None
+        self.result: dict[str, Any] | None = None
         self.count = count
         self.target_status = target_status
 
@@ -644,14 +652,14 @@ class BulkStatusDialog(ctk.CTkToplevel):
         if self.target_status == STATUS_SOLD:
             try:
                 sp_total = parse_money(self.var_sold_price.get(), allow_empty=True)
-                fees_total = parse_money(self.var_fees.get(), allow_empty=True) or Decimal("0")
+                fees_total = parse_money(self.var_fees.get(), allow_empty=True) or Decimal(0)
                 if sp_total is None:
                     raise ValueError("Per i prodotti venduti e obbligatorio il prezzo di vendita totale.")
                 selling_place = self.var_selling_place.get().strip()
                 count_dec = Decimal(str(self.count))
                 extra["sold_price"] = (sp_total / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if self.count > 0 else sp_total
                 extra["fees"] = (fees_total / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if self.count > 0 else fees_total
-                extra["sold_date"] = datetime.now().strftime("%Y-%m-%d")
+                extra["sold_date"] = datetime.now(tz=timezone.utc).astimezone().date().isoformat()
                 extra["selling_place"] = selling_place
                 import uuid
                 extra["bundle_id"] = str(uuid.uuid4())
@@ -671,7 +679,7 @@ class PartialStockMoveDialog(ctk.CTkToplevel):
 
     def __init__(self, parent: tk.Misc, product_name: str, max_qty: int) -> None:
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
-        self.result: Optional[int] = None
+        self.result: int | None = None
         self.max_qty = max_qty
 
         self.title("Sposta in Magazzino")
@@ -763,13 +771,13 @@ class PartialStockMoveDialog(ctk.CTkToplevel):
 class ManagePlacesDialog(ctk.CTkToplevel):
     """Finestra per la gestione dei luoghi di vendita."""
 
-    def __init__(self, parent: tk.Misc, db: Any, current_places: List[str], on_update: callable) -> None:
+    def __init__(self, parent: tk.Misc, db: Any, current_places: list[str], on_update: callable) -> None:
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.db = db
         self.current_places = current_places
         self.on_update = on_update
-        self.selected_place: Optional[str] = None
-        self._place_widgets: Dict[str, ctk.CTkButton] = {}
+        self.selected_place: str | None = None
+        self._place_widgets: dict[str, ctk.CTkButton] = {}
 
         self.title("Gestione Luoghi di Vendita")
         center_window(self, 550, 650)

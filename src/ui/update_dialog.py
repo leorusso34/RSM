@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Finestra modale di dialogo per la notifica e il download degli aggiornamenti di RSM.
 """
 
 import threading
 import tkinter as tk
-from typing import Any, Dict
+from typing import Any
 
 import customtkinter as ctk
 
@@ -24,7 +23,7 @@ class UpdateDialog(ctk.CTkToplevel):
     def __init__(
         self,
         parent: tk.Misc,
-        update_info: Dict[str, Any],
+        update_info: dict[str, Any],
         github_token: str = "",
     ) -> None:
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
@@ -167,7 +166,7 @@ class UpdateDialog(ctk.CTkToplevel):
                 progress_callback=on_progress,
                 status_callback=on_status,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             self.after(0, lambda e=exc: self._on_error(str(e)))
 
     def _update_progress_ui(self, fraction: float, percent: int) -> None:

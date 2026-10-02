@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Finestra di dialogo per l'inserimento rapido tramite Intelligenza Artificiale con CustomTkinter."""
 
 import sys
@@ -7,14 +6,15 @@ import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import customtkinter as ctk
 from PIL import Image
 
-from ..config import DARK_THEME, STATUS_STOCK, PROJECT_DIR
 from ..ai_agent import parse_product_with_ai
+from ..config import DARK_THEME, PROJECT_DIR, STATUS_STOCK
 from ..speech_helper import SpeechTranscriber
-from ..utils import apply_dark_titlebar, apply_window_icon, center_window
+from ..utils import apply_dark_titlebar, center_window
 
 
 class AIDialog(ctk.CTkToplevel):
@@ -23,8 +23,8 @@ class AIDialog(ctk.CTkToplevel):
     def __init__(self, parent: tk.Misc, db: Any) -> None:
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
         self.db = db
-        self.result: Optional[List[Dict[str, Any]]] = None
-        self.transcriber: Optional[SpeechTranscriber] = None
+        self.result: list[dict[str, Any]] | None = None
+        self.transcriber: SpeechTranscriber | None = None
         self.is_recording: bool = False
 
         self.title("Inserimento Rapido con AI")
@@ -44,7 +44,7 @@ class AIDialog(ctk.CTkToplevel):
 
         pil_img = Image.open(mic_path).convert("RGBA")
         target_h = 22
-        target_w = max(1, int(round(target_h * (pil_img.width / max(1, pil_img.height)))))
+        target_w = max(1, round(target_h * (pil_img.width / max(1, pil_img.height))))
         self._mic_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(target_w, target_h))
 
         # Versione rossa durante la registrazione vocale
@@ -62,7 +62,7 @@ class AIDialog(ctk.CTkToplevel):
             try:
                 ai_pil = Image.open(ai_path).convert("RGBA")
                 self._ai_header_img = ctk.CTkImage(light_image=ai_pil, dark_image=ai_pil, size=(22, 22))
-            except Exception:
+            except (OSError, ValueError):
                 pass
 
         self._build_ui()
@@ -193,10 +193,11 @@ class AIDialog(ctk.CTkToplevel):
         try:
             parsed_data = parse_product_with_ai(prompt, api_key)
             self.after(0, lambda: self._on_ai_success(parsed_data))
-        except Exception as exc:
-            self.after(0, lambda: self._on_ai_error(str(exc)))
+        except Exception as exc:  # noqa: BLE001
+            err_msg = str(exc)
+            self.after(0, lambda msg=err_msg: self._on_ai_error(msg))
 
-    def _on_ai_success(self, parsed_list: List[Dict[str, Any]]) -> None:
+    def _on_ai_success(self, parsed_list: list[dict[str, Any]]) -> None:
         count = len(parsed_list)
         if count == 0:
             self.btn_generate.configure(state="normal")

@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Modulo per la sincronizzazione ordini via email tramite Gmail IMAP e Gemini AI."""
 
 import email
-from email.header import decode_header
 import html
 import http.client
 import imaplib
 import json
 import re
 import socket
-from datetime import datetime
-from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime, timezone
+from email.header import decode_header
+from typing import Any
 
 from .config import STATUS_PREORDER
 
 
-def _clean_header(header_value: Optional[str]) -> str:
+def _clean_header(header_value: str | None) -> str:
     """Decodifica un'intestazione MIME di un'email in stringa UTF-8 leggibile."""
     if not header_value:
         return ""
@@ -29,14 +27,14 @@ def _clean_header(header_value: Optional[str]) -> str:
                 if encoding:
                     try:
                         result.append(fragment.decode(encoding, errors="replace"))
-                    except Exception:
+                    except (LookupError, UnicodeDecodeError):
                         result.append(fragment.decode("utf-8", errors="replace"))
                 else:
                     result.append(fragment.decode("utf-8", errors="replace"))
             else:
                 result.append(str(fragment))
         return "".join(result).strip()
-    except Exception:
+    except (LookupError, UnicodeDecodeError, ValueError):
         return str(header_value).strip()
 
 
@@ -70,7 +68,7 @@ def _extract_body(msg: email.message.Message) -> str:
             charset = part.get_content_charset() or "utf-8"
             try:
                 decoded_str = payload.decode(charset, errors="replace")
-            except Exception:
+            except (LookupError, UnicodeDecodeError):
                 decoded_str = payload.decode("utf-8", errors="replace")
 
             if content_type == "text/plain" and not body:
@@ -86,7 +84,7 @@ def _extract_body(msg: email.message.Message) -> str:
             charset = msg.get_content_charset() or "utf-8"
             try:
                 decoded_str = payload.decode(charset, errors="replace")
-            except Exception:
+            except (LookupError, UnicodeDecodeError):
                 decoded_str = payload.decode("utf-8", errors="replace")
 
             if msg.get_content_type() == "text/html":
@@ -97,7 +95,7 @@ def _extract_body(msg: email.message.Message) -> str:
     return body.strip()
 
 
-def test_gmail_connection(email_addr: str, app_password: str) -> Tuple[bool, str]:
+def test_gmail_connection(email_addr: str, app_password: str) -> tuple[bool, str]:
     """Testa la connessione a Gmail con l'indirizzo email e la password per le app."""
     clean_email = email_addr.strip()
     clean_pass = app_password.replace(" ", "").strip()
@@ -118,15 +116,15 @@ def test_gmail_connection(email_addr: str, app_password: str) -> Tuple[bool, str
         if "Application-specific password required" in msg or "Invalid credentials" in msg:
             return False, "Credenziali non valide: assicurati di usare la Password per le App a 16 caratteri creata su Google."
         return False, f"Errore autenticazione IMAP: {msg}"
-    except Exception as exc:
+    except OSError as exc:
         return False, f"Errore di connessione: {exc}"
 
 
-def fetch_unread_order_emails(email_addr: str, app_password: str, max_emails: int = 20) -> List[Dict[str, Any]]:
+def fetch_unread_order_emails(email_addr: str, app_password: str, max_emails: int = 20) -> list[dict[str, Any]]:
     """Recupera le email non lette (UNSEEN) dalla casella INBOX."""
     clean_email = email_addr.strip()
     clean_pass = app_password.replace(" ", "").strip()
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
 
     mail = imaplib.IMAP4_SSL("imap.gmail.com", 993)
     try:
@@ -156,13 +154,13 @@ def fetch_unread_order_emails(email_addr: str, app_password: str, max_emails: in
             body = _extract_body(msg)
 
             # Estrai una data sintetica se possibile
-            date_formatted = datetime.now().strftime("%Y-%m-%d")
+            date_formatted = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d")
             try:
                 parsed_tuple = email.utils.parsedate_tz(msg.get("Date"))
                 if parsed_tuple:
                     ts = email.utils.mktime_tz(parsed_tuple)
-                    date_formatted = datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
-            except Exception:
+                    date_formatted = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone().strftime("%Y-%m-%d")
+            except (ValueError, OverflowError, TypeError, OSError):
                 pass
 
             results.append({
@@ -177,17 +175,17 @@ def fetch_unread_order_emails(email_addr: str, app_password: str, max_emails: in
     finally:
         try:
             mail.close()
-        except Exception:
+        except (imaplib.IMAP4.error, OSError):
             pass
         try:
             mail.logout()
-        except Exception:
+        except (imaplib.IMAP4.error, OSError):
             pass
 
     return results
 
 
-def mark_emails_as_read(email_addr: str, app_password: str, email_uids: List[str]) -> None:
+def mark_emails_as_read(email_addr: str, app_password: str, email_uids: list[str]) -> None:
     """Contrassegna le email specificate con il flag \\Seen (Letta)."""
     if not email_uids:
         return
@@ -202,20 +200,20 @@ def mark_emails_as_read(email_addr: str, app_password: str, email_uids: List[str
         for uid in email_uids:
             try:
                 mail.store(uid, "+FLAGS", "\\Seen")
-            except Exception:
+            except (imaplib.IMAP4.error, OSError):
                 pass
     finally:
         try:
             mail.close()
-        except Exception:
+        except (imaplib.IMAP4.error, OSError):
             pass
         try:
             mail.logout()
-        except Exception:
+        except (imaplib.IMAP4.error, OSError):
             pass
 
 
-def parse_order_email_with_gemini(email_item: Dict[str, Any], api_key: str) -> List[Dict[str, Any]]:
+def parse_order_email_with_gemini(email_item: dict[str, Any], api_key: str) -> list[dict[str, Any]]:
     """Invia il contenuto dell'email a Gemini AI per estrarre i dati dei prodotti ordinati."""
     host = "generativelanguage.googleapis.com"
     path = f"/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
@@ -296,11 +294,11 @@ def parse_order_email_with_gemini(email_item: Dict[str, Any], api_key: str) -> L
             for p in products:
                 p["status"] = STATUS_PREORDER
                 if not p.get("release_date"):
-                    p["release_date"] = email_item.get("date", datetime.now().strftime("%Y-%m-%d"))
+                    p["release_date"] = email_item.get("date", datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d"))
             return products
         return []
-    except Exception as exc:
-        raise RuntimeError(f"Errore AI Gemini: {exc}")
+    except (http.client.HTTPException, OSError, json.JSONDecodeError, ValueError, KeyError, IndexError, TypeError) as exc:
+        raise RuntimeError(f"Errore AI Gemini: {exc}") from exc
     finally:
         socket.setdefaulttimeout(_prev_timeout)
         conn.close()

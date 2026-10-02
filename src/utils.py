@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Utility di formattazione, calcolo e I/O per RSM."""
 
 import csv
 import re
-from datetime import datetime
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from typing import Any, Optional, Tuple, List, Dict
+import tkinter as tk
+from datetime import datetime, timezone
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from typing import Any
 
-from .config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK, PROJECT_DIR, MONTHS_SHORT_IT
+from .config import (
+    MONTHS_SHORT_IT,
+    PROJECT_DIR,
+)
 
-def parse_money(value: Any, allow_empty: bool = False) -> Optional[Decimal]:
+
+def parse_money(value: Any, allow_empty: bool = False) -> Decimal | None:
     """Converte un importo monetario valido in Decimal con due decimali."""
     if value is None or str(value).strip() == "":
         if allow_empty:
@@ -52,19 +56,19 @@ def parse_money(value: Any, allow_empty: bool = False) -> Optional[Decimal]:
     return amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def money_to_cents(value: Optional[Any]) -> Optional[int]:
+def money_to_cents(value: Any | None) -> int | None:
     """Converte un importo Decimal in centesimi interi per SQLite."""
     if value is None:
         return None
     amount = value if isinstance(value, Decimal) else Decimal(str(value))
-    return int((amount * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return int((amount * 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
 
-def cents_to_money(value: Optional[int]) -> Optional[Decimal]:
+def cents_to_money(value: int | None) -> Decimal | None:
     """Converte centesimi interi SQLite in un importo Decimal."""
     if value is None:
         return None
-    return (Decimal(value) / Decimal("100")).quantize(Decimal("0.01"))
+    return (Decimal(value) / Decimal(100)).quantize(Decimal("0.01"))
 
 def money(value: Any) -> str:
     """Formatta un numero come importo monetario in Euro (€ 1.234,56)."""
@@ -74,7 +78,7 @@ def money(value: Any) -> str:
         amount = Decimal(str(value)).quantize(Decimal("0.01"))
         formatted = f"{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         return f"€ {formatted}"
-    except Exception:
+    except (ValueError, TypeError, InvalidOperation):
         return "€ 0,00"
 
 def parse_int(value: Any, default: int = 1) -> int:
@@ -106,7 +110,7 @@ def parse_date(value: Any, allow_empty: bool = True) -> str:
     
     for fmt in formats:
         try:
-            return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
+            return datetime.strptime(text, fmt).replace(tzinfo=timezone.utc).strftime("%Y-%m-%d")
         except ValueError:
             continue
             
@@ -124,7 +128,7 @@ def format_month_label(month_key: Any) -> str:
         return f"{short_name} '{year_part[2:]}"
     return text
 
-def calculate_profit(purchased_price: Any, sold_price: Optional[Any], fees: Any = Decimal("0"), quantity: int = 1) -> Tuple[Decimal, Decimal]:
+def calculate_profit(purchased_price: Any, sold_price: Any | None, fees: Any = Decimal(0), quantity: int = 1) -> tuple[Decimal, Decimal]:
     """
     Calcola il profitto totale netto e il ROI % per un articolo venduto.
 
@@ -139,14 +143,14 @@ def calculate_profit(purchased_price: Any, sold_price: Optional[Any], fees: Any 
     purchased = purchased_price if isinstance(purchased_price, Decimal) else Decimal(str(purchased_price))
     sold = sold_price if isinstance(sold_price, Decimal) else (Decimal(str(sold_price)) if sold_price is not None else None)
     fee_amount = fees if isinstance(fees, Decimal) else Decimal(str(fees))
-    qty = Decimal(str(quantity)) if quantity and quantity > 0 else Decimal("1")
+    qty = Decimal(str(quantity)) if quantity and quantity > 0 else Decimal(1)
 
     if sold is None or purchased < 0:
-        return Decimal("0"), Decimal("0")
+        return Decimal(0), Decimal(0)
 
     total_cost = purchased * qty
     total_profit = sold - total_cost - fee_amount
-    roi = (total_profit / total_cost) * 100 if total_cost > 0 else Decimal("0")
+    roi = (total_profit / total_cost) * 100 if total_cost > 0 else Decimal(0)
     return total_profit.quantize(Decimal("0.01")), roi.quantize(Decimal("0.01"))
 
 def normalize_header(value: Any) -> str:
@@ -162,7 +166,7 @@ def read_spreadsheet_raw(filepath: str) -> str:
     Funziona con qualsiasi struttura di colonne, lingue e formati.
     """
     path = str(filepath)
-    lines: List[str] = []
+    lines: list[str] = []
 
     if path.lower().endswith(".csv"):
         # Lettura CSV con rilevamento automatico del separatore
@@ -199,7 +203,7 @@ def read_spreadsheet_raw(filepath: str) -> str:
     return "\n".join(lines)
 
 
-def export_to_csv(filepath: str, products: List[dict]) -> int:
+def export_to_csv(filepath: str, products: list[dict]) -> int:
     """Esporta una lista di prodotti in un file CSV formattato per Excel."""
     headers = [
         "ID", "NOME", "TAGLIA", "QUANTITÀ", "PREZZO ACQUISTO", "LUOGO ACQUISTO",
@@ -240,9 +244,10 @@ def export_to_csv(filepath: str, products: List[dict]) -> int:
 def apply_window_icon(window: Any) -> None:
     """Imposta l'icona personalizzata ad alta definizione su qualsiasi finestra (CTk o CTkToplevel)."""
     try:
-        import sys
         import ctypes
+        import sys
         from pathlib import Path
+
         from PIL import Image, ImageTk
 
         ico_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_icon.ico"
@@ -259,7 +264,7 @@ def apply_window_icon(window: Any) -> None:
         if ico_path.exists():
             try:
                 window.iconbitmap(str(ico_path))
-            except Exception:
+            except (tk.TclError, OSError):
                 pass
 
         # 2. Registra le icone multi-risoluzione native (16, 24, 32, 48, 64, 128, 256) per Tkinter
@@ -273,7 +278,7 @@ def apply_window_icon(window: Any) -> None:
                     photos.append(ImageTk.PhotoImage(resized))
                 window._icon_photos_keepalive = photos
                 window.iconphoto(False, *photos)
-            except Exception:
+            except (tk.TclError, OSError, ValueError):
                 pass
 
         # 3. Chiamata Win32 diretta WM_SETICON per rendere la barra delle applicazioni perfettamente nitida
@@ -288,9 +293,9 @@ def apply_window_icon(window: Any) -> None:
                     ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 1, h_icon_big)
                 if h_icon_small:
                     ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 0, h_icon_small)
-            except Exception:
+            except (AttributeError, OSError):
                 pass
-    except Exception:
+    except (AttributeError, OSError, tk.TclError):
         pass
 
 
@@ -305,7 +310,7 @@ def apply_dark_titlebar(window) -> None:
         ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
         # Try Windows 10
         ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
-    except Exception:
+    except (AttributeError, OSError):
         pass
 
 
@@ -315,7 +320,7 @@ def center_window(window: Any, width: int, height: int) -> None:
         import ctypes
         screen_w = ctypes.windll.user32.GetSystemMetrics(0)
         screen_h = ctypes.windll.user32.GetSystemMetrics(1)
-    except Exception:
+    except (AttributeError, OSError):
         screen_w = window.winfo_screenwidth()
         screen_h = window.winfo_screenheight()
 

@@ -28,3 +28,4 @@ data/
 fix_*.py
 test.py
 test_*.py
+*_log.txt
