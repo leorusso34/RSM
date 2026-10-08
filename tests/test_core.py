@@ -1,12 +1,19 @@
 import csv
 import sqlite3
 from decimal import Decimal
-from pathlib import Path
+from unittest.mock import MagicMock
 
 from src.config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
 from src.database import InventoryDatabase
 from src.ui.main_window import InventoryApp
-from src.utils import calculate_profit, export_to_csv, read_spreadsheet_raw, parse_int, parse_money, format_month_label
+from src.utils import (
+    calculate_profit,
+    export_to_csv,
+    format_month_label,
+    parse_int,
+    parse_money,
+    read_spreadsheet_raw,
+)
 
 
 def product(name="Test", status=STATUS_STOCK):
@@ -24,7 +31,7 @@ def product(name="Test", status=STATUS_STOCK):
 def test_money_and_profit_are_strict():
     assert parse_money("€ 12,50") == Decimal("12.50")
     assert parse_money("1.234") == Decimal("1234.00")
-    assert calculate_profit(Decimal("100"), Decimal("0"), Decimal("5"), 2)[0] == Decimal("-205.00")
+    assert calculate_profit(Decimal(100), Decimal(0), Decimal(5), 2)[0] == Decimal("-205.00")
     # Prodotto a costo zero (es. regalo/omaggio venduto a 50€ con 2€ fees)
     profit_zero_cost, roi_zero_cost = calculate_profit(Decimal("0.00"), Decimal("50.00"), Decimal("2.00"), 1)
     assert profit_zero_cost == Decimal("48.00")
@@ -147,7 +154,7 @@ def test_email_sync_dialog_initialization(tmp_path):
 
     try:
         app = InventoryApp()
-    except Exception:
+    except Exception:  # noqa: BLE001
         import pytest
         db.close()
         pytest.skip("Tcl/Tk non disponibile nell'ambiente di test senza display")
@@ -166,6 +173,7 @@ def test_email_sync_dialog_initialization(tmp_path):
 
 def test_external_config_json_priority(tmp_path, monkeypatch):
     import json
+
     from src import database
     fake_config = tmp_path / "config.json"
     fake_config.write_text(json.dumps({"gemini_api_key": "KEY_FROM_JSON"}), encoding="utf-8")
@@ -188,14 +196,14 @@ def test_search_by_price(tmp_path):
         "name": "Jordan 4 Retro", "size": "43", "quantity": 1,
         "purchased_price": Decimal("210.50"), "purchased_place": "SNKRS",
         "selling_place": "", "selling_price": Decimal("350.00"),
-        "sold_price": None, "fees": Decimal("0"), "sold_date": "",
+        "sold_price": None, "fees": Decimal(0), "sold_date": "",
         "status": STATUS_STOCK, "release_date": "", "notes": ""
     })
     db.save({
         "name": "Yeezy Slide", "size": "42", "quantity": 1,
         "purchased_price": Decimal("70.00"), "purchased_place": "Confirmed",
         "selling_place": "", "selling_price": Decimal("110.00"),
-        "sold_price": None, "fees": Decimal("0"), "sold_date": "",
+        "sold_price": None, "fees": Decimal(0), "sold_date": "",
         "status": STATUS_STOCK, "release_date": "", "notes": ""
     })
 
@@ -250,7 +258,7 @@ def test_undo_stack_limit_and_actions(tmp_path):
         "name": "Articolo Originale", "size": "42", "quantity": 1,
         "purchased_price": Decimal("100.00"), "purchased_place": "Store",
         "selling_place": "", "selling_price": None, "sold_price": None,
-        "fees": Decimal("0"), "sold_date": "", "status": STATUS_STOCK,
+        "fees": Decimal(0), "sold_date": "", "status": STATUS_STOCK,
         "release_date": "", "notes": ""
     })
     app_stub._push_undo("Aggiunto articolo", lambda nids=[pid]: app_stub._undo_insert(nids))
@@ -301,7 +309,8 @@ def test_partial_sale_splits_record(tmp_path):
     vendere k pezzi su N deve creare un nuovo record vendita (qty=k)
     e lasciare il record originale con qty=N-k nello stesso status."""
     from decimal import Decimal
-    from src.config import STATUS_STOCK, STATUS_SOLD
+
+    from src.config import STATUS_SOLD, STATUS_STOCK
 
     db = InventoryDatabase(tmp_path / "inventory.db")
 
@@ -520,7 +529,9 @@ def test_bulk_status_move_with_selling_place(tmp_path):
 def test_scrollable_dropdown_behavior():
     """Verifica che CTkScrollableDropdown apra, chiuda e imposti correttamente i valori sul combobox."""
     import time
+
     import customtkinter as ctk
+
     from src.ui.dialogs import CTkScrollableDropdown
 
     root = None
@@ -528,7 +539,7 @@ def test_scrollable_dropdown_behavior():
         try:
             root = ctk.CTk()
             break
-        except Exception:
+        except Exception:  # noqa: BLE001
             time.sleep(0.15)
     if root is None:
         import pytest
@@ -681,5 +692,49 @@ def test_status_timer_auto_reset():
     app.set_status("Seconda notifica", auto_reset=True)
     assert first_timer in cancelled
     assert app.status_bar_var.get() == "Seconda notifica"
+
+
+def test_cross_platform_config_app_directory(monkeypatch):
+    """Verifica che app_directory gestisca correttamente bundle macOS .app e modalità standard."""
+    import sys
+
+    from src.config import app_directory
+
+    # Simula eseguibile dentro un bundle macOS .app
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    fake_exe = "/Applications/RSM.app/Contents/MacOS/RSM"
+    monkeypatch.setattr(sys, "executable", fake_exe)
+    monkeypatch.setattr(sys, "platform", "darwin")
+
+    dir_found = app_directory()
+    assert dir_found.as_posix().endswith("/Applications")
+
+    # Simula eseguibile Windows standard
+    fake_win_exe = "C:\\Program Files\\RSM\\RSM.exe"
+    monkeypatch.setattr(sys, "executable", fake_win_exe)
+    monkeypatch.setattr(sys, "platform", "win32")
+
+    win_dir = app_directory()
+    assert win_dir.as_posix().endswith("Program Files/RSM")
+
+
+def test_cross_platform_utils_non_win32(monkeypatch):
+    """Verifica che apply_dark_titlebar e center_window non vadano in crash su macOS / Linux."""
+    import sys
+
+    from src.utils import apply_dark_titlebar, center_window
+
+    monkeypatch.setattr(sys, "platform", "darwin")
+
+    mock_win = MagicMock()
+    mock_win.winfo_screenwidth.return_value = 1920
+    mock_win.winfo_screenheight.return_value = 1080
+    mock_win._get_window_scaling = lambda: 1.0
+
+    # Non deve sollevare alcuna eccezione
+    apply_dark_titlebar(mock_win)
+    center_window(mock_win, 800, 600)
+    mock_win.geometry.assert_called_with("800x600+560+240")
+
 
 

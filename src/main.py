@@ -1,7 +1,8 @@
 """Entry point principale per RSM."""
 
-import ctypes
+import contextlib
 import sqlite3
+import sys
 import tkinter as tk
 from tkinter import messagebox
 
@@ -10,26 +11,34 @@ from .ui.main_window import InventoryApp
 
 
 def main() -> None:
-    # 1. Imposta AppUserModelID per visualizzare correttamente l'icona nitida nella taskbar di Windows
-    try:
-        app_id = "russostock.rsm.app.1.0"
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
-    except (AttributeError, OSError):
-        pass
+    if sys.platform == "win32":
+        import ctypes
 
-    # 2. Abilita il supporto High DPI su Windows per testi e grafica nitidi
-    try:
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    except (AttributeError, OSError):
+        # 1. Imposta AppUserModelID per visualizzare correttamente l'icona nitida nella taskbar di Windows
         try:
-            ctypes.windll.user32.SetProcessDPIAware()
+            app_id = "russostock.rsm.app.1.0"
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
         except (AttributeError, OSError):
             pass
+
+        # 2. Abilita il supporto High DPI su Windows per testi e grafica nitidi
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)
+        except (AttributeError, OSError):
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()
+            except (AttributeError, OSError):
+                pass
 
     try:
         app = InventoryApp()
         app.update_idletasks()
-        app.after(0, lambda: app.state("zoomed"))
+        if sys.platform == "win32":
+            with contextlib.suppress(tk.TclError):
+                app.after(0, lambda: app.state("zoomed"))
+        elif sys.platform == "darwin":
+            with contextlib.suppress(tk.TclError):
+                app.after(0, lambda: app.attributes("-zoomed", True))
         app.mainloop()
     except sqlite3.Error as exc:
         root = tk.Tk()

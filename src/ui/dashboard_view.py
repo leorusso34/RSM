@@ -1,5 +1,6 @@
 """Vista Dashboard e Grafici Statistici per RSM."""
 
+import sys
 import tkinter as tk
 from decimal import Decimal
 from typing import Any
@@ -157,6 +158,9 @@ class DashboardView(ctk.CTkFrame):
             menu.tk_popup(event.x_root, event.y_root)
 
         widget.bind("<Button-3>", show_menu)
+        widget.bind("<Button-2>", show_menu)
+        if sys.platform == "darwin":
+            widget.bind("<Control-Button-1>", show_menu)
 
     def _bind_context_menu(self, widget: tk.Widget, chart_id: str):
         menu = tk.Menu(self, tearoff=0, bg=DARK_THEME["bg_card"], fg=DARK_THEME["fg_main"], activebackground=DARK_THEME["accent"])
@@ -168,6 +172,9 @@ class DashboardView(ctk.CTkFrame):
             menu.tk_popup(event.x_root, event.y_root)
 
         widget.bind("<Button-3>", show_menu)
+        widget.bind("<Button-2>", show_menu)
+        if sys.platform == "darwin":
+            widget.bind("<Control-Button-1>", show_menu)
 
     def _hide_chart(self, chart_id: str):
         import json

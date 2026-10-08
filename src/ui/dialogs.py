@@ -314,6 +314,7 @@ class ProductDialog(ctk.CTkToplevel):
         self.bind("<Return>", self._on_return)
         self.bind("<KP_Enter>", self._on_return)
         self.bind("<Control-Return>", lambda _e: self._submit())
+        self.bind("<Command-Return>", lambda _e: self._submit())
         self.after(80, self._focus_name)
 
     def _on_return(self, event=None) -> str | None:

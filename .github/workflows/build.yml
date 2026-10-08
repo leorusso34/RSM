@@ -1,0 +1,60 @@
+name: Build Executables
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: RSM-Windows
+            zip_name: RSM-Windows.zip
+          - os: macos-latest
+            artifact_name: RSM-macOS
+            zip_name: RSM-macOS.zip
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build Application with PyInstaller
+        run: |
+          python build.py
+
+      - name: Package Release (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/RSM -DestinationPath ${{ matrix.zip_name }}
+
+      - name: Package Release (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cd dist
+          zip -r -y ../${{ matrix.zip_name }} RSM/
+          cd ..
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.zip_name }}
+          if-no-files-found: error

@@ -2,6 +2,7 @@
 
 import csv
 import re
+import sys
 import tkinter as tk
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
@@ -243,8 +244,6 @@ def export_to_csv(filepath: str, products: list[dict]) -> int:
 def apply_window_icon(window: Any) -> None:
     """Imposta l'icona personalizzata ad alta definizione su qualsiasi finestra (CTk o CTkToplevel)."""
     try:
-        import ctypes
-        import sys
         from pathlib import Path
 
         from PIL import Image, ImageTk
@@ -259,8 +258,8 @@ def apply_window_icon(window: Any) -> None:
         if not logo_path.exists():
             logo_path = PROJECT_DIR / "assets" / "app_logo.png"
 
-        # 1. Fallback Tkinter standard iconbitmap
-        if ico_path.exists():
+        # 1. Fallback Tkinter standard iconbitmap (supportato nativamente su Windows)
+        if ico_path.exists() and sys.platform == "win32":
             try:
                 window.iconbitmap(str(ico_path))
             except (tk.TclError, OSError):
@@ -277,12 +276,13 @@ def apply_window_icon(window: Any) -> None:
                     photos.append(ImageTk.PhotoImage(resized))
                 window._icon_photos_keepalive = photos
                 window.iconphoto(False, *photos)
-            except (tk.TclError, OSError, ValueError):
+            except (tk.TclError, OSError, ValueError, RuntimeError):
                 pass
 
         # 3. Chiamata Win32 diretta WM_SETICON per rendere la barra delle applicazioni perfettamente nitida
         if ico_path.exists() and sys.platform == "win32":
             try:
+                import ctypes
                 window.update_idletasks()
                 hwnd = ctypes.windll.user32.GetAncestor(window.winfo_id(), 2)  # GA_ROOT = 2
                 h_icon_big = ctypes.windll.user32.LoadImageW(None, str(ico_path), 1, 0, 0, 0x0010 | 0x0040)
@@ -294,16 +294,18 @@ def apply_window_icon(window: Any) -> None:
                     ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 0, h_icon_small)
             except (AttributeError, OSError):
                 pass
-    except (AttributeError, OSError, tk.TclError):
+    except (AttributeError, OSError, tk.TclError, RuntimeError):
         pass
 
 
 def apply_dark_titlebar(window) -> None:
     """Forza la titlebar di Windows 10/11 in modalità scura per matchare il tema."""
+    if sys.platform != "win32":
+        return
     try:
         import ctypes
         window.update_idletasks()
-        hwnd = ctypes.windll.user32.GetAncestor(window.winfo_id(), 2) # GA_ROOT = 2
+        hwnd = ctypes.windll.user32.GetAncestor(window.winfo_id(), 2)  # GA_ROOT = 2
         value = ctypes.c_int(1)
         # Try Windows 11
         ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
@@ -314,12 +316,16 @@ def apply_dark_titlebar(window) -> None:
 
 
 def center_window(window: Any, width: int, height: int) -> None:
-    """Centra una finestra (CTkToplevel o CTk) perfettamente allo schermo su qualsiasi monitor Windows, gestendo correttamente il DPI scaling."""
-    try:
-        import ctypes
-        screen_w = ctypes.windll.user32.GetSystemMetrics(0)
-        screen_h = ctypes.windll.user32.GetSystemMetrics(1)
-    except (AttributeError, OSError):
+    """Centra una finestra (CTkToplevel o CTk) perfettamente allo schermo, gestendo correttamente il DPI scaling su Windows."""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            screen_w = ctypes.windll.user32.GetSystemMetrics(0)
+            screen_h = ctypes.windll.user32.GetSystemMetrics(1)
+        except (AttributeError, OSError):
+            screen_w = window.winfo_screenwidth()
+            screen_h = window.winfo_screenheight()
+    else:
         screen_w = window.winfo_screenwidth()
         screen_h = window.winfo_screenheight()
 

@@ -49,6 +49,11 @@ def main() -> None:
         shutil.rmtree(old_build_dir, ignore_errors=True)
 
     # Costruisci il comando PyInstaller con tutte le inclusioni per CustomTkinter
+    data_sep = ";" if sys.platform == "win32" else ":"
+    icon_arg = "--icon=assets/app_icon.ico"
+    if sys.platform == "darwin" and (project_root / "assets" / "app_icon.icns").exists():
+        icon_arg = "--icon=assets/app_icon.icns"
+
     cmd = [
         sys.executable,
         "-m", "PyInstaller",
@@ -57,8 +62,8 @@ def main() -> None:
         "--windowed",
         "--name=RSM",
         "--clean",
-        "--icon=assets/app_icon.ico",
-        "--add-data=assets;assets",
+        icon_arg,
+        f"--add-data=assets{data_sep}assets",
         "--hidden-import=customtkinter",
         "--hidden-import=darkdetect",
         "--hidden-import=PIL",
@@ -69,6 +74,14 @@ def main() -> None:
 
     print(f"Esecuzione comando: {' '.join(cmd)}")
     subprocess.check_call(cmd, cwd=project_root)
+
+    # Su macOS PyInstaller può generare dist/RSM.app: organizziamo la cartella di rilascio dist/RSM
+    if sys.platform == "darwin" and (dist_root / "RSM.app").exists():
+        dist_dir.mkdir(parents=True, exist_ok=True)
+        target_app = dist_dir / "RSM.app"
+        if target_app.exists():
+            shutil.rmtree(target_app)
+        shutil.move(str(dist_root / "RSM.app"), str(target_app))
 
     # 2. Ripristino del database di produzione in dist/RSM/data
     if not dist_data.exists():

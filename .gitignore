@@ -25,7 +25,7 @@ data_backup_temp/
 data/
 
 # Temporary and test scripts
-fix_*.py
-test.py
-test_*.py
+/fix_*.py
+/test.py
+/test_*.py
 *_log.txt

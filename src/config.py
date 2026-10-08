@@ -45,7 +45,12 @@ DEFAULT_SELLING_PLACES = [
 def app_directory() -> Path:
     """Restituisce la cartella del file .py o dell'eseguibile PyInstaller."""
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
+        exe_path = Path(sys.executable).resolve()
+        # Su macOS con bundle .app (es. RSM.app/Contents/MacOS/RSM),
+        # risale all'esterno del bundle per mantenere i dati portabili e persistenti
+        if sys.platform == "darwin" and ".app/Contents/MacOS" in exe_path.as_posix():
+            return exe_path.parents[2].parent
+        return exe_path.parent
     return Path(__file__).resolve().parent
 
 BASE_DIR = app_directory()

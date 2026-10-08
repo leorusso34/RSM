@@ -3,6 +3,7 @@
 import contextlib
 import re
 import sqlite3
+import sys
 import threading
 import tkinter as tk
 from datetime import datetime, timezone
@@ -133,6 +134,17 @@ class InventoryApp(ctk.CTk):
         self.bind("<KeyPress-E>", self._on_e_press)
         self.bind("<Control-Tab>", lambda _e: self._switch_tab(1))
         self.bind("<Control-Shift-Tab>", lambda _e: self._switch_tab(-1))
+        if sys.platform == "darwin":
+            self.bind("<Command-n>", lambda _e: self.add_product())
+            self.bind("<Command-N>", lambda _e: self.add_product())
+            self.bind("<Command-f>", self._focus_search)
+            self.bind("<Command-F>", self._focus_search)
+            self.bind("<Command-r>", lambda _e: self.refresh())
+            self.bind("<Command-R>", lambda _e: self.refresh())
+            self.bind("<Command-z>", self.undo)
+            self.bind("<Command-Z>", self.undo)
+            self.bind("<Command-Tab>", lambda _e: self._switch_tab(1))
+            self.bind("<Command-Shift-Tab>", lambda _e: self._switch_tab(-1))
         self.search_entry.focus_set()
 
         # Avvio del controllo silenzioso degli aggiornamenti in background
@@ -453,7 +465,11 @@ class InventoryApp(ctk.CTk):
 
         tree.bind("<Double-1>", lambda e, t=tree: self._on_tree_double_click(e, t))
         tree.bind("<Button-3>", lambda e: self._on_right_click(e, tree))
+        tree.bind("<Button-2>", lambda e: self._on_right_click(e, tree))
+        if sys.platform == "darwin":
+            tree.bind("<Control-Button-1>", lambda e: self._on_right_click(e, tree))
         tree.bind("<Delete>", lambda _e: self.delete_selected())
+        tree.bind("<BackSpace>", lambda _e: self.delete_selected())
         tree.bind("<<TreeviewSelect>>", lambda _e: self._update_action_states())
 
         tree.bind("<ButtonPress-1>", lambda e, t=tree: self._on_drag_start(e, t))
@@ -472,6 +488,17 @@ class InventoryApp(ctk.CTk):
         tree.bind("<Control-V>", self._paste_from_clipboard)
         tree.bind("<Control-f>", self._focus_search)
         tree.bind("<Control-F>", self._focus_search)
+        if sys.platform == "darwin":
+            tree.bind("<Command-Shift-Up>", lambda e, t=tree: self._extend_selection(e, t, -1))
+            tree.bind("<Command-Shift-Down>", lambda e, t=tree: self._extend_selection(e, t, 1))
+            tree.bind("<Command-a>", lambda e, t=tree: self._select_all(e, t))
+            tree.bind("<Command-A>", lambda e, t=tree: self._select_all(e, t))
+            tree.bind("<Command-c>", self._copy_to_clipboard)
+            tree.bind("<Command-C>", self._copy_to_clipboard)
+            tree.bind("<Command-v>", self._paste_from_clipboard)
+            tree.bind("<Command-V>", self._paste_from_clipboard)
+            tree.bind("<Command-f>", self._focus_search)
+            tree.bind("<Command-F>", self._focus_search)
 
         self.trees[status] = tree
 
@@ -917,7 +944,7 @@ class InventoryApp(ctk.CTk):
                 except (tk.TclError, AttributeError):
                     pass
             else:
-                if not (event.state & 0x0001 or event.state & 0x0004):
+                if not (event.state & 0x0001 or event.state & 0x0004 or (sys.platform == "darwin" and event.state & 0x0008)):
                     item = tree.identify_row(event.y)
                     if item:
                         tree.selection_set(item)

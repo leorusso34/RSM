@@ -73,14 +73,34 @@ def check_for_updates(current_version: str = APP_VERSION) -> dict[str, Any] | No
 
         assets = data.get("assets", [])
         zip_asset = None
+        target_keyword = "mac" if sys.platform == "darwin" else "win"
+
+        # 1. Cerca prima uno zip specifico per il sistema operativo corrente (es. 'win' o 'mac')
         for asset in assets:
             name = asset.get("name", "").lower()
-            if name.endswith(".zip"):
-                if "rsm" in name:
+            if name.endswith(".zip") and target_keyword in name:
+                zip_asset = asset
+                break
+
+        # 2. Se non trova uno zip con la keyword del proprio OS, cerca uno zip generico evitando l'altro OS
+        if not zip_asset:
+            other_keyword = "win" if sys.platform == "darwin" else "mac"
+            for asset in assets:
+                name = asset.get("name", "").lower()
+                if name.endswith(".zip") and other_keyword not in name:
+                    if "rsm" in name:
+                        zip_asset = asset
+                        break
+                    if not zip_asset:
+                        zip_asset = asset
+
+        # 3. Fallback di sicurezza: qualsiasi zip con 'rsm'
+        if not zip_asset:
+            for asset in assets:
+                name = asset.get("name", "").lower()
+                if name.endswith(".zip"):
                     zip_asset = asset
                     break
-                if not zip_asset:
-                    zip_asset = asset
 
         if not zip_asset:
             return None
@@ -208,112 +228,163 @@ def apply_update_and_restart(
         # Individua in modo robusto la cartella sorgente contenente l'applicazione:
         # Se 'RSM.exe' si trova direttamente in extract_dir, usiamo quella.
         # Altrimenti cerchiamo la cartella che contiene 'RSM.exe' (es. dentro 'RSM/').
-        if (extract_dir / "RSM.exe").exists():
+        # Individua in modo robusto la cartella sorgente contenente l'applicazione:
+        # Su Windows cerca 'RSM.exe', su macOS cerca 'RSM.app' o binario 'RSM'
+        if (extract_dir / "RSM.exe").exists() or (extract_dir / "RSM.app").exists() or (extract_dir / "RSM").exists():
             source_root = extract_dir
         else:
-            exe_candidates = list(extract_dir.rglob("RSM.exe"))
-            if exe_candidates:
-                source_root = exe_candidates[0].parent
+            candidates = (
+                list(extract_dir.rglob("RSM.exe"))
+                + list(extract_dir.rglob("RSM.app"))
+                + [p for p in extract_dir.rglob("RSM") if p.is_file()]
+            )
+            if candidates:
+                cand = candidates[0]
+                if cand.name == "RSM.app":
+                    source_root = cand.parent
+                elif ".app/Contents/MacOS" in cand.as_posix():
+                    source_root = cand.parents[2].parent
+                else:
+                    source_root = cand.parent
             else:
                 subfolders = [f for f in extract_dir.iterdir() if f.is_dir()]
                 source_root = subfolders[0] if len(subfolders) == 1 else extract_dir
 
         # Determina la directory di destinazione corretta:
-        # - Se gira come exe compilato (PyInstaller): è la cartella dell'eseguibile stesso
-        # - Se gira come script Python (sviluppo/testing): è dist/RSM/ nella root del progetto
+        # - Se gira come exe/app compilata (PyInstaller): cartella dell'applicazione
+        # - Se gira come script Python (sviluppo/testing): dist/RSM/ nella root del progetto
         if getattr(sys, "frozen", False):
-            target_app_dir = Path(sys.executable).resolve().parent
+            exe_path = Path(sys.executable).resolve()
+            if sys.platform == "darwin" and ".app/Contents/MacOS" in exe_path.as_posix():
+                target_app_dir = exe_path.parents[2].parent
+            else:
+                target_app_dir = exe_path.parent
         else:
             target_app_dir = (PROJECT_DIR / "dist" / "RSM").resolve()
 
         if status_callback:
             status_callback("Avvio aggiornamento in background...")
 
-        # Genera un batch script helper nella directory temp di sistema.
-        # Si usa .bat invece di uno script Python perché nell'eseguibile
-        # PyInstaller frozen sys.executable è RSM.exe e non un interprete Python:
-        # lanciare "RSM.exe script.py" riaprirebbe solo l'applicazione ignorando
-        # l'argomento, senza mai eseguire la logica di aggiornamento.
-        # Un batch file viene eseguito direttamente da cmd.exe senza alcuna dipendenza.
         system_temp = Path(tempfile.gettempdir())
-        helper_script = system_temp / "rsm_apply_update.bat"
         log_path = system_temp / "rsm_update.log"
 
-        # Stringhe pulite senza barre finali per evitare escape non voluti in cmd.exe
         src = str(source_root).rstrip(r"\/")
         tgt = str(target_app_dir).rstrip(r"\/")
         tmp = str(temp_dir).rstrip(r"\/")
         log = str(log_path).rstrip(r"\/")
 
-        helper_code = (
-            "@echo off\r\n"
-            "setlocal EnableDelayedExpansion\r\n"
-            "\r\n"
-            f'set "LOG={log}"\r\n'
-            f'set "SOURCE={src}"\r\n'
-            f'set "TARGET={tgt}"\r\n'
-            f'set "TMPDIR={tmp}"\r\n'
-            "\r\n"
-            'echo === RSM Update Helper avviato === >> "!LOG!"\r\n'
-            'echo source_root  = !SOURCE! >> "!LOG!"\r\n'
-            'echo target_dir   = !TARGET! >> "!LOG!"\r\n'
-            "\r\n"
-            ":: Attende che RSM rilasci i file (4 secondi in modo totalmente silenzioso)\r\n"
-            'echo Attesa chiusura RSM... >> "!LOG!"\r\n'
-            "ping 127.0.0.1 -n 5 > nul\r\n"
-            "\r\n"
-            ":: Chiude eventuali processi residui bloccati prima della copia\r\n"
-            "taskkill /F /IM RSM.exe > nul 2>&1\r\n"
-            "\r\n"
-            ":: Copia tutti i file aggiornati preservando config.json e data/\r\n"
-            ":: robocopy exit code 0-7 = successo, 8+ = errori\r\n"
-            'echo Copia file aggiornati ^(robocopy^)... >> "!LOG!"\r\n'
-            'robocopy "!SOURCE!" "!TARGET!" /E /XD data /XF config.json /IS /IT /IM /R:5 /W:2 >> "!LOG!" 2>&1\r\n'
-            'set "RC=!ERRORLEVEL!"\r\n'
-            'echo Robocopy exit code: !RC! >> "!LOG!"\r\n'
-            "\r\n"
-            "if !RC! LSS 8 (\r\n"
-            '    echo Copia completata con successo. >> "!LOG!"\r\n'
-            ") else (\r\n"
-            '    echo ATTENZIONE: Robocopy ha riportato errori ^(codice !RC!^). >> "!LOG!"\r\n'
-            ")\r\n"
-            "\r\n"
-            ":: Riavvia RSM impostando esplicitamente la cartella di lavoro corretta\r\n"
-            'if exist "!TARGET!\\RSM.exe" (\r\n'
-            '    echo Riavvio RSM: !TARGET!\\RSM.exe >> "!LOG!"\r\n'
-            '    start "" /d "!TARGET!" "!TARGET!\\RSM.exe"\r\n'
-            '    echo RSM riavviato con successo. >> "!LOG!"\r\n'
-            ") else (\r\n"
-            '    echo ERRORE: RSM.exe non trovato in !TARGET! >> "!LOG!"\r\n'
-            ")\r\n"
-            "\r\n"
-            ":: Pulizia cartella temporanea\r\n"
-            'echo Pulizia cartella temporanea... >> "!LOG!"\r\n'
-            'rmdir /s /q "!TMPDIR!" 2>> "!LOG!"\r\n'
-            "\r\n"
-            'echo === Fine Update Helper === >> "!LOG!"\r\n'
-            "\r\n"
-            'del "%~f0"\r\n'
-        )
+        if sys.platform == "win32":
+            helper_script = system_temp / "rsm_apply_update.bat"
+            helper_code = (
+                "@echo off\r\n"
+                "setlocal EnableDelayedExpansion\r\n"
+                "\r\n"
+                f'set "LOG={log}"\r\n'
+                f'set "SOURCE={src}"\r\n'
+                f'set "TARGET={tgt}"\r\n'
+                f'set "TMPDIR={tmp}"\r\n'
+                "\r\n"
+                'echo === RSM Update Helper avviato === >> "!LOG!"\r\n'
+                'echo source_root  = !SOURCE! >> "!LOG!"\r\n'
+                'echo target_dir   = !TARGET! >> "!LOG!"\r\n'
+                "\r\n"
+                ":: Attende che RSM rilasci i file (4 secondi in modo totalmente silenzioso)\r\n"
+                'echo Attesa chiusura RSM... >> "!LOG!"\r\n'
+                "ping 127.0.0.1 -n 5 > nul\r\n"
+                "\r\n"
+                ":: Chiude eventuali processi residui bloccati prima della copia\r\n"
+                "taskkill /F /IM RSM.exe > nul 2>&1\r\n"
+                "\r\n"
+                ":: Copia tutti i file aggiornati preservando config.json e data/\r\n"
+                ":: robocopy exit code 0-7 = successo, 8+ = errori\r\n"
+                'echo Copia file aggiornati ^(robocopy^)... >> "!LOG!"\r\n'
+                'robocopy "!SOURCE!" "!TARGET!" /E /XD data /XF config.json /IS /IT /IM /R:5 /W:2 >> "!LOG!" 2>&1\r\n'
+                'set "RC=!ERRORLEVEL!"\r\n'
+                'echo Robocopy exit code: !RC! >> "!LOG!"\r\n'
+                "\r\n"
+                "if !RC! LSS 8 (\r\n"
+                '    echo Copia completata con successo. >> "!LOG!"\r\n'
+                ") else (\r\n"
+                '    echo ATTENZIONE: Robocopy ha riportato errori ^(codice !RC!^). >> "!LOG!"\r\n'
+                ")\r\n"
+                "\r\n"
+                ":: Riavvia RSM impostando esplicitamente la cartella di lavoro corretta\r\n"
+                'if exist "!TARGET!\\RSM.exe" (\r\n'
+                '    echo Riavvio RSM: !TARGET!\\RSM.exe >> "!LOG!"\r\n'
+                '    start "" /d "!TARGET!" "!TARGET!\\RSM.exe"\r\n'
+                '    echo RSM riavviato con successo. >> "!LOG!"\r\n'
+                ") else (\r\n"
+                '    echo ERRORE: RSM.exe non trovato in !TARGET! >> "!LOG!"\r\n'
+                ")\r\n"
+                "\r\n"
+                ":: Pulizia cartella temporanea\r\n"
+                'echo Pulizia cartella temporanea... >> "!LOG!"\r\n'
+                'rmdir /s /q "!TMPDIR!" 2>> "!LOG!"\r\n'
+                "\r\n"
+                'echo === Fine Update Helper === >> "!LOG!"\r\n'
+                "\r\n"
+                'del "%~f0"\r\n'
+            )
+            with open(helper_script, "w", encoding="utf-8", newline="") as f:
+                f.write(helper_code)
 
-        # newline="" per evitare che Python aggiunga \r extra ai \r\n manuali
-        with open(helper_script, "w", encoding="utf-8", newline="") as f:
-            f.write(helper_code)
+            CREATE_NO_WINDOW = 0x08000000
+            CREATE_NEW_PROCESS_GROUP = 0x00000200
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = 0  # SW_HIDE
 
-        CREATE_NO_WINDOW = 0x08000000
-        CREATE_NEW_PROCESS_GROUP = 0x00000200
+            subprocess.Popen(
+                ["cmd.exe", "/c", str(helper_script)],
+                creationflags=CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP,
+                startupinfo=startupinfo,
+                close_fds=True,
+                shell=False,
+            )
+        else:
+            helper_script = system_temp / "rsm_apply_update.sh"
+            helper_code = (
+                "#!/bin/bash\n"
+                f'LOG="{log}"\n'
+                f'SOURCE="{src}"\n'
+                f'TARGET="{tgt}"\n'
+                f'TMPDIR="{tmp}"\n\n'
+                'echo "=== RSM Update Helper avviato ===" >> "$LOG"\n'
+                'echo "source_root = $SOURCE" >> "$LOG"\n'
+                'echo "target_dir  = $TARGET" >> "$LOG"\n\n'
+                "sleep 3\n"
+                'pkill -f "RSM" 2>/dev/null || true\n\n'
+                "if command -v rsync >/dev/null 2>&1; then\n"
+                '    rsync -a --exclude="data" --exclude="data/" --exclude="config.json" "$SOURCE/" "$TARGET/" >> "$LOG" 2>&1\n'
+                "else\n"
+                '    for item in "$SOURCE"/*; do\n'
+                '        base=$(basename "$item")\n'
+                '        if [ "$base" != "data" ] && [ "$base" != "config.json" ]; then\n'
+                '            cp -R "$item" "$TARGET/" >> "$LOG" 2>&1\n'
+                "        fi\n"
+                "    done\n"
+                "fi\n\n"
+                'if [ -d "$TARGET/RSM.app" ]; then\n'
+                '    echo "Riavvio RSM.app..." >> "$LOG"\n'
+                '    open "$TARGET/RSM.app" >> "$LOG" 2>&1\n'
+                'elif [ -f "$TARGET/RSM" ]; then\n'
+                '    echo "Riavvio RSM..." >> "$LOG"\n'
+                '    chmod +x "$TARGET/RSM"\n'
+                '    "$TARGET/RSM" &\n'
+                "fi\n\n"
+                'rm -rf "$TMPDIR" 2>> "$LOG"\n'
+                'echo "=== Fine Update Helper ===" >> "$LOG"\n'
+                'rm -- "$0"\n'
+            )
+            with open(helper_script, "w", encoding="utf-8", newline="\n") as f:
+                f.write(helper_code)
+            os.chmod(helper_script, 0o755)
 
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        startupinfo.wShowWindow = 0  # SW_HIDE: nasconde completamente qualsiasi finestra di console
-
-        subprocess.Popen(
-            ["cmd.exe", "/c", str(helper_script)],
-            creationflags=CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP,
-            startupinfo=startupinfo,
-            close_fds=True,
-            shell=False,
-        )
+            subprocess.Popen(
+                ["/bin/bash", str(helper_script)],
+                close_fds=True,
+                start_new_session=True,
+            )
 
         # Chiude l'intero processo immediatamente per rilasciare tutti i file
         os._exit(0)

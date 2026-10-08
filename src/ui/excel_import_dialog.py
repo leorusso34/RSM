@@ -325,8 +325,9 @@ class ExcelHintDialog(ctk.CTkToplevel):
 
         # Focus sul campo di testo
         self.txt_hint.focus_set()
-        # Bind Ctrl+Enter per procedere rapidamente
+        # Bind Ctrl+Enter e Cmd+Enter per procedere rapidamente
         self.bind("<Control-Return>", lambda _e: self._proceed_with_hint())
+        self.bind("<Command-Return>", lambda _e: self._proceed_with_hint())
 
     def _proceed_with_hint(self) -> None:
         self.hint = self.txt_hint.get("1.0", "end").strip()
