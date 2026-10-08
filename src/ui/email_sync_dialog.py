@@ -35,8 +35,8 @@ class EmailSyncDialog(ctk.CTkToplevel):
         self.is_scanning = False
 
         self.title("Sincronizzazione Email Ordini")
-        center_window(self, 860, 660)
-        self.minsize(780, 560)
+        center_window(self, 900, 680)
+        self.minsize(820, 600)
         self.transient(parent)
         self.grab_set()
         apply_dark_titlebar(self)
@@ -44,7 +44,6 @@ class EmailSyncDialog(ctk.CTkToplevel):
         # Variabili
         self.var_email = tk.StringVar(value=self.db.get_setting("email_sync_address", ""))
         self.var_password = tk.StringVar(value=self.db.get_setting("email_sync_app_password", ""))
-        self.var_api_key = tk.StringVar(value=self.db.get_setting("gemini_api_key", ""))
         self.var_status_msg = tk.StringVar(value="Pronto per la scansione delle email.")
         self.var_show_pass = tk.BooleanVar(value=False)
 
@@ -66,37 +65,59 @@ class EmailSyncDialog(ctk.CTkToplevel):
             text_color=c["fg_muted"],
         ).pack(anchor="w", pady=(2, 0))
 
-        # Box Impostazioni Credenziali (Collassabile o Card compatta)
+        # Box Impostazioni Credenziali (Card moderna a due livelli)
         self.config_card = ctk.CTkFrame(container, fg_color=c["bg_card"], corner_radius=10, border_width=1, border_color=c["border"])
         self.config_card.pack(fill="x", pady=(0, 12))
 
         cfg_inner = ctk.CTkFrame(self.config_card, fg_color="transparent")
-        cfg_inner.pack(fill="x", padx=14, pady=10)
+        cfg_inner.pack(fill="x", padx=16, pady=12)
 
-        # Riga 1: Email + Password per le app
-        r1 = ctk.CTkFrame(cfg_inner, fg_color="transparent")
-        r1.pack(fill="x", pady=(0, 6))
+        # Riga 1: Campi di input Credenziali
+        r_inputs = ctk.CTkFrame(cfg_inner, fg_color="transparent")
+        r_inputs.pack(fill="x", pady=(0, 10))
 
-        ctk.CTkLabel(r1, text="Email Gmail:", font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 6))
-        self.ent_email = ctk.CTkEntry(r1, textvariable=self.var_email, placeholder_text="esempio@gmail.com", width=210, font=("Segoe UI", 12))
-        self.ent_email.pack(side="left", padx=(0, 14))
+        ctk.CTkLabel(r_inputs, text="Email Gmail:", font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 6))
+        self.ent_email = ctk.CTkEntry(r_inputs, textvariable=self.var_email, placeholder_text="esempio@gmail.com", width=220, font=("Segoe UI", 12))
+        self.ent_email.pack(side="left", padx=(0, 16))
 
-        ctk.CTkLabel(r1, text="Password App (16 car.):", font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 6))
-        self.ent_pass = ctk.CTkEntry(r1, textvariable=self.var_password, placeholder_text="abcd efgh ijkl mnop", show="*", width=170, font=("Segoe UI", 12))
+        ctk.CTkLabel(r_inputs, text="Password App (16 car.):", font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 6))
+        self.ent_pass = ctk.CTkEntry(r_inputs, textvariable=self.var_password, placeholder_text="abcd efgh ijkl mnop", show="*", width=180, font=("Segoe UI", 12))
         self.ent_pass.pack(side="left", padx=(0, 8))
 
-        ctk.CTkCheckBox(r1, text="Mostra", variable=self.var_show_pass, command=self._toggle_pass_visibility, width=70, font=("Segoe UI", 11)).pack(side="left", padx=(0, 10))
+        ctk.CTkCheckBox(r_inputs, text="Mostra", variable=self.var_show_pass, command=self._toggle_pass_visibility, width=70, font=("Segoe UI", 11)).pack(side="left")
 
-        # Riga 2: Chiave Gemini API + Bottoni Configurazione
-        r2 = ctk.CTkFrame(cfg_inner, fg_color="transparent")
-        r2.pack(fill="x", pady=(4, 0))
+        # Riga 2: Pulsanti di Azione e Nota informativa
+        r_actions = ctk.CTkFrame(cfg_inner, fg_color="transparent")
+        r_actions.pack(fill="x")
 
-        ctk.CTkLabel(r2, text="API Key Gemini:", font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 6))
-        self.ent_api = ctk.CTkEntry(r2, textvariable=self.var_api_key, placeholder_text="AIzaSy...", show="*", width=210, font=("Segoe UI", 12))
-        self.ent_api.pack(side="left", padx=(0, 14))
+        ctk.CTkLabel(
+            r_actions,
+            text="Inserisci una password per le app di Google generata con verifica a 2 fattori attiva.",
+            font=("Segoe UI", 11),
+            text_color=c["fg_muted"],
+        ).pack(side="left")
 
-        ctk.CTkButton(r2, text="Test Connessione", command=self._test_connection, fg_color="#374151", hover_color="#4b5563", width=120, font=("Segoe UI", 11)).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(r2, text="Salva Dati", command=self._save_credentials, fg_color="#374151", hover_color="#4b5563", width=90, font=("Segoe UI", 11)).pack(side="left")
+        ctk.CTkButton(
+            r_actions,
+            text="Salva Dati",
+            command=self._save_credentials,
+            fg_color="#2563eb",
+            hover_color="#1d4ed8",
+            width=110,
+            height=30,
+            font=("Segoe UI", 11, "bold"),
+        ).pack(side="right")
+
+        ctk.CTkButton(
+            r_actions,
+            text="Test Connessione",
+            command=self._test_connection,
+            fg_color="#374151",
+            hover_color="#4b5563",
+            width=130,
+            height=30,
+            font=("Segoe UI", 11),
+        ).pack(side="right", padx=(0, 10))
 
         # Barra di Scansione & Azioni
         scan_bar = ctk.CTkFrame(container, fg_color="transparent")
@@ -171,7 +192,6 @@ class EmailSyncDialog(ctk.CTkToplevel):
     def _save_credentials(self, notify: bool = True) -> bool:
         email_val = self.var_email.get().strip()
         pass_val = self.var_password.get().replace(" ", "").strip()
-        api_val = self.var_api_key.get().strip()
 
         if not email_val or not pass_val:
             messagebox.showwarning("Dati incompleti", "Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri.", parent=self)
@@ -179,8 +199,6 @@ class EmailSyncDialog(ctk.CTkToplevel):
 
         self.db.set_setting("email_sync_address", email_val)
         self.db.set_setting("email_sync_app_password", pass_val)
-        if api_val:
-            self.db.set_setting("gemini_api_key", api_val)
 
         if notify:
             messagebox.showinfo("Salvataggio", "Credenziali salvate con successo nel database!", parent=self)
@@ -216,13 +234,9 @@ class EmailSyncDialog(ctk.CTkToplevel):
 
         email_val = self.var_email.get().strip()
         pass_val = self.var_password.get().replace(" ", "").strip()
-        api_key = self.var_api_key.get().strip()
 
         if not email_val or not pass_val:
             messagebox.showwarning("Credenziali mancanti", "Inserisci e salva prima le credenziali Gmail.", parent=self)
-            return
-        if not api_key:
-            messagebox.showwarning("API Key mancante", "Inserisci la tua Chiave API Gemini per analizzare i testi delle email.", parent=self)
             return
 
         self._save_credentials(notify=False)
@@ -252,7 +266,7 @@ class EmailSyncDialog(ctk.CTkToplevel):
                         f"Analisi con AI ({i}/{t}): {s[:35]}..."
                     ))
                     try:
-                        prods = parse_order_email_with_gemini(em, api_key)
+                        prods = parse_order_email_with_gemini(em)
                         if prods:
                             new_found_products.extend(prods)
                             new_uids.append(em["uid"])

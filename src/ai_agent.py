@@ -1,9 +1,12 @@
+"""Modulo per l'integrazione con Google Gemini AI per l'estrazione dati prodotti."""
+
 import http.client
 import json
 import re
-import socket
-from datetime import datetime, timezone
+import urllib.parse
 from typing import Any
+
+from .config import RSM_AUTH_KEY, WORKER_URL
 
 
 def _safe_parse_json_products(raw_content: str) -> list[dict[str, Any]]:
@@ -55,14 +58,15 @@ def _safe_parse_json_products(raw_content: str) -> list[dict[str, Any]]:
 
     raise ValueError(f"Impossibile interpretare la risposta AI come elenco prodotti JSON: {raw_content[:200]}...")
 
-def parse_product_with_ai(prompt: str, api_key: str) -> list[dict[str, Any]]:
+
+def parse_product_with_ai(prompt: str) -> list[dict[str, Any]]:
     """
-    Invia la richiesta testuale all'API di Gemini per estrarre i dati di UNO O PIÙ prodotti.
+    Invia la richiesta testuale al Cloudflare Worker proxy per estrarre i dati
+    di UNO O PIÙ prodotti tramite Google Gemini.
     Restituisce una lista di dizionari, uno per prodotto.
-    Utilizza http.client puro per evitare blocchi causati da urllib su Windows.
     """
-    host = "generativelanguage.googleapis.com"
-    path = f"/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
+    if not WORKER_URL:
+        raise RuntimeError("WORKER_URL non è configurato.")
 
     # Schema per un singolo prodotto (riutilizzato dentro l'array)
     product_schema = {
@@ -105,72 +109,88 @@ def parse_product_with_ai(prompt: str, api_key: str) -> list[dict[str, Any]]:
     }
 
     data = json.dumps(payload).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
 
-    _prev_timeout = socket.getdefaulttimeout()
-    socket.setdefaulttimeout(20)
+    parsed_w = urllib.parse.urlparse(WORKER_URL.strip())
+    w_host = parsed_w.netloc
+    w_path = f"{parsed_w.path.rstrip('/')}/api/gemini/generate"
+    w_headers = {"Content-Type": "application/json"}
+    if RSM_AUTH_KEY:
+        w_headers["X-RSM-Auth"] = RSM_AUTH_KEY.strip()
 
-    conn = http.client.HTTPSConnection(host, timeout=20)
+    conn_cls = http.client.HTTPSConnection if parsed_w.scheme == "https" else http.client.HTTPConnection
+    conn = conn_cls(w_host, timeout=25)
     try:
-        conn.request("POST", path, body=data, headers=headers)
+        conn.request("POST", w_path, body=data, headers=w_headers)
         response = conn.getresponse()
         resp_data = response.read().decode("utf-8")
-
         if response.status != 200:
-            raise RuntimeError(f"Errore API ({response.status}): {resp_data}")
-
+            raise RuntimeError(f"Errore Proxy AI ({response.status}): {resp_data}")
         result = json.loads(resp_data)
         if "candidates" in result and len(result["candidates"]) > 0:
             content = result["candidates"][0]["content"]["parts"][0]["text"]
             return _safe_parse_json_products(content)
-        else:
-            raise ValueError(f"Risposta inaspettata: {resp_data}")
+        raise ValueError(f"Risposta inaspettata dal proxy AI: {resp_data}")
     except (OSError, http.client.HTTPException, ValueError) as e:
-        raise RuntimeError(f"Errore di connessione: {e!s}")
+        raise RuntimeError(f"Errore di connessione proxy AI: {e!s}") from e
     finally:
-        socket.setdefaulttimeout(_prev_timeout)
         conn.close()
 
 
-def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> list[dict[str, Any]]:
+def parse_excel_with_ai(raw_text: str, user_hint: str = "") -> list[dict[str, Any]]:
     """
     Analizza l'intero contenuto testuale di un file Excel/CSV con una singola
-    chiamata a Gemini e restituisce la lista di prodotti estratti in formato JSON.
-
-    Regole di estrazione per il modello AI:
-    - Status default: 'In Stock' (Magazzino) se non è chiaro.
-    - Se trova un prezzo di vendita o un luogo di vendita → 'Venduto' (Vendite Attive).
-    - Se trova la parola "preorder", "pre-order" o "pre ordine" → 'Pre-ordine'.
-    - Taglia di default: 'UNI' se non specificata.
-    - Quantità di default: 1 se non specificata.
-    - Restituisce TUTTI i prodotti trovati nella tabella, uno per riga dati.
-    - Se user_hint è fornito, viene trattato come istruzione prioritaria aggiuntiva.
+    chiamata al Cloudflare Worker proxy e restituisce la lista di prodotti estratti in formato JSON.
     """
-    today_str = datetime.now(tz=timezone.utc).astimezone().date().isoformat()
-    host = "generativelanguage.googleapis.com"
-    path = f"/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
+    if not WORKER_URL:
+        raise RuntimeError("WORKER_URL non è configurato.")
+
+    hint_clause = f"\nNOTA DELL'UTENTE SULLA STRUTTURA DEL FILE:\n\"{user_hint.strip()}\"\n" if user_hint.strip() else ""
+
+    system_instruction = (
+        "Sei un assistente specializzato nell'estrazione ed importazione dati per un software gestionale di magazzino (RSM).\n"
+        "Riceverai il testo grezzo estratto da un foglio di calcolo (Excel o CSV) con tutte le sue righe e colonne.\n"
+        "Il tuo compito è comprendere la struttura della tabella, identificare le colonne rilevanti e convertire OGNI riga "
+        "valida di prodotto in un oggetto strutturato conforme allo schema JSON richiesto.\n\n"
+        "REGOLE DI MAPPATURA DEI CAMPI:\n"
+        "1. 'name': Nome del prodotto/scarpa/articolo (es. 'Jordan 4 Military Black', 'Travis Scott Olive').\n"
+        "2. 'size': Taglia del prodotto. Se la taglia è un numero o un valore specifico (es. '42', '42.5', 'US 9', 'M', 'L'), riportala pulita. "
+        "Se assente o non applicabile, usa rigorosamente 'UNI'.\n"
+        "3. 'quantity': Quantità acquistata. Numero intero >= 1. Se assente, usa 1.\n"
+        "4. 'purchased_price': Prezzo di acquisto UNITARIO in euro (numero con decimali, es. 120 o 120.50). "
+        "ATTENZIONE CRITICA: Se il prezzo indicato nel foglio è il TOTALE dell'ordine per più pezzi, "
+        "devi dividerlo per la quantità per ottenere sempre e solo il prezzo unitario!\n"
+        "5. 'purchased_place': Luogo o piattaforma di acquisto (es. 'SNKRS', 'Nike', 'Privato', 'Foot Locker'). Se vuoto, lascia stringa vuota.\n"
+        "6. 'status': Stato attuale del prodotto. Scegli RIGOROSAMENTE tra questi quattro valori esatti:\n"
+        "   - 'In Stock' (se l'articolo è disponibile in magazzino o invenduto)\n"
+        "   - 'Pre-ordine' (se ordinato ma non ancora arrivato)\n"
+        "   - 'Venduto' (se è già stato venduto)\n"
+        "   - 'Completato' (se la vendita è conclusa)\n"
+        "   Se non specificato o ambiguo, usa 'In Stock'.\n"
+        "7. 'selling_place': Se lo stato è Venduto o Completato, la piattaforma di vendita (es. 'StockX', 'Vinted', 'eBay'). Altrimenti stringa vuota.\n"
+        "8. 'sold_price': Se venduto, il prezzo effettivo incassato/venduto unitario. Altrimenti null.\n"
+        "9. 'fees': Commissioni di vendita totali per la transazione in euro. Se assenti, usa 0.0.\n"
+        "10. 'release_date': Data di uscita o acquisto nel formato 'YYYY-MM-DD'. Se manca l'anno, usa l'anno corrente. Se non deducibile, usa la data odierna.\n"
+        "11. 'notes': Codice SKU/style code o eventuali note aggiuntive.\n\n"
+        "REGOLE GENERALI:\n"
+        "- Salta le righe di intestazione, i totali riepilogativi, le righe vuote o le note generali a piè pagina.\n"
+        "- Restituisci SEMPRE tutti i prodotti trovati come array 'products' nello schema JSON.\n"
+        f"{hint_clause}"
+    )
 
     product_schema = {
         "type": "OBJECT",
         "properties": {
-            "name":             {"type": "STRING", "description": "Nome del prodotto. Obbligatorio."},
-            "size":             {"type": "STRING", "description": "Taglia. Default 'UNI' se non specificata."},
-            "quantity":         {"type": "INTEGER", "description": "Quantità. Default 1."},
-            "purchased_price":  {"type": "NUMBER", "description": "Prezzo di acquisto UNITARIO (per singolo pezzo). Obbligatorio. Se nel foglio leggi un prezzo totale per più pezzi (es. 5 pezzi a 100€ totali), dividi per la quantità (100 / 5 = 20.0)."},
-            "purchased_place":  {"type": "STRING", "description": "Luogo o sito di acquisto. Vuoto se non trovato."},
-            "selling_place":    {"type": "STRING", "description": "Luogo o piattaforma di vendita. Vuoto se non trovato."},
-            "selling_price":    {"type": "NUMBER", "description": "Prezzo di vendita stimato UNITARIO per singolo pezzo. 0 se non trovato."},
-            "sold_price":       {"type": "NUMBER", "description": "Prezzo di vendita effettivo UNITARIO per singolo pezzo. 0 se non trovato."},
-            "fees":             {"type": "NUMBER", "description": "Commissioni o spese UNITARIE per singolo pezzo. Default 0."},
-            "sold_date":        {"type": "STRING", "description": f"Data vendita in formato YYYY-MM-DD. Se lo stato è Venduto e non c'è una data specifica nel foglio, usa rigorosamente la data odierna: {today_str}."},
-            "status":           {"type": "STRING", "description": (
-                "Stato del prodotto. Scegli RIGOROSAMENTE tra: 'In Stock', 'Pre-ordine', 'Venduto'. "
-                "Regole: se trovi un prezzo di vendita effettivo o un luogo di vendita → 'Venduto'. "
-                "Se trovi 'preorder', 'pre-order', 'pre ordine' → 'Pre-ordine'. "
-                "In tutti gli altri casi → 'In Stock' (DEFAULT)."
-            )},
-            "release_date":     {"type": "STRING", "description": "Data di uscita prodotto in formato YYYY-MM-DD. Vuoto se non trovata."},
-            "notes":            {"type": "STRING", "description": "Note aggiuntive. Vuoto se non presenti."},
+            "name": {"type": "STRING"},
+            "size": {"type": "STRING"},
+            "quantity": {"type": "INTEGER"},
+            "purchased_price": {"type": "NUMBER"},
+            "purchased_place": {"type": "STRING"},
+            "status": {"type": "STRING"},
+            "selling_place": {"type": "STRING"},
+            "sold_price": {"type": "NUMBER"},
+            "fees": {"type": "NUMBER"},
+            "release_date": {"type": "STRING"},
+            "notes": {"type": "STRING"}
         },
         "required": ["name", "quantity", "purchased_price", "status"]
     }
@@ -178,43 +198,27 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> lis
     response_schema = {
         "type": "OBJECT",
         "properties": {
-            "products": {"type": "ARRAY", "items": product_schema}
+            "products": {
+                "type": "ARRAY",
+                "items": product_schema
+            }
         },
         "required": ["products"]
     }
 
-    system_prompt = (
-        f"Sei un assistente esperto di inventari. La data di oggi è {today_str}. "
-        "Ti verrà fornito il contenuto grezzo di un file Excel o CSV, con righe e colonne separate da tabulazioni. "
-        "Il tuo compito è identificare OGNI riga che rappresenta un prodotto fisico e restituire la lista 'products' con tutti i dati estratti. "
-        "Ignora le righe di intestazione, righe totali, righe vuote e sezioni di testo non dati. "
-        "Riconosci automaticamente le colonne indipendentemente dalla lingua (italiano, inglese, ecc.) e dal formato (valute, date, simboli). "
-        "REGOLA CRUCIALE SUI PREZZI: i campi 'purchased_price', 'selling_price', 'sold_price' e 'fees' DEVONO ESSERE RIGOROSAMENTE PREZZI UNITARI (per 1 singolo pezzo). "
-        "Se una riga rappresenta una quantità multipla (es. quantità 5, o dicitura 'x5' nel nome/colonna) e il prezzo indicato nel foglio è il totale complessivo del lotto/ordine (es. 5 pezzi a 200€ totali), "
-        "DEVI dividere il prezzo totale per la quantità (es. 200 / 5 = 40.0) in modo da inserire SEMPRE il prezzo unitario per singola unità. Non inserire MAI il totale complessivo come prezzo di acquisto se la quantità è maggiore di 1. "
-        f"Se lo stato è 'Venduto' e non è presente una data specifica nel foglio, assegna la data di oggi ({today_str}) come sold_date. "
-        "Non inventare dati non presenti: usa i valori di default specificati nello schema. "
-        "Formato date: YYYY-MM-DD. Formato numeri: senza simboli di valuta."
-    )
-
-    hint_section = ""
-    if user_hint and user_hint.strip():
-        hint_section = (
-            "ISTRUZIONI AGGIUNTIVE PRIORITARIE fornite dall'utente "
-            "(seguile con precedenza assoluta sulle regole generali):\n"
-            f"{user_hint.strip()}\n\n"
-        )
-
-    user_prompt = (
-        f"{hint_section}"
-        f"Data di oggi: {today_str}\n"
-        "Analizza il seguente contenuto di un file Excel/CSV ed estrai tutti i prodotti presenti:\n\n"
-        f"{raw_text}"
-    )
-
     payload = {
-        "contents": [{"parts": [{"text": user_prompt}]}],
-        "systemInstruction": {"parts": [{"text": system_prompt}]},
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": f"Ecco il contenuto del foglio di calcolo da importare:\n\n{raw_text}"
+                    }
+                ]
+            }
+        ],
+        "systemInstruction": {
+            "parts": [{"text": system_instruction}]
+        },
         "generationConfig": {
             "temperature": 0.1,
             "maxOutputTokens": 65536,
@@ -224,33 +228,30 @@ def parse_excel_with_ai(raw_text: str, api_key: str, user_hint: str = "") -> lis
     }
 
     data = json.dumps(payload).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
 
-    _prev_timeout = socket.getdefaulttimeout()
-    socket.setdefaulttimeout(180)  # Timeout esteso a 3 minuti per file Excel corposi
+    parsed_w = urllib.parse.urlparse(WORKER_URL.strip())
+    w_host = parsed_w.netloc
+    w_path = f"{parsed_w.path.rstrip('/')}/api/gemini/generate"
+    w_headers = {"Content-Type": "application/json"}
+    if RSM_AUTH_KEY:
+        w_headers["X-RSM-Auth"] = RSM_AUTH_KEY.strip()
 
-    conn = http.client.HTTPSConnection(host, timeout=180)
+    conn_cls = http.client.HTTPSConnection if parsed_w.scheme == "https" else http.client.HTTPConnection
+    conn = conn_cls(w_host, timeout=180)
     try:
-        conn.request("POST", path, body=data, headers=headers)
+        conn.request("POST", w_path, body=data, headers=w_headers)
         response = conn.getresponse()
         resp_data = response.read().decode("utf-8")
-
         if response.status != 200:
-            raise RuntimeError(f"Errore API Gemini ({response.status}): {resp_data}")
-
+            raise RuntimeError(f"Errore Proxy AI ({response.status}): {resp_data}")
         result = json.loads(resp_data)
         if "candidates" in result and len(result["candidates"]) > 0:
             content = result["candidates"][0]["content"]["parts"][0]["text"]
             return _safe_parse_json_products(content)
-        else:
-            raise ValueError(f"Risposta AI inaspettata: {resp_data}")
+        raise ValueError(f"Risposta AI inaspettata dal proxy: {resp_data}")
     except TimeoutError:
-        raise RuntimeError("Tempo scaduto: il server AI ha impiegato più di 3 minuti ad analizzare il file. Riprova tra poco.")
+        raise RuntimeError("Tempo scaduto: il server proxy AI ha impiegato più di 3 minuti. Riprova.") from None
     except (OSError, http.client.HTTPException, ValueError) as e:
-        err_msg = str(e)
-        if "timed out" in err_msg.lower():
-            raise RuntimeError("Tempo scaduto: l'analisi ha superato il tempo massimo. Riprova.")
-        raise RuntimeError(f"Errore AI Excel import: {err_msg}")
+        raise RuntimeError(f"Errore proxy AI Excel import: {e!s}") from e
     finally:
-        socket.setdefaulttimeout(_prev_timeout)
         conn.close()

@@ -28,8 +28,6 @@ class EbayPriceDialog(ctk.CTkToplevel):
         parent: tk.Misc,
         product_name: str,
         product_size: str,
-        client_id: str,
-        client_secret: str,
         on_apply_price: Callable[[Decimal], None] | None = None,
     ) -> None:
         """
@@ -37,8 +35,6 @@ class EbayPriceDialog(ctk.CTkToplevel):
             parent:         Finestra padre.
             product_name:   Nome del prodotto da cercare.
             product_size:   Taglia del prodotto ("UNI" → ignorata).
-            client_id:      App ID / Client ID eBay da config.json.
-            client_secret:  Cert ID / Client Secret eBay da config.json.
             on_apply_price: Callback opzionale chiamato con il prezzo medio
                             (Decimal) quando l'utente preme "Applica Prezzo".
         """
@@ -46,8 +42,6 @@ class EbayPriceDialog(ctk.CTkToplevel):
 
         self._product_name  = product_name
         self._product_size  = product_size
-        self._client_id     = client_id
-        self._client_secret = client_secret
         self._on_apply_price = on_apply_price
         self._result: dict | None = None
 
@@ -214,8 +208,6 @@ class EbayPriceDialog(ctk.CTkToplevel):
             result = fetch_market_prices(
                 self._product_name,
                 self._product_size,
-                self._client_id,
-                self._client_secret,
             )
             self.after(0, lambda: self._on_fetch_success(result))
         except Exception as exc:  # noqa: BLE001

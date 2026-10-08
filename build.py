@@ -120,11 +120,9 @@ def main() -> None:
     elif not dist_config.exists():
         with open(dist_config, "w", encoding="utf-8") as f:
             json.dump({
-                "gemini_api_key": "",
                 "email_sync_address": "",
                 "email_sync_app_password": "",
-                "ebay_client_id": "",
-                "ebay_client_secret": ""
+                "dashboard_layout": "[\"monthly\", \"top_products\", \"platform_pie\"]"
             }, f, indent=2, ensure_ascii=False)
 
     # 4. Copia del README.md nella cartella di rilascio dist/RSM

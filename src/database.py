@@ -315,7 +315,6 @@ class InventoryDatabase:
         """Aggiorna il file config.json mantenendo sincronizzate le impostazioni."""
         try:
             current_data = {
-                "gemini_api_key": "",
                 "email_sync_address": "",
                 "email_sync_app_password": ""
             }

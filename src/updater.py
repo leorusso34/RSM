@@ -16,7 +16,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from .config import APP_VERSION, GITHUB_REPO, PROJECT_DIR
+from .config import APP_VERSION, PROJECT_DIR, RSM_AUTH_KEY, WORKER_URL
 
 
 def parse_version_tuple(version_str: str) -> tuple[int, ...]:
@@ -35,31 +35,30 @@ def parse_version_tuple(version_str: str) -> tuple[int, ...]:
     return tuple(int(n) for n in numbers)
 
 
-def check_for_updates(
-    current_version: str = APP_VERSION,
-    repo: str = GITHUB_REPO,
-    github_token: str = "",
-) -> dict[str, Any] | None:
+def check_for_updates(current_version: str = APP_VERSION) -> dict[str, Any] | None:
     """
-    Controlla in modo sicuro se è disponibile una nuova versione su GitHub Releases.
+    Controlla in modo sicuro se è disponibile una nuova versione su Cloudflare Worker.
 
     Returns:
         Dizionario con i dettagli dell'aggiornamento o None se l'app è già aggiornata.
     """
-    if not repo or "/" not in repo:
+    if not WORKER_URL:
         return None
 
-    owner, repo_name = repo.split("/", 1)
-    headers = {
+    parsed_w = urllib.parse.urlparse(WORKER_URL.strip())
+    w_host = parsed_w.netloc
+    w_path = parsed_w.path.rstrip("/") + "/api/updates/latest"
+    w_headers = {
         "User-Agent": "RSM-App-Updater",
-        "Accept": "application/vnd.github.v3+json",
+        "Accept": "application/json",
     }
-    if github_token:
-        headers["Authorization"] = f"Bearer {github_token.strip()}"
+    if RSM_AUTH_KEY:
+        w_headers["X-RSM-Auth"] = RSM_AUTH_KEY.strip()
 
     try:
-        conn = http.client.HTTPSConnection("api.github.com", timeout=8)
-        conn.request("GET", f"/repos/{owner}/{repo_name}/releases/latest", headers=headers)
+        conn_cls = http.client.HTTPSConnection if parsed_w.scheme == "https" else http.client.HTTPConnection
+        conn = conn_cls(w_host, timeout=10)
+        conn.request("GET", w_path, headers=w_headers)
         resp = conn.getresponse()
         raw_data = resp.read().decode("utf-8")
         conn.close()
@@ -69,14 +68,9 @@ def check_for_updates(
 
         data = json.loads(raw_data)
         tag_name = data.get("tag_name", "").strip()
-        if not tag_name:
+        if not tag_name or parse_version_tuple(tag_name) <= parse_version_tuple(current_version):
             return None
 
-        # Confronto versioni
-        if parse_version_tuple(tag_name) <= parse_version_tuple(current_version):
-            return None
-
-        # Cerca un asset .zip (preferibilmente contenente 'RSM' o il primo zip)
         assets = data.get("assets", [])
         zip_asset = None
         for asset in assets:
@@ -91,9 +85,8 @@ def check_for_updates(
         if not zip_asset:
             return None
 
-        # Per repository privati usiamo l'endpoint API dell'asset (zip_asset["url"]) con token
-        download_url = (zip_asset.get("url") if github_token else zip_asset.get("browser_download_url")) or zip_asset.get("url")
-        is_api_asset = bool(github_token or (zip_asset.get("url") and not zip_asset.get("browser_download_url")))
+        asset_id = zip_asset.get("id")
+        download_url = f"{WORKER_URL.strip().rstrip('/')}/api/updates/download/{asset_id}"
 
         return {
             "version": tag_name,
@@ -102,7 +95,6 @@ def check_for_updates(
             "download_url": download_url,
             "asset_name": zip_asset.get("name", "RSM-update.zip"),
             "size_bytes": zip_asset.get("size", 0),
-            "is_api_asset": is_api_asset,
         }
     except Exception:  # noqa: BLE001
         return None
@@ -144,9 +136,10 @@ def download_file_with_redirects(
             if not location:
                 raise RuntimeError(f"Redirect HTTP {resp.status} senza header Location")
             current_url = location
-            # Se reindirizzato ad AWS S3 (objects.githubusercontent.com), rimuoviamo l'header Authorization di GitHub
+            # Se reindirizzato ad AWS S3 (objects.githubusercontent.com), rimuoviamo gli header di autorizzazione
             if "githubusercontent.com" in location:
                 req_headers.pop("Authorization", None)
+                req_headers.pop("X-RSM-Auth", None)
             continue
 
         if resp.status != 200:
@@ -177,7 +170,6 @@ def download_file_with_redirects(
 
 def apply_update_and_restart(
     download_url: str,
-    github_token: str = "",
     progress_callback: Callable[[float], None] | None = None,
     status_callback: Callable[[str], None] | None = None,
 ) -> None:
@@ -194,9 +186,8 @@ def apply_update_and_restart(
             status_callback("Download dell'aggiornamento in corso...")
 
         headers = {}
-        if github_token:
-            headers["Authorization"] = f"Bearer {github_token.strip()}"
-            headers["Accept"] = "application/octet-stream"
+        if RSM_AUTH_KEY:
+            headers["X-RSM-Auth"] = RSM_AUTH_KEY.strip()
 
         download_file_with_redirects(
             download_url,

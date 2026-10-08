@@ -7,6 +7,10 @@ APP_NAME = "RSM"
 APP_VERSION = "1.4.0"
 GITHUB_REPO = "leorusso34/RSM"
 
+# Cloudflare Worker Proxy per API sicure (eBay, Gemini AI, GitHub Updates)
+WORKER_URL = "https://rsm-proxy.leorusso34-441.workers.dev"
+RSM_AUTH_KEY = "CucGxi.PEhfgR6MFry*s"
+
 # Stati prodotti
 STATUS_STOCK = "In Stock"
 STATUS_PREORDER = "Pre-ordine"

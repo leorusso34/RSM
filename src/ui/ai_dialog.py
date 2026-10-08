@@ -27,13 +27,12 @@ class AIDialog(ctk.CTkToplevel):
         self.is_recording: bool = False
 
         self.title("Inserimento Rapido con AI")
-        center_window(self, 620, 520)
-        self.minsize(540, 440)
+        center_window(self, 620, 440)
+        self.minsize(540, 380)
         self.transient(parent)
         self.grab_set()
         apply_dark_titlebar(self)
 
-        self.api_key_var = tk.StringVar(value=self.db.get_setting("gemini_api_key", ""))
         self.status_var = tk.StringVar(value="")
 
         # Carica icona microfono pulita e versione rossa attiva
@@ -87,23 +86,6 @@ class AIDialog(ctk.CTkToplevel):
             font=("Segoe UI", 12),
             text_color=c["fg_muted"],
         ).pack(anchor="w", pady=(2, 0))
-
-        # Sezione API Key
-        api_card = ctk.CTkFrame(container, fg_color=c["bg_card"], corner_radius=10, border_width=1, border_color=c["border"])
-        api_card.pack(fill="x", pady=(0, 14))
-
-        api_inner = ctk.CTkFrame(api_card, fg_color="transparent")
-        api_inner.pack(fill="x", padx=14, pady=10)
-
-        ctk.CTkLabel(api_inner, text="GEMINI API KEY:", font=("Segoe UI", 10, "bold"), text_color=c["fg_muted"]).pack(anchor="w")
-
-        api_row = ctk.CTkFrame(api_inner, fg_color="transparent")
-        api_row.pack(fill="x", pady=(4, 0))
-
-        self.api_entry = ctk.CTkEntry(api_row, textvariable=self.api_key_var, placeholder_text="Incolla la tua Gemini API Key (AIzaSy...)", show="*", font=("Segoe UI", 12))
-        self.api_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
-
-        ctk.CTkButton(api_row, text="Salva Chiave", command=self._save_api_key, fg_color="#374151", hover_color="#4b5563", width=110, font=("Segoe UI", 11)).pack(side="right")
 
         # Sezione Prompt & Microfono
         prompt_card = ctk.CTkFrame(container, fg_color=c["bg_card"], corner_radius=10, border_width=1, border_color=c["border"])
@@ -162,22 +144,7 @@ class AIDialog(ctk.CTkToplevel):
         )
         self.btn_generate.pack(side="right", padx=(0, 10))
 
-    def _save_api_key(self) -> None:
-        key = self.api_key_var.get().strip()
-        if key:
-            self.db.set_setting("gemini_api_key", key)
-            self.status_var.set("Chiave API salvata con successo!")
-            messagebox.showinfo("Salvataggio", "Chiave API Gemini salvata correttamente.", parent=self)
-        else:
-            self.status_var.set("Inserisci una chiave API valida.")
-            messagebox.showwarning("Chiave Mancante", "Inserisci una chiave API valida.", parent=self)
-
     def _generate(self) -> None:
-        api_key = self.api_key_var.get().strip()
-        if not api_key:
-            messagebox.showwarning("API Key mancante", "Per favore inserisci e salva la tua Gemini API Key prima di procedere.", parent=self)
-            return
-
         prompt = self.prompt_text.get("1.0", "end").strip()
         if not prompt:
             messagebox.showwarning("Testo mancante", "Scrivi o detta i prodotti che desideri inserire.", parent=self)
@@ -186,11 +153,11 @@ class AIDialog(ctk.CTkToplevel):
         self.btn_generate.configure(state="disabled")
         self.status_var.set("Analisi del testo con Gemini in corso...")
 
-        threading.Thread(target=self._run_ai, args=(prompt, api_key), daemon=True).start()
+        threading.Thread(target=self._run_ai, args=(prompt,), daemon=True).start()
 
-    def _run_ai(self, prompt: str, api_key: str) -> None:
+    def _run_ai(self, prompt: str) -> None:
         try:
-            parsed_data = parse_product_with_ai(prompt, api_key)
+            parsed_data = parse_product_with_ai(prompt)
             self.after(0, lambda: self._on_ai_success(parsed_data))
         except Exception as exc:  # noqa: BLE001
             err_msg = str(exc)
@@ -253,15 +220,18 @@ class AIDialog(ctk.CTkToplevel):
         self.btn_mic.configure(image=self._mic_img_rec)
         self.status_var.set("Inizializzazione microfono...")
 
-        api_key = self.api_key_var.get().strip()
-        self.transcriber = SpeechTranscriber()
-        self.transcriber.start(
-            on_result=self._on_speech_result,
-            on_error=self._on_speech_error,
-            on_listening=self._on_listening,
-            api_key=api_key,
-            max_duration=20
-        )
+        try:
+            self.transcriber = SpeechTranscriber()
+            self.transcriber.start(
+                on_result=self._on_speech_result,
+                on_error=self._on_speech_error,
+                on_listening=self._on_listening,
+                max_duration=20,
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.is_recording = False
+            self.btn_mic.configure(image=self._mic_img)
+            self.status_var.set(f"⚠️ Errore microfono: {exc}")
 
     def _on_listening(self) -> None:
         def update_ui():

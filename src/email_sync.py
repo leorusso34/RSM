@@ -6,12 +6,12 @@ import http.client
 import imaplib
 import json
 import re
-import socket
+import urllib.parse
 from datetime import datetime, timezone
 from email.header import decode_header
 from typing import Any
 
-from .config import STATUS_PREORDER
+from .config import RSM_AUTH_KEY, STATUS_PREORDER, WORKER_URL
 
 
 def _clean_header(header_value: str | None) -> str:
@@ -212,10 +212,10 @@ def mark_emails_as_read(email_addr: str, app_password: str, email_uids: list[str
             pass
 
 
-def parse_order_email_with_gemini(email_item: dict[str, Any], api_key: str) -> list[dict[str, Any]]:
-    """Invia il contenuto dell'email a Gemini AI per estrarre i dati dei prodotti ordinati."""
-    host = "generativelanguage.googleapis.com"
-    path = f"/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
+def parse_order_email_with_gemini(email_item: dict[str, Any]) -> list[dict[str, Any]]:
+    """Invia il contenuto dell'email a Cloudflare Worker per estrarre i dati dei prodotti tramite Gemini AI."""
+    if not WORKER_URL:
+        raise RuntimeError("WORKER_URL non è configurato.")
 
     product_schema = {
         "type": "OBJECT",
@@ -271,20 +271,22 @@ def parse_order_email_with_gemini(email_item: dict[str, Any], api_key: str) -> l
     }
 
     data = json.dumps(payload).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
 
-    _prev_timeout = socket.getdefaulttimeout()
-    socket.setdefaulttimeout(25)
+    parsed_w = urllib.parse.urlparse(WORKER_URL.strip())
+    w_host = parsed_w.netloc
+    w_path = f"{parsed_w.path.rstrip('/')}/api/gemini/generate"
+    w_headers = {"Content-Type": "application/json"}
+    if RSM_AUTH_KEY:
+        w_headers["X-RSM-Auth"] = RSM_AUTH_KEY.strip()
 
-    conn = http.client.HTTPSConnection(host, timeout=25)
+    conn_cls = http.client.HTTPSConnection if parsed_w.scheme == "https" else http.client.HTTPConnection
+    conn = conn_cls(w_host, timeout=25)
     try:
-        conn.request("POST", path, body=data, headers=headers)
+        conn.request("POST", w_path, body=data, headers=w_headers)
         response = conn.getresponse()
         resp_data = response.read().decode("utf-8")
-
         if response.status != 200:
-            raise RuntimeError(f"Errore API Gemini ({response.status}): {resp_data}")
-
+            raise RuntimeError(f"Errore Proxy AI ({response.status}): {resp_data}")
         result = json.loads(resp_data)
         if "candidates" in result and len(result["candidates"]) > 0:
             content = result["candidates"][0]["content"]["parts"][0]["text"]
@@ -297,7 +299,6 @@ def parse_order_email_with_gemini(email_item: dict[str, Any], api_key: str) -> l
             return products
         return []
     except (http.client.HTTPException, OSError, json.JSONDecodeError, ValueError, KeyError, IndexError, TypeError) as exc:
-        raise RuntimeError(f"Errore AI Gemini: {exc}") from exc
+        raise RuntimeError(f"Errore Proxy AI Gemini: {exc}") from exc
     finally:
-        socket.setdefaulttimeout(_prev_timeout)
         conn.close()

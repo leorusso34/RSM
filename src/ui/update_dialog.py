@@ -23,12 +23,10 @@ class UpdateDialog(ctk.CTkToplevel):
         self,
         parent: tk.Misc,
         update_info: dict[str, Any],
-        github_token: str = "",
     ) -> None:
         super().__init__(parent, fg_color=DARK_THEME["bg_main"])
 
         self.update_info = update_info
-        self.github_token = github_token
         self._is_updating = False
 
         self.title("Aggiornamento Disponibile")
@@ -161,7 +159,6 @@ class UpdateDialog(ctk.CTkToplevel):
 
             apply_update_and_restart(
                 download_url=download_url,
-                github_token=self.github_token,
                 progress_callback=on_progress,
                 status_callback=on_status,
             )

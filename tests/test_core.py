@@ -242,6 +242,7 @@ def test_undo_stack_limit_and_actions(tmp_path):
         "_undo_insert": InventoryApp._undo_insert,
         "_undo_update": InventoryApp._undo_update,
         "_undo_delete": InventoryApp._undo_delete,
+        "set_status": InventoryApp.set_status,
     })()
 
     # Inseriamo un prodotto
@@ -639,7 +640,46 @@ def test_sort_tree_with_explicit_ascending():
     assert fake_tree.moves == ["2", "1"]
     assert controller.current_sort[STATUS_STOCK] == ("purchased_price", True)
 
+def test_status_timer_auto_reset():
+    """Verifica che set_status imposti il messaggio e pianifichi il ripristino su 'Vista aggiornata'."""
+    scheduled = {}
+    cancelled = []
 
+    class MockApp:
+        def __init__(self):
+            self.status_bar_var = type("Var", (), {"_val": "Pronto", "set": lambda s, v: setattr(s, "_val", v), "get": lambda s: s._val})()
+            self._status_timer = None
 
+        def after(self, delay, callback):
+            timer_id = f"timer_{len(scheduled)}"
+            scheduled[timer_id] = (delay, callback)
+            return timer_id
+
+        def after_cancel(self, timer_id):
+            cancelled.append(timer_id)
+            scheduled.pop(timer_id, None)
+
+        set_status = InventoryApp.set_status
+        _reset_status = InventoryApp._reset_status
+
+    app = MockApp()
+    app.set_status("1 prodotto modificato con successo", auto_reset=True, timeout_ms=5000)
+    assert app.status_bar_var.get() == "1 prodotto modificato con successo"
+    assert app._status_timer is not None
+    assert app._status_timer in scheduled
+    assert scheduled[app._status_timer][0] == 5000
+
+    # Simula lo scadere del timer
+    _delay, cb = scheduled[app._status_timer]
+    cb()
+    assert app.status_bar_var.get() == "Vista aggiornata"
+    assert app._status_timer is None
+
+    # Verifica cancellazione timer precedente su nuova notifica
+    app.set_status("Prima notifica", auto_reset=True)
+    first_timer = app._status_timer
+    app.set_status("Seconda notifica", auto_reset=True)
+    assert first_timer in cancelled
+    assert app.status_bar_var.get() == "Seconda notifica"
 
 

@@ -1,5 +1,6 @@
 """Finestra principale dell'applicazione InventoryApp per RSM."""
 
+import contextlib
 import sqlite3
 import threading
 import tkinter as tk
@@ -17,7 +18,6 @@ from ..config import (
     APP_VERSION,
     DARK_THEME,
     DB_PATH,
-    GITHUB_REPO,
     PROJECT_DIR,
     STATUS_COMPLETED,
     STATUS_PREORDER,
@@ -80,6 +80,7 @@ class InventoryApp(ctk.CTk):
 
         self.search_var = tk.StringVar()
         self.status_bar_var = tk.StringVar(value="Pronto")
+        self._status_timer: str | None = None
         self.filter_purchased_place_var = tk.StringVar()
         self.filter_selling_place_var = tk.StringVar()
         self.filter_min_price_var = tk.StringVar()
@@ -503,25 +504,14 @@ class InventoryApp(ctk.CTk):
             open_search_in_browser(name, effective_size)
             opened += 1
         if opened:
-            self.status_bar_var.set(f"Ricerca eBay aperta per {opened} prodott{'o' if opened == 1 else 'i'}")
+            self.set_status(f"Ricerca eBay aperta per {opened} prodott{'o' if opened == 1 else 'i'}")
         else:
-            self.status_bar_var.set("Impossibile cercare su eBay: nessun prodotto valido selezionato")
+            self.set_status("Impossibile cercare su eBay: nessun prodotto valido selezionato")
 
     def _show_ebay_price_dialog(self) -> None:
         """Apre il dialog con i prezzi di mercato eBay per ciascun prodotto selezionato, in sequenza."""
         ids = self.selected_ids()
         if not ids:
-            return
-
-        client_id = self.db.get_setting("ebay_client_id", "")
-        client_secret = self.db.get_setting("ebay_client_secret", "")
-        if not client_id or not client_secret:
-            messagebox.showwarning(
-                "Credenziali eBay mancanti",
-                "Inserisci 'ebay_client_id' e 'ebay_client_secret' nel file config.json "
-                "per usare la funzione Prezzo Medio eBay.",
-                parent=self,
-            )
             return
 
         applied_old_records = []
@@ -550,8 +540,6 @@ class InventoryApp(ctk.CTk):
                 self,
                 product_name=name,
                 product_size=size,
-                client_id=client_id,
-                client_secret=client_secret,
                 on_apply_price=make_apply_callback(prod_id, dict(record)),
             )
             self.wait_window(dialog)
@@ -562,7 +550,7 @@ class InventoryApp(ctk.CTk):
                 f"Applicato prezzo medio eBay a {applied_count} prodotti",
                 lambda recs=applied_old_records: self._undo_update(recs),
             )
-            self.status_bar_var.set(
+            self.set_status(
                 f"Prezzo stimato aggiornato per {applied_count} prodott{'o' if applied_count == 1 else 'i'} (media eBay)"
             )
 
@@ -575,7 +563,7 @@ class InventoryApp(ctk.CTk):
         self.refresh()
         if old_records:
             self._push_undo(f"Completate {len(ids)} vendite", lambda recs=old_records: self._undo_update(recs))
-        self.status_bar_var.set(f"{len(ids)} prodotti contrassegnati come vendita completata")
+        self.set_status(f"{len(ids)} prodotti contrassegnati come vendita completata")
 
     def _on_search_changed(self, *args) -> None:
         if hasattr(self, "_search_timer"):
@@ -659,6 +647,37 @@ class InventoryApp(ctk.CTk):
         self.combo_filter_purchased.configure(values=[""] + purchased)
         self.combo_filter_selling.configure(values=[""] + selling)
 
+    def set_status(
+        self,
+        text: str,
+        auto_reset: bool = True,
+        timeout_ms: int = 5000,
+        default_text: str = "Vista aggiornata",
+    ) -> None:
+        """
+        Imposta il messaggio nella status bar in basso a destra.
+        Se auto_reset=True, dopo timeout_ms (default 5 secondi) il testo
+        ritorna automaticamente a default_text (default: 'Vista aggiornata').
+        """
+        if hasattr(self, "_status_timer") and self._status_timer and hasattr(self, "after_cancel"):
+            with contextlib.suppress(tk.TclError, ValueError):
+                self.after_cancel(self._status_timer)
+            self._status_timer = None
+
+        if hasattr(self, "status_bar_var"):
+            self.status_bar_var.set(text)
+
+        if auto_reset and text != default_text and hasattr(self, "after"):
+            self._status_timer = self.after(
+                timeout_ms,
+                lambda: self._reset_status(default_text),
+            )
+
+    def _reset_status(self, default_text: str = "Vista aggiornata") -> None:
+        self._status_timer = None
+        if hasattr(self, "status_bar_var"):
+            self.status_bar_var.set(default_text)
+
     def refresh_tables(self) -> None:
         st = self.current_status()
         if not st:
@@ -672,11 +691,11 @@ class InventoryApp(ctk.CTk):
             min_p = parse_money(self.filter_min_price_var.get(), allow_empty=True)
             max_p = parse_money(self.filter_max_price_var.get(), allow_empty=True)
         except ValueError:
-            self.status_bar_var.set("Inserire filtri prezzo validi")
+            self.set_status("Inserire filtri prezzo validi")
             return
 
         if min_p is not None and max_p is not None and min_p > max_p:
-            self.status_bar_var.set("Il prezzo minimo non può superare il massimo")
+            self.set_status("Il prezzo minimo non può superare il massimo")
             return
 
         for status_key, tree in self.trees.items():
@@ -775,7 +794,8 @@ class InventoryApp(ctk.CTk):
                         tree.focus(s_id)
                         restored = True
 
-        self.status_bar_var.set("Vista aggiornata")
+        if not getattr(self, "_status_timer", None):
+            self.status_bar_var.set("Vista aggiornata")
 
     def _get_visually_next(self, tree: ttk.Treeview, item: str) -> str:
         if tree.item(item, "open") and tree.get_children(item):
@@ -910,7 +930,7 @@ class InventoryApp(ctk.CTk):
     def _on_email_sync_success(self) -> None:
         self.refresh()
         self.set_tab("Pre-ordini")
-        self.status_bar_var.set("Pre-ordini importati con successo dalle email!")
+        self.set_status("Pre-ordini importati con successo dalle email!")
 
     def open_ai_insert(self) -> None:
         dialog = AIDialog(self, self.db)
@@ -937,7 +957,7 @@ class InventoryApp(ctk.CTk):
             self._focus_tree_item(last_target, str(created_ids[-1]))
             self._push_undo(f"Aggiunti {len(created_ids)} prodotti AI", lambda nids=created_ids: self._undo_insert(nids))
             n = len(created_ids)
-            self.status_bar_var.set(f"{n} prodott{'o aggiunto' if n == 1 else 'i aggiunti'} con successo")
+            self.set_status(f"{n} prodott{'o aggiunto' if n == 1 else 'i aggiunti'} con successo")
 
     def _focus_tree_item(self, status: str, item_id: str) -> None:
         """Seleziona un elemento nella tabella, posiziona il cursore di focus e assegna il focus da tastiera."""
@@ -970,7 +990,7 @@ class InventoryApp(ctk.CTk):
                     self.notebook.set(target_tab)
             self._focus_tree_item(target, str(new_id))
             self._push_undo(f"Aggiunto '{dialog.result.get('name')}'", lambda nids=[new_id]: self._undo_insert(nids))
-            self.status_bar_var.set("Prodotto aggiunto con successo")
+            self.set_status("Prodotto aggiunto con successo")
         else:
             cur_st = self.current_status()
             if cur_st and cur_st in self.trees:
@@ -1111,7 +1131,7 @@ class InventoryApp(ctk.CTk):
                 lambda recs=modified_old_records: self._undo_update(recs)
             )
             count = len(modified_old_records)
-            self.status_bar_var.set(f"{count} prodott{'o modificato' if count == 1 else 'i modificati'} con successo")
+            self.set_status(f"{count} prodott{'o modificato' if count == 1 else 'i modificati'} con successo")
         else:
             cur_st = self.current_status()
             if cur_st and cur_st in self.trees:
@@ -1147,7 +1167,7 @@ class InventoryApp(ctk.CTk):
         if duplicated_ids:
             self.refresh()
             self._push_undo(f"Duplicati {len(duplicated_ids)} prodotti", lambda nids=duplicated_ids: self._undo_insert(nids))
-            self.status_bar_var.set(f"Duplicati {len(duplicated_ids)} prodotti")
+            self.set_status(f"Duplicati {len(duplicated_ids)} prodotti")
 
     def _copy_to_clipboard(self, event=None) -> str:
         ids = self.selected_ids()
@@ -1163,7 +1183,7 @@ class InventoryApp(ctk.CTk):
             if lines:
                 self.clipboard_clear()
                 self.clipboard_append("\n".join(lines))
-        self.status_bar_var.set(f"Copiati {len(ids)} elementi negli appunti")
+        self.set_status(f"Copiati {len(ids)} elementi negli appunti")
         return "break"
 
     def _paste_from_clipboard(self, event=None) -> str:
@@ -1181,7 +1201,7 @@ class InventoryApp(ctk.CTk):
         if pasted_ids:
             self.refresh()
             self._push_undo(f"Incollati {len(pasted_ids)} prodotti", lambda nids=pasted_ids: self._undo_insert(nids))
-            self.status_bar_var.set(f"Incollati {len(pasted_ids)} prodotti")
+            self.set_status(f"Incollati {len(pasted_ids)} prodotti")
         return "break"
 
     def delete_selected(self) -> None:
@@ -1197,7 +1217,7 @@ class InventoryApp(ctk.CTk):
                 self.refresh()
                 if old_records:
                     self._push_undo(f"Eliminati {deleted_count} prodotti", lambda recs=old_records: self._undo_delete(recs))
-                self.status_bar_var.set(f"Eliminati {deleted_count} prodotti")
+                self.set_status(f"Eliminati {deleted_count} prodotti")
 
     def move_selected_to_stock(self) -> None:
         ids = self.selected_ids()
@@ -1259,7 +1279,7 @@ class InventoryApp(ctk.CTk):
                             self.refresh(),
                         ),
                     )
-                    self.status_bar_var.set(
+                    self.set_status(
                         f"Aggiunti {chosen_qty} pz al record esistente in magazzino"
                         f" — restano {remaining} pz in pre-ordine"
                     )
@@ -1287,7 +1307,7 @@ class InventoryApp(ctk.CTk):
                             self.refresh(),
                         ),
                     )
-                    self.status_bar_var.set(
+                    self.set_status(
                         f"Spostati {chosen_qty} pz in magazzino"
                         f" — restano {remaining} pz in pre-ordine"
                     )
@@ -1305,7 +1325,7 @@ class InventoryApp(ctk.CTk):
                             self.refresh(),
                         ),
                     )
-                    self.status_bar_var.set("Prodotto aggiunto al record esistente in magazzino")
+                    self.set_status("Prodotto aggiunto al record esistente in magazzino")
                 else:
                     # Nessun record compatibile: semplice cambio di stato
                     self.db.update_status_many([prod_id], STATUS_STOCK)
@@ -1313,7 +1333,7 @@ class InventoryApp(ctk.CTk):
                         "Spostamento in magazzino",
                         lambda recs=old_records: self._undo_update(recs),
                     )
-                    self.status_bar_var.set("Prodotto spostato in magazzino")
+                    self.set_status("Prodotto spostato in magazzino")
 
             self.refresh()
             self.notebook.set("Magazzino")
@@ -1334,7 +1354,7 @@ class InventoryApp(ctk.CTk):
                         "Spostamento in magazzino",
                         lambda recs=old_records: self._undo_update(recs),
                     )
-                self.status_bar_var.set(f"{len(ids)} prodotti spostati in magazzino")
+                self.set_status(f"{len(ids)} prodotti spostati in magazzino")
 
 
     def move_selected_to_sold(self) -> None:
@@ -1374,7 +1394,7 @@ class InventoryApp(ctk.CTk):
                             self.refresh(),
                         ),
                     )
-                    self.status_bar_var.set(
+                    self.set_status(
                         f"Venduti {sold_qty} pz — restano {remaining} pz in {record.get('status', 'magazzino')}"
                     )
                 else:
@@ -1385,7 +1405,7 @@ class InventoryApp(ctk.CTk):
                             "Spostamento in vendita",
                             lambda recs=old_records: self._undo_update(recs),
                         )
-                    self.status_bar_var.set("Prodotto venduto con successo")
+                    self.set_status("Prodotto venduto con successo")
                 self.refresh()
                 self.notebook.set("Vendite Attive")
         else:
@@ -1408,7 +1428,7 @@ class InventoryApp(ctk.CTk):
                     self.trees[STATUS_SOLD].focus_set()
                 if old_records:
                     self._push_undo(f"Spostamento {len(ids)} prodotti in vendita", lambda recs=old_records: self._undo_update(recs))
-                self.status_bar_var.set(f"{len(ids)} prodotti contrassegnati come venduti")
+                self.set_status(f"{len(ids)} prodotti contrassegnati come venduti")
 
     def _push_undo(self, desc: str, action_fn: Any) -> None:
         """Aggiunge un'azione invertibile alla pila di Undo (max 10 azioni)."""
@@ -1419,19 +1439,19 @@ class InventoryApp(ctk.CTk):
     def undo(self, event=None) -> None:
         """Annulla l'ultima azione eseguita dall'utente."""
         if not self._undo_stack:
-            self.status_bar_var.set("Nessuna azione da annullare")
+            self.set_status("Nessuna azione da annullare")
             return
         _desc, action_fn = self._undo_stack.pop()
         try:
             action_fn()
         except Exception as exc:  # noqa: BLE001
-            self.status_bar_var.set(f"Impossibile annullare: {exc}")
+            self.set_status(f"Impossibile annullare: {exc}")
 
     def _undo_insert(self, inserted_ids: list[int]) -> None:
         if inserted_ids:
             self.db.delete_many(inserted_ids)
             self.refresh()
-            self.status_bar_var.set(f"Annullato: rimossi {len(inserted_ids)} prodotti aggiunti")
+            self.set_status(f"Annullato: rimossi {len(inserted_ids)} prodotti aggiunti")
 
     def _undo_update(self, old_records: list[dict[str, Any]]) -> None:
         for rec in old_records:
@@ -1439,7 +1459,7 @@ class InventoryApp(ctk.CTk):
             if pid:
                 self.db.save(rec, pid)
         self.refresh()
-        self.status_bar_var.set(f"Annullato: ripristinate modifiche per {len(old_records)} prodotti")
+        self.set_status(f"Annullato: ripristinate modifiche per {len(old_records)} prodotti")
 
     def _undo_delete(self, deleted_records: list[dict[str, Any]]) -> None:
         restored = 0
@@ -1447,7 +1467,7 @@ class InventoryApp(ctk.CTk):
             self.db.save(rec)
             restored += 1
         self.refresh()
-        self.status_bar_var.set(f"Annullato: ripristinati {restored} prodotti eliminati")
+        self.set_status(f"Annullato: ripristinati {restored} prodotti eliminati")
 
     def export_csv(self) -> None:
         path = filedialog.asksaveasfilename(
@@ -1461,7 +1481,7 @@ class InventoryApp(ctk.CTk):
         if ids:
             products_data = [row for row in products_data if row["id"] in ids]
         count = export_to_csv(path, products_data)
-        self.status_bar_var.set(f"Esportati {count} prodotti")
+        self.set_status(f"Esportati {count} prodotti")
         messagebox.showinfo("Esportazione completata", f"Esportati {count} prodotti nel file:\n{path}", parent=self)
 
     def import_excel(self) -> None:
@@ -1472,16 +1492,6 @@ class InventoryApp(ctk.CTk):
             filetypes=[("Excel / CSV", "*.xlsx *.xlsm *.csv")],
         )
         if not path:
-            return
-
-        api_key = self.db.get_setting("gemini_api_key", "")
-        if not api_key:
-            messagebox.showwarning(
-                "API Key mancante",
-                "Inserisci la tua Chiave API Gemini nelle impostazioni prima di usare l'importazione AI.\n"
-                "(Puoi salvarla dalla finestra Sincronizzazione Email → campo 'API Key Gemini')",
-                parent=self,
-            )
             return
 
         # Mostra la dialog per il suggerimento contestuale opzionale
@@ -1496,7 +1506,7 @@ class InventoryApp(ctk.CTk):
         user_hint = hint_dialog.hint  # Può essere stringa vuota
 
         # Mostra stato di elaborazione
-        self.status_bar_var.set("Analisi AI del file in corso...")
+        self.set_status("Analisi AI del file in corso...", auto_reset=False)
         self.update_idletasks()
 
         def _run_import():
@@ -1508,9 +1518,9 @@ class InventoryApp(ctk.CTk):
                         "Il file selezionato non contiene dati leggibili.",
                         parent=self,
                     ))
-                    self.after(0, lambda: self.status_bar_var.set("Importazione annullata: file vuoto"))
+                    self.after(0, lambda: self.set_status("Importazione annullata: file vuoto"))
                     return
-                products = parse_excel_with_ai(raw_text, api_key, user_hint=user_hint)
+                products = parse_excel_with_ai(raw_text, user_hint=user_hint)
                 self.after(0, lambda: _on_ai_done(products))
             except Exception as exc:  # noqa: BLE001
                 err = str(exc)
@@ -1519,7 +1529,7 @@ class InventoryApp(ctk.CTk):
                     f"Impossibile analizzare il file:\n{err}",
                     parent=self,
                 ))
-                self.after(0, lambda: self.status_bar_var.set("Errore durante l'analisi AI"))
+                self.after(0, lambda: self.set_status("Errore durante l'analisi AI"))
 
         def _on_ai_done(products):
             if not products:
@@ -1529,7 +1539,7 @@ class InventoryApp(ctk.CTk):
                     "Assicurati che il file contenga righe con nome e prezzo.",
                     parent=self,
                 )
-                self.status_bar_var.set("Nessun prodotto trovato nel file")
+                self.set_status("Nessun prodotto trovato nel file")
                 return
 
             dialog = ExcelImportDialog(self, self.db, products)
@@ -1538,14 +1548,14 @@ class InventoryApp(ctk.CTk):
             if dialog.confirmed:
                 saved = getattr(dialog, "saved_count", len(products))
                 self.refresh()
-                self.status_bar_var.set(f"Importati {saved} prodotti da Excel con AI")
+                self.set_status(f"Importati {saved} prodotti da Excel con AI")
                 messagebox.showinfo(
                     "Importazione Completata",
                     f"Importati con successo {saved} prodott{'o' if saved == 1 else 'i'} dall'Excel!",
                     parent=self,
                 )
             else:
-                self.status_bar_var.set("Importazione Excel annullata")
+                self.set_status("Importazione Excel annullata")
 
         threading.Thread(target=_run_import, daemon=True).start()
 
@@ -1561,22 +1571,19 @@ class InventoryApp(ctk.CTk):
         if target:
             try:
                 self.db.backup_database_safe(Path(target))
-                self.status_bar_var.set("Backup del database completato")
+                self.set_status("Backup del database completato")
                 messagebox.showinfo("Backup Completato in Sicurezza", f"Backup atomico SQLite creato con successo:\n{target}", parent=self)
             except (sqlite3.Error, OSError) as exc:
                 messagebox.showerror("Errore Backup", str(exc), parent=self)
 
     def _check_updates_background(self) -> None:
-        """Controlla silenziosamente in background la presenza di aggiornamenti su GitHub."""
-        token = self.db.get_setting("github_token", "")
-        repo = self.db.get_setting("github_repo", GITHUB_REPO)
-
-        def worker(tok: str, rep: str):
-            info = check_for_updates(current_version=APP_VERSION, repo=rep, github_token=tok)
+        """Controlla silenziosamente in background la presenza di aggiornamenti tramite Cloudflare Worker."""
+        def worker():
+            info = check_for_updates()
             if info:
                 self.after(0, lambda: self._on_update_found(info))
 
-        threading.Thread(target=worker, args=(token, repo), daemon=True).start()
+        threading.Thread(target=worker, daemon=True).start()
 
     def _on_update_found(self, update_info: dict[str, Any]) -> None:
         """Mostra il badge dell'aggiornamento accanto al logo."""
@@ -1589,8 +1596,7 @@ class InventoryApp(ctk.CTk):
         """Apre la finestra modale di aggiornamento."""
         if not self._update_info:
             return
-        token = self.db.get_setting("github_token", "")
-        UpdateDialog(self, self._update_info, github_token=token)
+        UpdateDialog(self, self._update_info)
 
     def _on_close(self) -> None:
         self.db.close()

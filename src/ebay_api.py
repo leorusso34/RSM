@@ -7,22 +7,18 @@ Responsabilità:
   - Recupero prezzi di mercato tramite Browse API (item_summary/search).
 """
 
-import base64
 import http.client
 import json
 import urllib.parse
 import webbrowser
 
+from .config import RSM_AUTH_KEY, WORKER_URL
+
 # ---------------------------------------------------------------------------
 # Costanti API eBay
 # ---------------------------------------------------------------------------
 
-EBAY_AUTH_HOST  = "api.ebay.com"
-EBAY_API_HOST   = "api.ebay.com"
 EBAY_SEARCH_URL = "https://www.ebay.it/sch/i.html"
-
-# Marketplace ID per eBay Italia
-EBAY_MARKETPLACE_ID = "EBAY_IT"
 
 
 # ---------------------------------------------------------------------------
@@ -65,78 +61,22 @@ def open_search_in_browser(name: str, size: str = "") -> None:
 
 
 # ---------------------------------------------------------------------------
-# OAuth 2.0 — Client Credentials Grant
-# ---------------------------------------------------------------------------
-
-def _get_oauth_token(client_id: str, client_secret: str) -> str:
-    """
-    Richiede un token di accesso OAuth 2.0 a eBay tramite Client Credentials.
-    Questo flusso non richiede login utente ed è adatto per dati pubblici.
-
-    Args:
-        client_id:     App ID / Client ID eBay.
-        client_secret: Cert ID / Client Secret eBay.
-
-    Returns:
-        Token di accesso (stringa Bearer) da usare nelle chiamate API.
-
-    Raises:
-        RuntimeError: se l'autenticazione fallisce.
-    """
-    credentials = base64.b64encode(
-        f"{client_id}:{client_secret}".encode()
-    ).decode()
-
-    body = urllib.parse.urlencode({
-        "grant_type": "client_credentials",
-        "scope": "https://api.ebay.com/oauth/api_scope",
-    })
-
-    conn = http.client.HTTPSConnection(EBAY_AUTH_HOST, timeout=15)
-    try:
-        conn.request(
-            "POST",
-            "/identity/v1/oauth2/token",
-            body=body,
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": f"Basic {credentials}",
-            },
-        )
-        resp = conn.getresponse()
-        raw = resp.read().decode("utf-8")
-    finally:
-        conn.close()
-
-    data = json.loads(raw)
-    if "access_token" not in data:
-        error = data.get("error_description", data.get("error", "risposta non valida"))
-        raise RuntimeError(f"Autenticazione eBay fallita: {error}")
-
-    return data["access_token"]
-
-
-# ---------------------------------------------------------------------------
-# Browse API — ricerca prezzi
+# Cloudflare Worker Proxy — ricerca prezzi
 # ---------------------------------------------------------------------------
 
 def fetch_market_prices(
     name: str,
     size: str,
-    client_id: str,
-    client_secret: str,
     limit: int = 100,
 ) -> dict:
     """
-    Recupera i prezzi delle inserzioni eBay attive per un prodotto e
-    restituisce un riepilogo con min, media e max.
+    Recupera i prezzi delle inserzioni eBay attive per un prodotto tramite il Cloudflare
+    Worker proxy protetto e restituisce un riepilogo con min, media e max.
 
     Args:
-        name:          Nome del prodotto.
-        size:          Taglia (vuota o "UNI" → non inclusa nella query).
-        client_id:     App ID / Client ID eBay.
-        client_secret: Cert ID / Client Secret eBay.
-        limit:         Numero massimo di risultati da analizzare (max 200).
+        name:  Nome del prodotto.
+        size:  Taglia (vuota o "UNI" → non inclusa nella query).
+        limit: Numero massimo di risultati da analizzare (default 100).
 
     Returns:
         Dizionario con le chiavi:
@@ -147,55 +87,45 @@ def fetch_market_prices(
           - "query"   (str)   — query utilizzata per la ricerca
 
     Raises:
-        RuntimeError: se l'autenticazione o la chiamata API fallisce.
+        RuntimeError: se la chiamata API fallisce o WORKER_URL non è configurato.
         ValueError:   se non viene trovata nessuna inserzione valida.
     """
-    # 1. Autenticazione
-    token = _get_oauth_token(client_id, client_secret)
+    if not WORKER_URL:
+        raise RuntimeError("WORKER_URL non è configurato.")
 
-    # 2. Costruzione query (stessa logica dell'URL browser)
+    # Costruzione query (stessa logica dell'URL browser)
     query_parts = [name.strip()]
     effective_size = size.strip() if size.strip().upper() != "UNI" else ""
     if effective_size:
         query_parts.append(effective_size)
     query = " ".join(query_parts)
 
-    # 3. Parametri ricerca
-    params = urllib.parse.urlencode({
-        "q": query,
-        "limit": str(min(limit, 200)),
-        "filter": "buyingOptions:{FIXED_PRICE}",  # solo inserzioni a prezzo fisso
-    })
-    path = f"/buy/browse/v1/item_summary/search?{params}"
+    parsed_w = urllib.parse.urlparse(WORKER_URL.strip())
+    w_host = parsed_w.netloc
+    params = urllib.parse.urlencode({"q": query, "limit": str(limit)})
+    w_path = f"{parsed_w.path.rstrip('/')}/api/ebay/prices?{params}"
+    w_headers = {"Accept": "application/json"}
+    if RSM_AUTH_KEY:
+        w_headers["X-RSM-Auth"] = RSM_AUTH_KEY.strip()
 
-    # 4. Chiamata Browse API
-    conn = http.client.HTTPSConnection(EBAY_API_HOST, timeout=15)
+    conn_cls = http.client.HTTPSConnection if parsed_w.scheme == "https" else http.client.HTTPConnection
+    conn = conn_cls(w_host, timeout=15)
     try:
-        conn.request(
-            "GET",
-            path,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "X-EBAY-C-MARKETPLACE-ID": EBAY_MARKETPLACE_ID,
-                "Content-Type": "application/json",
-            },
-        )
+        conn.request("GET", w_path, headers=w_headers)
         resp = conn.getresponse()
         raw = resp.read().decode("utf-8")
     finally:
         conn.close()
 
     data = json.loads(raw)
-
     if resp.status != 200:
-        error = data.get("errors", [{}])[0].get("message", "Errore sconosciuto")
-        raise RuntimeError(f"Errore Browse API eBay ({resp.status}): {error}")
+        error = data.get("error") or data.get("errors", [{}])[0].get("message", "Errore sconosciuto")
+        raise RuntimeError(f"Errore Proxy eBay ({resp.status}): {error}")
 
     items = data.get("itemSummaries", [])
     if not items:
         raise ValueError(f"Nessuna inserzione trovata su eBay per: {query}")
 
-    # 5. Estrazione prezzi (campo "price.value")
     prices = []
     for item in items:
         price_info = item.get("price", {})
