@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets\app_icon.ico" width="96" alt="RSM icon">
+<img src="assets/app_logo_animated.gif" width="96" alt="RSM Logo">
 
 # RSM
 
@@ -116,6 +116,7 @@ L'eseguibile completo e pronto all'uso verrà generato nella cartella `dist/RSM/
 ```text
 RUSSO STOCK/
 ├── assets/                       # Icone, logo, grafiche e preview GIF
+│   ├── app_logo_animated.gif     # Logo animato (slancio rialzista)
 │   └── graphs.gif                # Preview animata della dashboard
 ├── src/                          # Codice sorgente modulare
 │   ├── ai_agent.py               # Integrazione API Gemini

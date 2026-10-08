@@ -1,6 +1,7 @@
 """Finestra principale dell'applicazione InventoryApp per RSM."""
 
 import contextlib
+import re
 import sqlite3
 import threading
 import tkinter as tk
@@ -101,6 +102,10 @@ class InventoryApp(ctk.CTk):
         self._clipboard_ids: list[int] = []
         self._undo_stack: list[tuple[str, Any]] = []
         self._update_info: dict[str, Any] | None = None
+        self._logo_frames: list[Any] = []
+        self._logo_frame_idx: int = 0
+        self._logo_anim_after_id: str | None = None
+        self._logo_label: ctk.CTkLabel | None = None
         self.status_tabs = [STATUS_STOCK, STATUS_PREORDER, STATUS_SOLD, STATUS_COMPLETED]
 
         self.tab_name_to_status = {
@@ -158,7 +163,27 @@ class InventoryApp(ctk.CTk):
                 logo_path = PROJECT_DIR / "assets" / "app_icon.ico"
             img = Image.open(logo_path)
             self._header_logo = ctk.CTkImage(light_image=img, dark_image=img, size=(48, 48))
-            ctk.CTkLabel(logo_box, image=self._header_logo, text="").pack(side="left")
+
+            # Caricamento fotogrammi animazione (slancio rialzista senza sfondo)
+            self._logo_frames = []
+            surge_dir = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "logo_surge"
+            if not surge_dir.exists():
+                surge_dir = PROJECT_DIR / "assets" / "logo_surge"
+
+            if surge_dir.exists():
+                for i in range(36):
+                    fpath = surge_dir / f"frame_{i:02d}.png"
+                    if fpath.exists():
+                        fimg = Image.open(fpath)
+                        self._logo_frames.append(ctk.CTkImage(light_image=fimg, dark_image=fimg, size=(48, 48)))
+
+            initial_img = self._logo_frames[0] if self._logo_frames else self._header_logo
+            self._logo_label = ctk.CTkLabel(logo_box, image=initial_img, text="")
+            self._logo_label.pack(side="left")
+
+            if len(self._logo_frames) > 1:
+                self._logo_frame_idx = 0
+                self._animate_header_logo()
         except (OSError, ValueError):
             pass
 
@@ -1588,8 +1613,9 @@ class InventoryApp(ctk.CTk):
     def _on_update_found(self, update_info: dict[str, Any]) -> None:
         """Mostra il badge dell'aggiornamento accanto al logo."""
         self._update_info = update_info
-        ver = update_info.get("version", "")
-        self.btn_update.configure(text=f"Aggiorna a {ver}")
+        ver = update_info.get("version", "").strip()
+        clean_ver = re.sub(r"^[^\d]*", "", ver) or ver
+        self.btn_update.configure(text=f"Aggiorna alla versione {clean_ver}")
         self.btn_update.pack(side="left", padx=(14, 0))
 
     def _open_updater(self) -> None:
@@ -1598,6 +1624,20 @@ class InventoryApp(ctk.CTk):
             return
         UpdateDialog(self, self._update_info)
 
+    def _animate_header_logo(self) -> None:
+        """Cicla i fotogrammi del logo con animazione di slancio rialzista a 20 FPS."""
+        with contextlib.suppress(tk.TclError, RuntimeError):
+            if not self.winfo_exists():
+                return
+            if self._logo_label is not None and self._logo_frames:
+                self._logo_frame_idx = (self._logo_frame_idx + 1) % len(self._logo_frames)
+                self._logo_label.configure(image=self._logo_frames[self._logo_frame_idx])
+            self._logo_anim_after_id = self.after(50, self._animate_header_logo)
+
     def _on_close(self) -> None:
+        if self._logo_anim_after_id is not None:
+            with contextlib.suppress(tk.TclError, ValueError):
+                self.after_cancel(self._logo_anim_after_id)
+            self._logo_anim_after_id = None
         self.db.close()
         self.destroy()

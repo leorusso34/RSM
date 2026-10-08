@@ -2,6 +2,7 @@
 Finestra modale di dialogo per la notifica e il download degli aggiornamenti di RSM.
 """
 
+import re
 import threading
 import tkinter as tk
 from typing import Any
@@ -53,8 +54,9 @@ class UpdateDialog(ctk.CTkToplevel):
             anchor="w",
         ).pack(fill="x")
 
-        ver = self.update_info.get("version", "Nuova")
-        subtitle_text = f"Versione {ver} disponibile (versione attuale: v{APP_VERSION})"
+        ver = self.update_info.get("version", "").strip()
+        clean_ver = re.sub(r"^[^\d]*", "", ver) or ver or "Nuova"
+        subtitle_text = f"Versione {clean_ver} disponibile (versione attuale: v{APP_VERSION})"
         ctk.CTkLabel(
             outer,
             text=subtitle_text,
@@ -104,7 +106,7 @@ class UpdateDialog(ctk.CTkToplevel):
 
         self.btn_update = ctk.CTkButton(
             self.footer,
-            text="Aggiorna Ora",
+            text=f"Aggiorna alla versione {clean_ver}",
             command=self._start_update,
             fg_color="#059669",
             hover_color="#047857",
