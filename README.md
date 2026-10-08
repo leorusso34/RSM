@@ -6,16 +6,6 @@
 
 Applicazione desktop moderna in **CustomTkinter** per la gestione di inventario, pre-ordini, vendite attive e storiche, con cruscotto KPI, grafici statistici interattivi, sincronizzazione email e inserimento intelligente con AI (testuale e vocale).
 
-<!-- Badges -->
-<p align="center">
-  <img src="https://img.shields.io/badge/version-v1.5.0-2563eb" alt="Versione RSM">
-  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white" alt="Windows 10/11">
-  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/AI-Google%20Gemini-8E75C4?logo=googlegemini&logoColor=white" alt="Google Gemini">
-  <img src="https://img.shields.io/badge/Proxy-Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers">
-  <img src="https://img.shields.io/badge/Market-eBay%20API-E53238?logo=ebay&logoColor=white" alt="eBay API">
-</p>
-
 <p align="center">
   <img src="assets/graphs.gif" alt="RSM Preview - Dashboard & Grafici" width="100%">
 </p>
