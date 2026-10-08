@@ -710,7 +710,7 @@ def test_cross_platform_config_app_directory(monkeypatch):
     assert dir_found.as_posix().endswith("/Applications")
 
     # Simula eseguibile Windows standard
-    fake_win_exe = "C:\\Program Files\\RSM\\RSM.exe"
+    fake_win_exe = "C:/Program Files/RSM/RSM.exe"
     monkeypatch.setattr(sys, "executable", fake_win_exe)
     monkeypatch.setattr(sys, "platform", "win32")
 
