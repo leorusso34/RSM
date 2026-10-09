@@ -1,0 +1,17 @@
+[package]
+name = "rsm-desktop"
+version = "2.0.0"
+description = "RSM - Reseller Stock & Sales Manager Next-Gen UI"
+authors = ["Leonardo Russo"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = ["shell-open"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

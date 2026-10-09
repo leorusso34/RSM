@@ -45,7 +45,7 @@ Applicazione desktop moderna in **CustomTkinter** per la gestione di inventario,
 
 ## ⚙️ Configurazione Credenziali (`config.json`)
 
-Tutte le integrazioni esterne (prezzi di mercato eBay, intelligenza artificiale Google Gemini per inserimento rapido ed Excel, e download degli aggiornamenti da GitHub Releases) sono gestite e protette direttamente sul cloud tramite **Cloudflare Worker**. Nessuna chiave API complessa o token deve essere inserito dagli utenti!
+Tutte le integrazioni esterne (prezzi di mercato eBay, Google Gemini per inserimento rapido ed Excel, e download degli aggiornamenti da GitHub Releases) sono gestite e protette direttamente sul cloud tramite **Cloudflare Worker**.
 
 Nel file `config.json` nella cartella principale puoi configurare le tue credenziali personali per la sincronizzazione email:
 

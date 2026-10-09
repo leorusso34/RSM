@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RSM • Next-Gen Reseller Suite</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="chart.min.js"></script>
+</head>
+<body>
+  <!-- Layout Applicativo Principale -->
+  <div class="app-layout">
+    
+    <!-- Pulsante fluttuante per riaprire la sidebar a tutto schermo -->
+    <button class="open-sidebar-btn" id="openSidebarBtn" title="Apri barra laterale" onclick="toggleSidebar(true)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>
+      </svg>
+    </button>
+
+    <!-- ====================================================================
+         SIDEBAR DI NAVIGAZIONE (COLLAPSIBILE)
+         ==================================================================== -->
+    <aside class="sidebar" id="appSidebar">
+      <div>
+        <!-- Intestazione Sidebar: Logo / Profilo e Pulsante Chiudi -->
+        <div class="brand-section">
+          <div class="brand-left">
+            <div class="brand-logo">R</div>
+            <div class="brand-text">
+              <h1>RSM</h1>
+              <p>Reseller Suite</p>
+            </div>
+          </div>
+          <!-- Pulsante per chiudere la colonna sinistra (tutto schermo) -->
+          <button class="sidebar-toggle-btn" id="closeSidebarBtn" title="Nascondi barra laterale" onclick="toggleSidebar(false)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Pulsante Azione Rapida Integrato nella Sidebar -->
+        <div class="sidebar-action-wrap">
+          <button class="btn-sidebar-add" onclick="openAddProductModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Nuovo Prodotto</span>
+          </button>
+        </div>
+
+        <!-- Menu di Navigazione Principale -->
+        <div class="nav-group-title">PANORAMICA</div>
+        <ul class="nav-list">
+          <li class="nav-item active" data-section="dashboard">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+              <span>Dashboard & Grafici</span>
+            </div>
+          </li>
+          <li class="nav-item" data-section="magazzino">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+              <span>Magazzino</span>
+            </div>
+            <span class="nav-badge" id="badge-stock">24</span>
+          </li>
+          <li class="nav-item" data-section="preordini">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Pre-ordini</span>
+            </div>
+            <span class="nav-badge" id="badge-preorder">6</span>
+          </li>
+          <li class="nav-item" data-section="vendite">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m20.59 13.41-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" x2="7.01" y1="7" y2="7"/></svg>
+              <span>Vendite Attive</span>
+            </div>
+            <span class="nav-badge" id="badge-active">8</span>
+          </li>
+          <li class="nav-item" data-section="storico">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span>Storico Vendite</span>
+            </div>
+            <span class="nav-badge" id="badge-completed">84</span>
+          </li>
+        </ul>
+
+        <div class="nav-group-title">INTEGRAZIONI</div>
+        <ul class="nav-list">
+          <li class="nav-item" onclick="simulateAIAssistant()">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+              <span>Assistente AI Gemini</span>
+            </div>
+          </li>
+          <li class="nav-item" onclick="simulateEmailSync()">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              <span>Sincronizzazione Email</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Footer della Sidebar -->
+      <div class="sidebar-footer">
+        <div class="status-pill">
+          <div class="status-indicator"></div>
+          <div>
+            <div style="font-weight: 600; color: #fff;">Database Locale SQLite</div>
+            <div style="font-size: 10px; color: var(--text-dim);">Sincronizzato • Latenza 0ms</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ====================================================================
+         CONTENUTO PRINCIPALE (SENZA HEADER SUPERIORE, TUTTO SPAZIO UTILE)
+         ==================================================================== -->
+    <main class="main-wrapper">
+      
+      <!-- Scrollable Workspace -->
+      <div class="content-scroll">
+
+        <!-- ================================================================
+             RIGA 1: 3 CARD KPI (COME DA DISEGNO)
+             ================================================================ -->
+        <section class="kpi-grid">
+          
+          <!-- Card 1: Capitale Investito -->
+          <div class="flat-card kpi-card blue">
+            <div class="card-content">
+              <div class="kpi-card-header">
+                <span class="kpi-title">Capitale Investito</span>
+                <div class="kpi-icon-wrap">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-invested">€ 0,00</div>
+              <div class="kpi-footer">
+                <span class="kpi-trend neutral">+12.4%</span>
+                <span class="kpi-subtext">Acquisti nell'ultimo mese</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Valore Magazzino -->
+          <div class="flat-card kpi-card emerald">
+            <div class="card-content">
+              <div class="kpi-card-header">
+                <span class="kpi-title">Valore Magazzino</span>
+                <div class="kpi-icon-wrap">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-stock">€ 0,00</div>
+              <div class="kpi-footer">
+                <span class="kpi-trend positive">+8.6%</span>
+                <span class="kpi-subtext">Stima di realizzo a mercato</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Profitto Netto & ROI Totale -->
+          <div class="flat-card kpi-card purple">
+            <div class="card-content">
+              <div class="kpi-card-header">
+                <span class="kpi-title">Profitto Netto & ROI</span>
+                <div class="kpi-icon-wrap">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-profit">€ 0,00</div>
+              <div class="kpi-footer">
+                <span class="kpi-trend positive" id="kpi-roi">+0% ROI</span>
+                <span class="kpi-subtext">Netto commissioni e spese</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ================================================================
+             RIGA 2: 2 GRAFICI (COME DA DISEGNO: GRANDE A SX, CIAMBELLA A DX)
+             ================================================================ -->
+        <section class="charts-grid">
+          
+          <!-- Grafico 1: Utili Mensili (Box Grande) -->
+          <div class="flat-card">
+            <div class="card-content">
+              <div class="chart-card-header">
+                <div class="chart-card-title">
+                  <h3>Andamento Profitto Mensile (€)</h3>
+                  <p>Guadagno netto mese per mese</p>
+                </div>
+                <div class="timeframe-pills">
+                  <button class="timeframe-pill active">Anno 2026</button>
+                  <button class="timeframe-pill">6 Mesi</button>
+                  <button class="timeframe-pill">Tutto</button>
+                </div>
+              </div>
+              <div class="chart-canvas-container">
+                <canvas id="monthlyProfitChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grafico 2: Canali di Vendita (Box Destra) -->
+          <div class="flat-card">
+            <div class="card-content">
+              <div class="chart-card-header">
+                <div class="chart-card-title">
+                  <h3>Canali di Vendita</h3>
+                  <p>Ripartizione piattaforme</p>
+                </div>
+              </div>
+              <div class="chart-canvas-container">
+                <canvas id="platformPieChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ================================================================
+             RIGA 3: SEZIONE TABELLA UNIFICATA (CON RICERCA E SCHEDE INTEGRATE)
+             ================================================================ -->
+        <section class="flat-card table-card">
+          <div class="card-content">
+            
+            <!-- Barra Superiore della Tabella: Schede a Sinistra, Ricerca a Destra -->
+            <div class="table-header-bar">
+              <div class="table-tabs">
+                <button class="table-tab-pill active" data-filter="all">Tutti i Prodotti</button>
+                <button class="table-tab-pill" data-filter="stock">Magazzino</button>
+                <button class="table-tab-pill" data-filter="preorder">Pre-ordini</button>
+                <button class="table-tab-pill" data-filter="active-sale">Vendite Attive</button>
+                <button class="table-tab-pill" data-filter="completed">Vendite Completate</button>
+              </div>
+
+              <!-- Controlli a destra: Ricerca + Quadratino Ordinamento -->
+              <div class="table-controls-right">
+                <div class="table-search-wrap">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                  </svg>
+                  <input type="text" id="global-search-input" placeholder="Cerca prodotto, taglia, brand..." />
+                </div>
+
+                <!-- Mini Quadratino Ordinamento -->
+                <div class="sort-dropdown-wrap">
+                  <button class="btn-sort-square" id="sortDropdownBtn" title="Ordina tabella" onclick="toggleSortMenu(event)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/>
+                    </svg>
+                  </button>
+                  <div class="sort-menu" id="sortMenu">
+                    <div class="sort-menu-header">CRITERIO DI ORDINAMENTO</div>
+                    <div class="sort-menu-item active" data-sort-key="date-desc" onclick="applySort('date', 'desc')">
+                      <span>Ultima aggiunta (Recenti)</span>
+                    </div>
+                    <div class="sort-menu-item" data-sort-key="date-asc" onclick="applySort('date', 'asc')">
+                      <span>Prima aggiunta (Vecchi)</span>
+                    </div>
+                    <div class="sort-menu-item" data-sort-key="purchasedPrice-desc" onclick="applySort('purchasedPrice', 'desc')">
+                      <span>Prezzo acquisto (Più alto)</span>
+                    </div>
+                    <div class="sort-menu-item" data-sort-key="purchasedPrice-asc" onclick="applySort('purchasedPrice', 'asc')">
+                      <span>Prezzo acquisto (Più basso)</span>
+                    </div>
+                    <div class="sort-menu-item" data-sort-key="salePrice-desc" onclick="applySort('salePrice', 'desc')">
+                      <span>Prezzo vendita (Più alto)</span>
+                    </div>
+                    <div class="sort-menu-item" data-sort-key="profit-desc" onclick="applySort('profit', 'desc')">
+                      <span>Utile netto (Maggiore)</span>
+                    </div>
+                    <div class="sort-menu-item" data-sort-key="roi-desc" onclick="applySort('roi', 'desc')">
+                      <span>ROI (%) (Maggiore)</span>
+                    </div>
+                    <div class="sort-menu-item" data-sort-key="name-asc" onclick="applySort('name', 'asc')">
+                      <span>Nome prodotto (A → Z)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabella Dati (Pulita, Senza Emoji, Icone Vettoriali di Azione) -->
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead id="inventory-table-head">
+                  <!-- Intestazioni generate dinamicamente da app.js -->
+                </thead>
+                <tbody id="inventory-table-body">
+                  <!-- Righe generate dinamicamente da app.js -->
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ====================================================================
+       MODALE: NUOVO / MODIFICA PRODOTTO (CALCOLO AUTOMATICO IN TEMPO REALE)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="productModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Aggiungi Prodotto all'Inventario</h3>
+        <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="productForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nome Prodotto / Modello</label>
+            <input type="text" id="prod-name" class="form-input" placeholder="Es. Travis Scott x Air Jordan 1 Low" required />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Brand / Marchio</label>
+              <input type="text" id="prod-brand" class="form-input" placeholder="Nike, Supreme, Jordan..." />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Taglia</label>
+              <input type="text" id="prod-size" class="form-input" placeholder="EU 43 / Size L" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Quantità</label>
+              <input type="number" id="prod-qty" class="form-input" value="1" min="1" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Prezzo Acquisto (€)</label>
+              <input type="number" step="0.5" id="prod-buy-price" class="form-input" placeholder="160.00" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Luogo di Acquisto</label>
+              <input type="text" id="prod-buy-place" class="form-input" placeholder="SNKRS, Store, Drop..." />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Prezzo Vendita Previsto (€)</label>
+              <input type="number" step="0.5" id="prod-sell-price" class="form-input" placeholder="380.00" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Canale di Vendita</label>
+              <input type="text" id="prod-sell-place" class="form-input" placeholder="StockX, Vinted, Privato..." />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stato Iniziale</label>
+              <select id="prod-status" class="form-input" style="background:#0b101c; color:#fff;">
+                <option value="stock">Magazzino</option>
+                <option value="preorder">Pre-ordine</option>
+                <option value="active-sale">In Vendita Attiva</option>
+                <option value="completed">Venduto</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Anteprima calcolo live -->
+          <div class="modal-preview-box">
+            <div>
+              <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                Stima Utile Netto (Netto ~9% Fee)
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim);">Ricalcolo automatico</div>
+            </div>
+            <div class="modal-preview-val" id="modal-profit-preview">€ 0.00</div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+          <button type="submit" class="btn btn-primary">Salva nel Database</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODALE: STIMA PREZZI EBAY API (SIMULATORE)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="ebayModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Stima di Mercato eBay Ufficiale</h3>
+        <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 13.5px; font-weight: 600; color: #fff; margin-bottom: 3px;" id="ebay-query-title">
+          Caricamento...
+        </div>
+        <div style="font-size: 11.5px; color: var(--text-muted);">
+          Scansione vendite concluse e inserzioni verificate su eBay EU.
+        </div>
+
+        <div id="ebay-loading" style="text-align: center; padding: 24px; color: #818cf8;">
+          <div style="font-size: 13px;">Interrogazione eBay Finding API...</div>
+        </div>
+
+        <div id="ebay-results" style="display: none; margin-top: 14px;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;">
+            <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;">Prezzo Medio</div>
+              <div style="font-size: 16px; font-weight: 800; color: #34d399; margin-top: 3px;" id="ebay-avg-val">€ 340,00</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;">Consigliato</div>
+              <div style="font-size: 16px; font-weight: 800; color: #60a5fa; margin-top: 3px;" id="ebay-rec-val">€ 325,00</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; text-align: center;">
+              <div style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;">Liquidità</div>
+              <div style="font-size: 13px; font-weight: 700; color: #a78bfa; margin-top: 5px;" id="ebay-vol-val">18 vendite / 30gg</div>
+            </div>
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-muted); background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); padding: 8px 12px; border-radius: 6px;">
+            Suggerimento: La domanda per questa taglia è solida con buon margine di realizzo rapido.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       SIDE-DRAWER OVERLAY: DETTAGLIO PRODOTTO (SLIDE-OVER DA DESTRA)
+       ==================================================================== -->
+  <div id="drawerBackdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
+
+  <aside id="sideDrawer" class="side-drawer">
+    <!-- Header -->
+    <div class="drawer-header">
+      <div class="drawer-header-left">
+        <span id="drawerStatusBadge" class="status-badge stock">
+          <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
+          <span id="drawerStatusText">In Magazzino</span>
+        </span>
+        <span class="drawer-id-tag">ID: #RSM-<span id="drawerId">1</span></span>
+      </div>
+      <button class="drawer-close-btn" onclick="closeDrawer()" title="Chiudi (ESC)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Body Scrollabile -->
+    <div class="drawer-body">
+      <!-- Titolo & Brand -->
+      <div class="drawer-title-section">
+        <h2 id="drawerTitle">Nome Prodotto</h2>
+        <p id="drawerBrand">Brand • Categoria</p>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="drawer-metrics-grid">
+        <div class="drawer-metric-card">
+          <div class="drawer-metric-label">Acquisto</div>
+          <div class="drawer-metric-val" id="drawerBuyPrice">€ 0,00</div>
+        </div>
+        <div class="drawer-metric-card">
+          <div class="drawer-metric-label">Vendita / Stima</div>
+          <div class="drawer-metric-val" id="drawerSellPrice">€ 0,00</div>
+        </div>
+        <div class="drawer-metric-card">
+          <div class="drawer-metric-label">Utile Netto</div>
+          <div class="drawer-metric-val profit" id="drawerProfit">+€ 0,00</div>
+        </div>
+      </div>
+
+      <!-- Dati Acquisto & Logistica -->
+      <div class="drawer-section">
+        <div class="drawer-section-title">Dati Acquisto & Logistica</div>
+        <div class="drawer-grid-fields">
+          <div>
+            <span class="drawer-field-label">Taglia / Misura:</span>
+            <span class="drawer-field-val" id="drawerSize">EU 43</span>
+          </div>
+          <div>
+            <span class="drawer-field-label">Quantità:</span>
+            <span class="drawer-field-val" id="drawerQty">1 pz</span>
+          </div>
+          <div>
+            <span class="drawer-field-label">Store / Fornitore:</span>
+            <span class="drawer-field-val" id="drawerStore">SNKRS</span>
+          </div>
+          <div>
+            <span class="drawer-field-label">Data Inserimento:</span>
+            <span class="drawer-field-val" id="drawerDate">2026-10-01</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canale & Vendita -->
+      <div class="drawer-section">
+        <div class="drawer-section-title">Canale & Vendita</div>
+        <div class="drawer-grid-fields">
+          <div>
+            <span class="drawer-field-label">Piattaforma:</span>
+            <span class="drawer-field-val" id="drawerChannel" style="color: #818cf8;">-</span>
+          </div>
+          <div>
+            <span class="drawer-field-label">ROI Calcolato:</span>
+            <span class="drawer-field-val" id="drawerRoi" style="color: #34d399;">-</span>
+          </div>
+          <div style="grid-column: span 2;">
+            <span class="drawer-field-label">Commissioni Piattaforma:</span>
+            <span class="drawer-field-val" id="drawerFees">€ 0,00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Note Personali & Condizioni -->
+      <div class="drawer-section">
+        <div class="drawer-section-title">Note Personali & Condizioni</div>
+        <p id="drawerNotes" style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin: 0;">
+          Prodotto originale verificato con scatola integra e accessori originali inclusi.
+        </p>
+      </div>
+
+      <!-- Cronistoria Eventi -->
+      <div class="drawer-section">
+        <div class="drawer-section-title">Cronistoria Prodotto</div>
+        <div class="drawer-timeline" id="drawerTimeline">
+          <!-- Popolato dinamicamente da app.js -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Azioni Rapide -->
+    <div class="drawer-footer">
+      <button type="button" class="btn btn-secondary" id="drawerEbayBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <span>Lookup eBay</span>
+      </button>
+      <div style="display: flex; gap: 6px;">
+        <button type="button" class="btn btn-secondary" id="drawerEditBtn">Modifica</button>
+        <button type="button" class="btn btn-primary" id="drawerStatusActionBtn">Segna Venduto</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Toast Notifiche -->
+  <div class="toast" id="toastNotification"></div>
+
+  <!-- Script Applicativo -->
+  <script src="app.js"></script>
+</body>
+</html>
