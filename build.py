@@ -1,89 +1,104 @@
-"""Script per la build dell'eseguibile Windows tramite PyInstaller per RSM."""
+"""Script per la build dell'eseguibile Windows nativo tramite Tauri e Rust per RSM."""
 
 import json
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 
-def main() -> None:
-    print("Preparazione per la build di RSM...")
+def find_cargo() -> str:
+    """Individua l'eseguibile cargo di Rust nel sistema."""
+    cargo_path = shutil.which("cargo")
+    if cargo_path:
+        return cargo_path
 
-    # Assicurati che PyInstaller sia installato
-    try:
-        import PyInstaller  # noqa: F401
-    except ImportError:
-        print("Installazione di PyInstaller in corso...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
+    # Controllo percorso standard cargo su Windows
+    home_cargo = Path.home() / ".cargo" / "bin" / ("cargo.exe" if sys.platform == "win32" else "cargo")
+    if home_cargo.exists():
+        return str(home_cargo)
+
+    raise RuntimeError("Cargo (Rust toolchain) non trovato. Assicurati che Rust sia installato.")
+
+
+def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+    print("[RSM BUILD] Inizio processo di compilazione RSM (Tauri Native Release)...")
 
     project_root = Path(__file__).resolve().parent
-    main_script = project_root / "rsm.py"
+    tauri_project_dir = project_root / "src-tauri"
 
-    if not main_script.exists():
-        print(f"Errore: {main_script} non trovato.")
+    if not tauri_project_dir.exists():
+        print(f"Errore: Cartella Tauri {tauri_project_dir} non trovata.")
         sys.exit(1)
 
+    cargo_bin = find_cargo()
+    print(f"Toolchain Rust rilevata: {cargo_bin}")
+
     dist_root = project_root / "dist"
-    build_root = project_root / "build"
     dist_dir = dist_root / "RSM"
     dist_data = dist_dir / "data"
-    old_dist_dir = dist_root / "Russo Stock Manager"
-    old_dist_data = old_dist_dir / "data"
     backup_data = project_root / "data_backup_temp"
     dist_config = dist_dir / "config.json"
 
-    # 1. Salvataggio sicuro del database prima della ricompilazione
-    target_existing_data = dist_data if dist_data.exists() else (old_dist_data if old_dist_data.exists() else None)
-    if target_existing_data and target_existing_data.exists():
+    # 1. Salvataggio sicuro del database di produzione prima della ricompilazione
+    dist_db = dist_data / "russo_stock.db"
+    if dist_db.exists() and dist_db.stat().st_size > 0:
         print("Salvataggio del database attuale in corso...")
         if backup_data.exists():
             shutil.rmtree(backup_data)
-        shutil.copytree(target_existing_data, backup_data)
+        shutil.copytree(dist_data, backup_data)
 
-    # Rimuovi la vecchia cartella legacy se ancora presente
-    if old_dist_dir.exists():
-        shutil.rmtree(old_dist_dir, ignore_errors=True)
-    old_build_dir = build_root / "Russo Stock Manager"
-    if old_build_dir.exists():
-        shutil.rmtree(old_build_dir, ignore_errors=True)
+    # 2. Gestione sicura dei percorsi con spazi per MinGW / windres su Windows
+    subst_drive = None
+    build_cwd = tauri_project_dir
+    if sys.platform == "win32" and " " in str(project_root):
+        subst_drive = "R:"
+        subprocess.run(["subst", subst_drive, "/D"], capture_output=True)
+        subst_res = subprocess.run(["subst", subst_drive, str(project_root)], capture_output=True)
+        if subst_res.returncode == 0:
+            build_cwd = Path(f"{subst_drive}/src-tauri")
 
-    # Costruisci il comando PyInstaller con tutte le inclusioni per CustomTkinter
-    data_sep = ";" if sys.platform == "win32" else ":"
-    icon_arg = "--icon=assets/app_icon.ico"
-    if sys.platform == "darwin" and (project_root / "assets" / "app_icon.icns").exists():
-        icon_arg = "--icon=assets/app_icon.icns"
+    try:
+        # 3. Compilazione nativa con Cargo in modalità Release ottimizzata
+        print("Compilazione in corso con Cargo Release (Zero-Lag Engine)...")
+        cmd = [cargo_bin, "build", "--release"]
+        try:
+            # Prova prima con flag offline per massima velocità
+            subprocess.check_call(cmd + ["--offline"], cwd=build_cwd)
+        except subprocess.CalledProcessError:
+            # Fallback con accesso rete se necessario
+            subprocess.check_call(cmd, cwd=build_cwd)
+    finally:
+        # Smonta sempre l'unità virtuale temporanea
+        if subst_drive:
+            subprocess.run(["subst", subst_drive, "/D"], capture_output=True)
 
-    cmd = [
-        sys.executable,
-        "-m", "PyInstaller",
-        "--noconfirm",
-        "--onedir",
-        "--windowed",
-        "--name=RSM",
-        "--clean",
-        icon_arg,
-        f"--add-data=assets{data_sep}assets",
-        "--hidden-import=customtkinter",
-        "--hidden-import=darkdetect",
-        "--hidden-import=PIL",
-        "--collect-all=customtkinter",
-        "--copy-metadata=customtkinter",
-        str(main_script)
-    ]
+    # 4. Individua il binario compilato
+    compiled_exe = tauri_project_dir / "target" / "release" / ("rsm-desktop.exe" if sys.platform == "win32" else "rsm-desktop")
+    if not compiled_exe.exists():
+        print(f"Errore: Binario compilato non trovato in {compiled_exe}")
+        sys.exit(1)
 
-    print(f"Esecuzione comando: {' '.join(cmd)}")
-    subprocess.check_call(cmd, cwd=project_root)
+    # 5. Organizzazione cartella di distribuzione dist/RSM
+    dist_dir.mkdir(parents=True, exist_ok=True)
+    target_exe = dist_dir / ("RSM.exe" if sys.platform == "win32" else "RSM")
 
-    # Su macOS PyInstaller può generare dist/RSM.app: organizziamo la cartella di rilascio dist/RSM
-    if sys.platform == "darwin" and (dist_root / "RSM.app").exists():
-        dist_dir.mkdir(parents=True, exist_ok=True)
-        target_app = dist_dir / "RSM.app"
-        if target_app.exists():
-            shutil.rmtree(target_app)
-        shutil.move(str(dist_root / "RSM.app"), str(target_app))
+    print(f"Copia dell'eseguibile in {target_exe}...")
+    shutil.copy2(compiled_exe, target_exe)
 
-    # 2. Ripristino del database di produzione in dist/RSM/data
+    # 6. Copia del backend Python e dei servizi necessari per il micro-server bridge
+    src_target = dist_dir / "src"
+    if src_target.exists():
+        shutil.rmtree(src_target, ignore_errors=True)
+    shutil.copytree(project_root / "src", src_target)
+
+    # 7. Ripristino / Copia sicura del database SQLite
     if not dist_data.exists():
         dist_data.mkdir(parents=True, exist_ok=True)
 
@@ -98,10 +113,9 @@ def main() -> None:
         shutil.rmtree(dist_data, ignore_errors=True)
         shutil.copytree(source_data, dist_data)
 
-    # 3. Copia esatta di config.json dalla cartella principale in dist/RSM/config.json
+    # 8. Copia file di configurazione config.json
     source_config = project_root / "config.json"
     if source_config.exists():
-        print("Copia di config.json da cartella principale in dist/RSM/...")
         shutil.copy2(source_config, dist_config)
     elif not dist_config.exists():
         with open(dist_config, "w", encoding="utf-8") as f:
@@ -111,18 +125,15 @@ def main() -> None:
                 "dashboard_layout": "[\"monthly\", \"top_products\", \"platform_pie\"]"
             }, f, indent=2, ensure_ascii=False)
 
-    # 4. Copia del README.md nella cartella di rilascio dist/RSM
+    # 9. Copia del README.md nella cartella di rilascio
     source_readme = project_root / "README.md"
     if source_readme.exists():
         shutil.copy(source_readme, dist_dir / "README.md")
 
-    # Pulizia finale cartella legacy se ricreata
-    if old_dist_dir.exists():
-        shutil.rmtree(old_dist_dir, ignore_errors=True)
-
-    print("\nBuild completata con successo!")
-    print("Cartella di rilascio: 'dist/RSM/'")
-    print("Eseguibile: 'dist/RSM/RSM.exe'")
+    size_mb = target_exe.stat().st_size / (1024 * 1024)
+    print("\n[OK] Build Tauri completata con successo!")
+    print(f"[OK] Cartella di rilascio: '{dist_dir}'")
+    print(f"[OK] Eseguibile nativo: '{target_exe}' ({size_mb:.1f} MB)")
 
 
 if __name__ == "__main__":
