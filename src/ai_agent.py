@@ -3,6 +3,7 @@
 import http.client
 import json
 import re
+import time
 import urllib.parse
 from typing import Any
 
@@ -118,22 +119,36 @@ def parse_product_with_ai(prompt: str) -> list[dict[str, Any]]:
         w_headers["X-RSM-Auth"] = RSM_AUTH_KEY.strip()
 
     conn_cls = http.client.HTTPSConnection if parsed_w.scheme == "https" else http.client.HTTPConnection
-    conn = conn_cls(w_host, timeout=25)
-    try:
-        conn.request("POST", w_path, body=data, headers=w_headers)
-        response = conn.getresponse()
-        resp_data = response.read().decode("utf-8")
-        if response.status != 200:
-            raise RuntimeError(f"Errore Proxy AI ({response.status}): {resp_data}")
-        result = json.loads(resp_data)
-        if "candidates" in result and len(result["candidates"]) > 0:
-            content = result["candidates"][0]["content"]["parts"][0]["text"]
-            return _safe_parse_json_products(content)
-        raise ValueError(f"Risposta inaspettata dal proxy AI: {resp_data}")
-    except (OSError, http.client.HTTPException, ValueError) as e:
-        raise RuntimeError(f"Errore di connessione proxy AI: {e!s}") from e
-    finally:
-        conn.close()
+    last_err: Exception | None = None
+
+    for attempt in range(3):
+        conn = conn_cls(w_host, timeout=25)
+        try:
+            conn.request("POST", w_path, body=data, headers=w_headers)
+            response = conn.getresponse()
+            resp_data = response.read().decode("utf-8")
+            if response.status == 200:
+                result = json.loads(resp_data)
+                if "candidates" in result and len(result["candidates"]) > 0:
+                    content = result["candidates"][0]["content"]["parts"][0]["text"]
+                    return _safe_parse_json_products(content)
+                raise ValueError(f"Risposta inaspettata dal proxy AI: {resp_data}")
+            elif response.status in (429, 500, 502, 503, 504) and attempt < 2:
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            else:
+                raise RuntimeError(f"Errore Proxy AI ({response.status}): {resp_data}")
+        except (OSError, http.client.HTTPException, ValueError, RuntimeError) as e:
+            last_err = e
+            if attempt < 2:
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            raise RuntimeError(f"Errore di connessione proxy AI: {e!s}") from e
+        finally:
+            conn.close()
+
+    if last_err:
+        raise last_err
 
 
 def parse_excel_with_ai(raw_text: str, user_hint: str = "") -> list[dict[str, Any]]:

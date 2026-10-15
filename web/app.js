@@ -1093,9 +1093,16 @@ async function handleAIAnalyze() {
     const json = await res.json();
     btnAnalyze.disabled = false;
 
-    if (!res.ok || !json.success || !Array.isArray(json.data) || json.data.length === 0) {
-      statusEl.textContent = "Nessun prodotto valido rilevato dall'AI.";
-      showToast("L'AI non ha trovato prodotti validi nel testo inserito.");
+    if (!res.ok || !json.success) {
+      const errMsg = json.error || `Errore server (${res.status})`;
+      statusEl.textContent = `⚠️ ${errMsg}`;
+      showToast(`Errore AI: ${errMsg}`);
+      return;
+    }
+
+    if (!Array.isArray(json.data) || json.data.length === 0) {
+      statusEl.textContent = "Nessun prodotto valido rilevato nel testo. Prova a specificare nome o dettagli del prodotto.";
+      showToast("Nessun prodotto valido rilevato dall'AI.");
       return;
     }
 

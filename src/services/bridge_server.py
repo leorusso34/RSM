@@ -5,6 +5,7 @@ Latenza su localhost: <1ms.
 """
 
 import json
+import os
 import re
 import sys
 import threading
@@ -94,13 +95,13 @@ def _start_voice_recording() -> tuple[bool, str]:
 
         try:
             from src.speech_helper import SpeechTranscriber
-            from src.config import GEMINI_API_KEY
+            api_key = os.environ.get("GEMINI_API_KEY", "")
             _active_transcriber = SpeechTranscriber()
             _active_transcriber.start(
                 on_result=_on_result,
                 on_error=_on_error,
                 on_listening=_on_listening,
-                api_key=GEMINI_API_KEY,
+                api_key=api_key,
                 max_duration=300,  # fino a 5 minuti senza spegnimento automatico
                 language="it-IT",
             )
