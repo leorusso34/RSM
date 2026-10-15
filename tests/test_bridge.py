@@ -350,6 +350,48 @@ def test_bridge_bulk_operations(tmp_path):
         assert db.get(id2) is None
         assert db.get(dup_id) is None
 
+        # 5. Spostamento Parziale Scorte (Vendita parziale di 1 unità su 3)
+        multi_qty_id = db.save({
+            "name": "Yeezy 350 Onyx",
+            "size": "44",
+            "quantity": 3,
+            "purchased_price": Decimal("220.00"),
+            "purchased_place": "Confirmed",
+            "status": STATUS_STOCK,
+        })
+
+        partial_sale_req = request.Request(
+            f"http://127.0.0.1:{port}/api/products/bulk-status",
+            data=json.dumps({
+                "ids": [multi_qty_id],
+                "status": "active-sale",
+                "sold_price_total": 280.0,
+                "fees_total": 15.0,
+                "selling_place": "Vinted",
+                "quantity_to_sell": 1,
+            }).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(partial_sale_req) as resp:
+            partial_data = json.loads(resp.read().decode("utf-8"))
+            assert partial_data["success"] is True
+            assert partial_data["partial"] is True
+            assert partial_data["remaining"] == 2
+            new_sold_id = partial_data["new_id"]
+
+        orig_row = db.get(multi_qty_id)
+        assert orig_row["status"] == STATUS_STOCK
+        assert orig_row["quantity"] == 2
+
+        sold_row = db.get(new_sold_id)
+        assert sold_row["status"] == STATUS_SOLD
+        assert sold_row["is_completed"] == 0
+        assert sold_row["quantity"] == 1
+        assert sold_row["sold_price"] == Decimal("280.00")
+        assert sold_row["fees"] == Decimal("15.00")
+        assert sold_row["selling_place"] == "Vinted"
+
     finally:
         server.shutdown()
         server.server_close()

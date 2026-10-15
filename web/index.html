@@ -827,9 +827,9 @@
         </p>
       </div>
 
-      <!-- Cronistoria Eventi -->
+      <!-- Cronologia Eventi -->
       <div class="drawer-section">
-        <div class="drawer-section-title">Cronistoria Prodotto</div>
+        <div class="drawer-section-title">Cronologia Prodotto</div>
         <div class="drawer-timeline" id="drawerTimeline">
           <!-- Popolato dinamicamente da app.js -->
         </div>
@@ -907,8 +907,14 @@
             Stai per mettere in vendita i prodotti selezionati. Il prezzo totale e le commissioni verranno ripartiti equamente e verrà creato un gruppo di vendita unico.
           </p>
 
+          <div class="form-group" id="bulk-sale-qty-group" style="margin-bottom: 12px; display: none;">
+            <label class="form-label">Quantità da mettere in vendita</label>
+            <select id="bulk-sale-qty-select" class="form-input"></select>
+            <span id="bulk-sale-qty-hint" style="display: block; font-size: 10.5px; color: var(--text-dim); margin-top: 4px;"></span>
+          </div>
+
           <div class="form-group" style="margin-bottom: 12px;">
-            <label class="form-label">Prezzo di Vendita TOTALE (€) *</label>
+            <label class="form-label" id="bulk-sale-price-label">Prezzo di Vendita TOTALE (€) *</label>
             <input type="number" step="0.01" min="0" id="bulk-sale-total-price" class="form-input" placeholder="0.00" required />
           </div>
 

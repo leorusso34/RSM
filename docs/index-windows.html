@@ -802,6 +802,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       min-width: 0;
+      flex: 1;
     }
 
     .win-title-left span {
@@ -915,7 +916,7 @@
        -------------------------------------------------------------------------- */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 0.85rem;
       margin-bottom: 1.25rem;
     }
@@ -1060,7 +1061,7 @@
 
     .inventory-split-deck {
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
       gap: 0.85rem;
     }
 
@@ -1267,7 +1268,7 @@
        -------------------------------------------------------------------------- */
     .ebay-market-grid {
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
       gap: 0.95rem;
     }
 
@@ -1559,7 +1560,7 @@
     }
 
     /* ==========================================================================
-       RESPONSIVE MOBILE HEADER & VIEWPORT ADAPTATION (< 860px / < 380px)
+       RESPONSIVE MOBILE HEADER & VIEWPORT ADAPTATION (< 860px / < 680px / < 480px / < 380px)
        ========================================================================== */
     @media (max-width: 860px) {
       .fluent-header {
@@ -1629,6 +1630,334 @@
       .hero-title {
         font-size: 2.1rem !important;
       }
+
+      .point-section {
+        min-height: auto;
+        padding: 3.2rem 0;
+        gap: 2.2rem;
+      }
+
+      .point-copy {
+        transform: none !important;
+        gap: 0.95rem;
+      }
+
+      .point-copy h2 {
+        font-size: 1.55rem;
+        line-height: 1.25;
+      }
+
+      .point-copy p {
+        font-size: 0.92rem;
+        line-height: 1.6;
+      }
+
+      /* Disposizione a colonna singola per sezioni a split deck su schermi compatti */
+      .inventory-split-deck {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+      }
+
+      .ebay-market-grid {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .graphic-card {
+        padding: 1.05rem 0.85rem;
+        border-radius: 8px;
+        overflow: hidden;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      .win-titlebar {
+        gap: 0.45rem;
+        padding-bottom: 0.75rem;
+        margin-bottom: 0.95rem;
+        font-size: 0.72rem;
+      }
+
+      .win-title-left {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .win-title-left span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+        max-width: 100%;
+      }
+
+      .win-caption-controls {
+        flex-shrink: 0;
+      }
+
+      /* UI 01: KPI Grid in colonna singola per eliminare compressione e overflow */
+      .kpi-grid {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+        margin-bottom: 0.95rem;
+      }
+
+      .fluent-card-inner {
+        padding: 0.75rem 0.85rem;
+      }
+
+      .kpi-value {
+        font-size: 1.25rem;
+      }
+
+      .kpi-footer-row {
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+
+      .chart-container-card {
+        padding: 0.85rem 0.8rem 0.65rem;
+      }
+
+      .chart-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.55rem;
+        margin-bottom: 0.65rem;
+      }
+
+      .timeframe-pills {
+        width: 100%;
+        display: flex;
+        gap: 3px;
+      }
+
+      .timeframe-pill {
+        flex: 1;
+        text-align: center;
+        padding: 3px 6px;
+        font-size: 0.65rem;
+      }
+
+      .chart-container-card svg {
+        max-width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .graphic-footer {
+        flex-wrap: wrap;
+        font-size: 0.65rem;
+        word-break: break-word;
+        gap: 0.4rem;
+      }
+
+      /* UI 02: Toolbar Magazzino e Chips flessibili con wrapping */
+      .table-toolbar-head {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.55rem;
+        padding-bottom: 0.65rem;
+      }
+
+      .table-tab-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        max-width: 100%;
+      }
+
+      .table-chip {
+        padding: 0.22rem 0.55rem;
+        font-size: 0.66rem;
+        white-space: nowrap;
+      }
+
+      .table-rows-list {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .table-row-item {
+        padding: 0.6rem 0.75rem;
+        gap: 0.5rem;
+      }
+
+      .table-row-item > div:first-child {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .table-row-item strong {
+        display: block;
+        font-size: 0.8rem !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .item-sku-sub {
+        font-size: 0.64rem;
+        flex-wrap: wrap;
+        gap: 0.2rem 0.35rem;
+      }
+
+      .drawer-badge-status,
+      .table-row-item .table-chip {
+        flex-shrink: 0;
+        font-size: 0.62rem !important;
+        padding: 0.15rem 0.45rem;
+        white-space: nowrap;
+      }
+
+      .drawer-preview-card {
+        padding: 0.75rem 0.85rem;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      /* UI 02: Slot Bundle con layout responsive */
+      .bundle-tray-zone {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.65rem;
+        padding: 0.8rem;
+      }
+
+      .bundle-tray-zone > div:first-child {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .bundle-tray-zone > div:last-child {
+        width: 100%;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        text-align: left !important;
+        border-top: 1px dashed rgba(0, 120, 212, 0.25);
+        padding-top: 0.5rem;
+      }
+
+      #p2-bundle-profit {
+        font-size: 1.25rem !important;
+      }
+
+      /* UI 03: Scanner Email & Presets */
+      .email-scanner-card {
+        padding: 0.95rem 0.85rem;
+      }
+
+      .email-sender-profile {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .email-presets-row {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .email-preset-chip {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.66rem;
+      }
+
+      .email-receipt-lines {
+        font-size: 0.72rem;
+        line-height: 1.7;
+        word-break: break-word;
+      }
+
+      .extracted-fields-deck {
+        grid-template-columns: 1fr;
+        gap: 0.55rem;
+      }
+
+      /* UI 04: Studio Audio */
+      .audio-studio-card {
+        padding: 1rem 0.85rem;
+        gap: 0.85rem;
+      }
+
+      .bars-visualizer-deck {
+        height: 52px;
+        gap: 2.5px;
+        padding: 0 0.35rem;
+      }
+
+      .speech-transcript-box {
+        padding: 0.75rem 0.85rem;
+        font-size: 0.82rem;
+        min-height: 3rem;
+      }
+
+      /* UI 05: Mercato eBay */
+      .market-box-panel {
+        padding: 0.9rem 0.85rem;
+      }
+
+      .ebay-presets-row {
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+
+      .ebay-preset-chip {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.65rem;
+      }
+
+      /* UI 06: DevOps Stepper */
+      .step-console-row {
+        padding: 0.7rem 0.85rem;
+        font-size: 0.72rem;
+        gap: 0.4rem;
+      }
+
+      .step-console-row > div:first-child {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .artifact-binary-card {
+        padding: 0.85rem 0.95rem;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .artifact-binary-card > div:first-child {
+        min-width: 0;
+        flex: 1;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .point-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.45rem;
+      }
+
+      .point-controls .ui-btn,
+      .point-controls .ui-select {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+      }
+
+      .point-copy h2 {
+        font-size: 1.35rem;
+      }
+
+      .graphic-card {
+        padding: 0.85rem 0.7rem;
+      }
     }
 
     @media (max-width: 380px) {
@@ -1651,6 +1980,22 @@
       .os-chip-target {
         padding: 2px 4px;
         font-size: 0.62rem;
+      }
+
+      .page-wrap {
+        padding: 4rem 0.65rem 4.5rem;
+      }
+
+      .hero-title {
+        font-size: 1.85rem !important;
+      }
+
+      .graphic-card {
+        padding: 0.75rem 0.6rem;
+      }
+
+      .kpi-value {
+        font-size: 1.15rem;
       }
     }
   </style>
@@ -1928,12 +2273,12 @@
         </div>
         <h2 id="p2-title">Dal pre-ordine alla vendita multipla con un trascinamento.</h2>
         <p id="p2-desc">
-          I 5 stati del database (<code>In Stock</code>, <code>Pre-ordine</code>, <code>Venduto</code>, <code>Completato</code>) convivono in una tabella unificata con ricerca globale. Trascina più lotti nello slot <strong>Bundle</strong> per aggregare commissioni e calcolare l'utile netto, oppure consulta la scheda logistica nel <strong>Side-Drawer</strong> laterale.
+          Tabella unificata per monitorare l'intero inventario con ricerca istantanea. Raggruppa più articoli nello slot dedicato per calcolare commissioni e utile netto in un colpo solo.
         </p>
         <div class="point-controls">
           <button class="ui-btn ghost interactive-btn" type="button" id="p2-bundle-btn" onclick="toggleBundleDemo()"><svg class="btn-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg><span id="p2-ctrl-1">Crea Bundle</span></button>
           <div class="ui-select" style="pointer-events:none;"><span id="p2-ctrl-2">Filtri: In Magazzino (24)</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
-          <div class="ui-select" style="pointer-events:none;"><span id="p2-ctrl-3">Drawer: Cronistoria Attiva</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="ui-select" style="pointer-events:none;"><span id="p2-ctrl-3">Drawer: Cronologia Attiva</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
         </div>
       </div>
 
@@ -2459,10 +2804,10 @@
 
         p2Eyebrow: '02 / 06 — MAGAZZINO & VENDITE MULTIPLE',
         p2Title: 'Dal pre-ordine alla vendita multipla con un trascinamento.',
-        p2Desc: "I 5 stati del database (<code>In Stock</code>, <code>Pre-ordine</code>, <code>Venduto</code>, <code>Completato</code>) convivono in una tabella unificata con ricerca globale. Trascina più lotti nello slot <strong>Bundle</strong> per aggregare commissioni e calcolare l'utile netto, oppure consulta la scheda logistica nel <strong>Side-Drawer</strong> laterale.",
+        p2Desc: "Tabella unificata per monitorare l'intero inventario con ricerca istantanea. Raggruppa più articoli nello slot dedicato per calcolare commissioni e utile netto in un colpo solo.",
         p2Ctrl1: 'Crea Bundle',
         p2Ctrl2: 'Filtri: In Magazzino (24)',
-        p2Ctrl3: 'Drawer: Cronistoria Attiva',
+        p2Ctrl3: 'Drawer: Cronologia Attiva',
         p2Topbar: 'src/ui/main_window.py',
         tabChip1: 'Tutti (122)',
         tabChip2: 'Magazzino (24)',
@@ -2585,7 +2930,7 @@
 
         p2Eyebrow: '02 / 06 — INVENTORY & BUNDLE SALES',
         p2Title: 'From pre-orders to bundle sales with a simple drag.',
-        p2Desc: 'The 5 database states (<code>In Stock</code>, <code>Pre-order</code>, <code>Active Sale</code>, <code>Completed</code>) live in a unified table with global search. Drag multiple lots into the <strong>Bundle</strong> slot to aggregate fees and compute net profit, or inspect logistical details in the <strong>Side-Drawer</strong>.',
+        p2Desc: 'Unified table to monitor your entire inventory with instant search. Bundle multiple items in the dedicated slot to compute platform fees and net profit in one click.',
         p2Ctrl1: 'Create Bundle',
         p2Ctrl2: 'Filters: In Stock (24)',
         p2Ctrl3: 'Drawer: Timeline Active',
@@ -3395,7 +3740,7 @@
           statusPill.style.color = '#c084fc';
         }
         if (statusTxt) {
-          statusTxt.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> GEMINI LASER PARSER...`;
+          statusTxt.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> GEMINI PARSER...`;
         }
 
         let laserP = 0;

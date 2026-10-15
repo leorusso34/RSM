@@ -91,6 +91,7 @@ let filterMaxPrice = null;
 // Modalità Selezione Multipla & Operazioni Massive
 let isSelectionModeActive = false;
 let selectedProductIds = new Set();
+let expandedBundles = new Set();
 
 let monthlyProfitChart = null;
 let platformPieChart = null;
@@ -563,135 +564,380 @@ function renderTable() {
     return;
   }
 
+  // Raggruppamento Bundle / Vendita Multipla (identico all'approccio di main_window.py)
+  const bundleGroups = new Map();
   filtered.forEach((item) => {
-    const tr = document.createElement("tr");
-    const isChecked = selectedProductIds.has(item.id);
-    if (isChecked) {
-      tr.classList.add("row-selected");
+    const bId = item.bundle_id || item.bundleId;
+    if (bId && (item.status === "active-sale" || item.status === "completed")) {
+      if (!bundleGroups.has(bId)) {
+        bundleGroups.set(bId, []);
+      }
+      bundleGroups.get(bId).push(item);
     }
+  });
 
-    const checkboxTd = isSelectionModeActive
-      ? `<td class="col-checkbox col-center" onclick="event.stopPropagation()"><input type="checkbox" class="row-checkbox" ${isChecked ? "checked" : ""} onchange="toggleItemSelection(${item.id}, this.checked)" /></td>`
-      : "";
-
-    // Status Badge Info
-    let statusClass = "stock";
-    let statusLabel = "In Magazzino";
-    if (item.status === "preorder") {
-      statusClass = "preorder";
-      statusLabel = "Pre-ordine";
-    } else if (item.status === "active-sale") {
-      statusClass = "active-sale";
-      statusLabel = "In Vendita";
-    } else if (item.status === "completed") {
-      statusClass = "completed";
-      statusLabel = "Venduto";
-    }
-
-    // Le vendite completate non possono essere modificate (solo visualizzazione/storico)
-    const editBtnHtml = (item.status === "completed") ? "" : `
-      <button class="btn-action-icon" title="Modifica Prodotto" onclick="event.stopPropagation(); editProduct(${item.id})">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-      </button>
-    `;
-
-    // Action buttons html
-    const actionBtnsHtml = `
-      <div class="action-btns">
-        <button class="btn-action-icon" title="Stima Prezzi eBay" onclick="event.stopPropagation(); openEbayPriceLookup('${item.name.replace(/'/g, "\\'")}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        </button>
-        ${editBtnHtml}
-        <button class="btn-action-icon delete" title="Elimina" onclick="event.stopPropagation(); deleteProduct(${item.id})">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-        </button>
-      </div>
-    `;
-
-    if (isStockView) {
-      tr.innerHTML = `
-        ${checkboxTd}
-        <td class="col-prod" title="${item.name}">
-          <div class="product-cell">
-            <div class="product-name">${item.name}</div>
-            <div class="product-brand">${item.purchasedPlace || "In Magazzino"}</div>
-          </div>
-        </td>
-        <td class="col-size col-center"><strong>${item.size}</strong></td>
-        <td class="col-qty col-center">${item.quantity} pz</td>
-        <td class="col-buy">${formatMoney(item.purchasedPrice)}</td>
-        <td class="col-place" style="color: var(--text-muted);">${item.purchasedPlace}</td>
-        <td class="col-status col-center">
-          <span class="status-badge ${statusClass}">
-            <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
-            ${statusLabel}
-          </span>
-        </td>
-        <td class="col-actions col-center">
-          ${actionBtnsHtml}
-        </td>
-      `;
+  const displayList = [];
+  const processedBundleIds = new Set();
+  filtered.forEach((item) => {
+    const bId = item.bundle_id || item.bundleId;
+    if (bId && bundleGroups.has(bId) && bundleGroups.get(bId).length > 1) {
+      if (!processedBundleIds.has(bId)) {
+        processedBundleIds.add(bId);
+        displayList.push({
+          isBundle: true,
+          bundleId: bId,
+          items: bundleGroups.get(bId),
+        });
+      }
     } else {
-      // Calcolo Utile & ROI
-      const netProfit = (item.salePrice || 0) - item.purchasedPrice - (item.fees || 0);
-      const roi = item.purchasedPrice > 0 ? (netProfit / item.purchasedPrice) * 100 : 0;
-      const hasSaleData = item.status === "completed" || item.status === "active-sale";
-      const salePriceHtml = hasSaleData && item.salePrice ? formatMoney(item.salePrice) : `<span style="color:var(--text-dim)">-</span>`;
-      const sellingPlaceHtml = hasSaleData && item.sellingPlace ? `<span style="font-size: 11.5px; color: var(--text-muted);">${item.sellingPlace}</span>` : `<span style="color:var(--text-dim)">-</span>`;
-      const profitHtml = hasSaleData ? `<span class="profit-pos">+${formatMoney(netProfit)}</span>` : `<span style="color:var(--text-dim)">-</span>`;
-      const roiHtml = hasSaleData ? `<span class="roi-badge">+${roi.toFixed(1)}%</span>` : `<span style="color:var(--text-dim)">-</span>`;
+      displayList.push({
+        isBundle: false,
+        item: item,
+      });
+    }
+  });
 
-      tr.innerHTML = `
-        ${checkboxTd}
-        <td class="col-prod" title="${item.name}">
-          <div class="product-cell">
-            <div class="product-name">${item.name}</div>
-            <div class="product-brand">${item.purchasedPlace || "Canale Diretto"}</div>
-          </div>
-        </td>
-        <td class="col-size col-center"><strong>${item.size}</strong></td>
-        <td class="col-qty col-center">${item.quantity} pz</td>
-        <td class="col-buy">${formatMoney(item.purchasedPrice)}</td>
-        <td class="col-sell">${salePriceHtml}</td>
-        <td class="col-channel">${sellingPlaceHtml}</td>
-        <td class="col-profit">${profitHtml}</td>
-        <td class="col-roi col-center">${roiHtml}</td>
-        <td class="col-status col-center">
-          <span class="status-badge ${statusClass}">
-            <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
-            ${statusLabel}
-          </span>
-        </td>
-        <td class="col-actions col-center">
-          ${actionBtnsHtml}
-        </td>
+  displayList.forEach((entry) => {
+    if (entry.isBundle) {
+      const bItems = entry.items;
+      const bId = entry.bundleId;
+      const isExpanded = expandedBundles.has(bId);
+
+      const distinctNames = Array.from(new Set(bItems.map((r) => r.name))).sort();
+      let bundleTitle = `Vendita Multipla (${distinctNames.join(", ")})`;
+      if (bundleTitle.length > 55) {
+        bundleTitle = bundleTitle.substring(0, 52) + "...)";
+      }
+
+      const totalQty = bItems.reduce((acc, r) => acc + (r.quantity || 1), 0);
+      const totalPurchased = bItems.reduce((acc, r) => acc + ((r.purchasedPrice || 0) * (r.quantity || 1)), 0);
+      const totalSold = bItems.reduce((acc, r) => acc + (r.salePrice || 0), 0);
+      const totalFees = bItems.reduce((acc, r) => acc + (r.fees || 0), 0);
+      const totalProfit = totalSold - totalPurchased - totalFees;
+      const totalRoi = totalPurchased > 0 ? (totalProfit / totalPurchased) * 100 : 0;
+      const sellingPlace = bItems[0].sellingPlace || "-";
+      const bundleStatus = bItems[0].status || "active-sale";
+      const bundleStatusLabel = bundleStatus === "completed" ? "Venduto" : "In Vendita";
+      const bundleStatusClass = bundleStatus === "completed" ? "completed" : "active-sale";
+
+      const isAllChecked = bItems.every((r) => selectedProductIds.has(r.id));
+      const isSomeChecked = bItems.some((r) => selectedProductIds.has(r.id));
+
+      const bundleTr = document.createElement("tr");
+      bundleTr.className = `bundle-row ${isAllChecked ? "row-selected" : ""}`;
+
+      const checkboxTd = isSelectionModeActive
+        ? `<td class="col-checkbox col-center" onclick="event.stopPropagation()">
+             <input type="checkbox" class="row-checkbox bundle-chk" ${isAllChecked ? "checked" : ""} onchange="toggleBundleSelection('${bId}', this.checked)" />
+           </td>`
+        : "";
+
+      const actionBtnsHtml = `
+        <div class="action-btns">
+          <button class="btn-action-icon delete" title="Elimina Vendita Multipla" onclick="event.stopPropagation(); deleteBundle('${bId}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+        </div>
       `;
-    }
 
-    // Gestione click riga: se selezione attiva fa toggle checkbox; altrimenti apre il drawer
-    if (isSelectionModeActive) {
-      tr.addEventListener("click", () => toggleItemSelection(item.id));
-    } else {
-      tr.addEventListener("click", () => openDrawer(item.id));
-      tr.addEventListener("dblclick", () => openDrawer(item.id));
-    }
+      if (isStockView) {
+        bundleTr.innerHTML = `
+          ${checkboxTd}
+          <td class="col-prod" title="${distinctNames.join(", ")}">
+            <div class="product-cell" style="flex-direction: row; align-items: center; gap: 8px;">
+              <span class="bundle-chevron" onclick="event.stopPropagation(); toggleBundleExpand('${bId}')" title="${isExpanded ? 'Comprimi' : 'Espandi'}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'}; transition: transform 0.15s ease;"><path d="m9 18 6-6-6-6"/></svg>
+              </span>
+              <span class="bundle-tag">Bundle</span>
+              <span class="product-name" style="font-weight: 700;">${bundleTitle}</span>
+            </div>
+          </td>
+          <td class="col-size col-center" style="color: var(--text-dim);">-</td>
+          <td class="col-qty col-center"><strong>${totalQty} pz</strong></td>
+          <td class="col-buy">${formatMoney(totalPurchased)}</td>
+          <td class="col-place" style="color: var(--text-muted);">${sellingPlace}</td>
+          <td class="col-status col-center">
+            <span class="status-badge ${bundleStatusClass}">
+              <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
+              ${bundleStatusLabel}
+            </span>
+          </td>
+          <td class="col-actions col-center">${actionBtnsHtml}</td>
+        `;
+      } else {
+        bundleTr.innerHTML = `
+          ${checkboxTd}
+          <td class="col-prod" title="${distinctNames.join(", ")}">
+            <div class="product-cell" style="flex-direction: row; align-items: center; gap: 8px;">
+              <span class="bundle-chevron" onclick="event.stopPropagation(); toggleBundleExpand('${bId}')" title="${isExpanded ? 'Comprimi' : 'Espandi'}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'}; transition: transform 0.15s ease;"><path d="m9 18 6-6-6-6"/></svg>
+              </span>
+              <span class="bundle-tag">Bundle</span>
+              <span class="product-name" style="font-weight: 700;">${bundleTitle}</span>
+            </div>
+          </td>
+          <td class="col-size col-center" style="color: var(--text-dim);">-</td>
+          <td class="col-qty col-center"><strong>${totalQty} pz</strong></td>
+          <td class="col-buy">${formatMoney(totalPurchased)}</td>
+          <td class="col-sell"><strong>${formatMoney(totalSold)}</strong></td>
+          <td class="col-channel"><span style="font-size: 11.5px; color: var(--text-muted);">${sellingPlace}</span></td>
+          <td class="col-profit"><span class="profit-pos">+${formatMoney(totalProfit)}</span></td>
+          <td class="col-roi col-center"><span class="roi-badge">+${totalRoi.toFixed(1)}%</span></td>
+          <td class="col-status col-center">
+            <span class="status-badge ${bundleStatusClass}">
+              <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
+              ${bundleStatusLabel}
+            </span>
+          </td>
+          <td class="col-actions col-center">${actionBtnsHtml}</td>
+        `;
+      }
 
-    // Menu contestuale personalizzato col tasto destro del mouse
-    tr.addEventListener("contextmenu", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!selectedProductIds.has(item.id)) {
+      if (isSelectionModeActive) {
+        const chkBox = bundleTr.querySelector(".bundle-chk");
+        if (chkBox) chkBox.indeterminate = !isAllChecked && isSomeChecked;
+        bundleTr.addEventListener("click", () => toggleBundleSelection(bId, !isAllChecked));
+      } else {
+        bundleTr.addEventListener("click", () => toggleBundleExpand(bId));
+      }
+
+      bundleTr.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (!isSelectionModeActive) {
           selectedProductIds.clear();
         }
-        selectedProductIds.add(item.id);
+        bItems.forEach((r) => selectedProductIds.add(r.id));
         updateSelectionBadge();
         renderTable();
-      }
-      showContextMenu(e.clientX, e.clientY);
-    });
+        showContextMenu(e.clientX, e.clientY);
+      });
 
-    tbody.appendChild(tr);
+      tbody.appendChild(bundleTr);
+
+      // Se espanso, disegna le sotto-righe dei singoli prodotti del bundle
+      if (isExpanded) {
+        bItems.forEach((child) => {
+          const childTr = document.createElement("tr");
+          childTr.className = `bundle-child-row ${selectedProductIds.has(child.id) ? "row-selected" : ""}`;
+
+          const childCheckboxTd = isSelectionModeActive
+            ? `<td class="col-checkbox col-center" onclick="event.stopPropagation()">
+                 <input type="checkbox" class="row-checkbox" ${selectedProductIds.has(child.id) ? "checked" : ""} onchange="toggleItemSelection(${child.id}, this.checked)" />
+               </td>`
+            : "";
+
+          const childEditBtnHtml = (child.status === "completed") ? "" : `
+            <button class="btn-action-icon" title="Modifica Prodotto" onclick="event.stopPropagation(); editProduct(${child.id})">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            </button>
+          `;
+
+          const childActionsHtml = `
+            <div class="action-btns">
+              <button class="btn-action-icon" title="Stima Prezzi eBay" onclick="event.stopPropagation(); openEbayPriceLookup('${child.name.replace(/'/g, "\\'")}')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </button>
+              ${childEditBtnHtml}
+              <button class="btn-action-icon delete" title="Elimina" onclick="event.stopPropagation(); deleteProduct(${child.id})">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              </button>
+            </div>
+          `;
+
+          if (isStockView) {
+            childTr.innerHTML = `
+              ${childCheckboxTd}
+              <td class="col-prod" title="${child.name}">
+                <div class="product-cell" style="padding-left: 28px;">
+                  <div class="product-name" style="color: var(--text-secondary); font-size: 12px;">↳ ${child.name}</div>
+                  <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "In Magazzino"}</div>
+                </div>
+              </td>
+              <td class="col-size col-center"><strong>${child.size}</strong></td>
+              <td class="col-qty col-center">${child.quantity} pz</td>
+              <td class="col-buy">${formatMoney(child.purchasedPrice)}</td>
+              <td class="col-place" style="color: var(--text-dim);">${child.purchasedPlace || "-"}</td>
+              <td class="col-status col-center"><span style="color: var(--text-dim); font-size: 11px;">(incluso)</span></td>
+              <td class="col-actions col-center">${childActionsHtml}</td>
+            `;
+          } else {
+            childTr.innerHTML = `
+              ${childCheckboxTd}
+              <td class="col-prod" title="${child.name}">
+                <div class="product-cell" style="padding-left: 28px;">
+                  <div class="product-name" style="color: var(--text-secondary); font-size: 12px;">↳ ${child.name}</div>
+                  <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "In Magazzino"}</div>
+                </div>
+              </td>
+              <td class="col-size col-center"><strong>${child.size}</strong></td>
+              <td class="col-qty col-center">${child.quantity} pz</td>
+              <td class="col-buy">${formatMoney(child.purchasedPrice)}</td>
+              <td class="col-sell" style="color: var(--text-dim); font-size: 11.5px;">(in bundle)</td>
+              <td class="col-channel"><span style="font-size: 11.5px; color: var(--text-dim);">${child.sellingPlace || "-"}</span></td>
+              <td class="col-profit" style="color: var(--text-dim);">-</td>
+              <td class="col-roi col-center" style="color: var(--text-dim);">-</td>
+              <td class="col-status col-center"><span style="color: var(--text-dim); font-size: 11px;">(incluso)</span></td>
+              <td class="col-actions col-center">${childActionsHtml}</td>
+            `;
+          }
+
+          if (isSelectionModeActive) {
+            childTr.addEventListener("click", () => toggleItemSelection(child.id));
+          } else {
+            childTr.addEventListener("click", () => openDrawer(child.id));
+            childTr.addEventListener("dblclick", () => openDrawer(child.id));
+          }
+
+          childTr.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!selectedProductIds.has(child.id)) {
+              if (!isSelectionModeActive) {
+                selectedProductIds.clear();
+              }
+              selectedProductIds.add(child.id);
+              updateSelectionBadge();
+              renderTable();
+            }
+            showContextMenu(e.clientX, e.clientY);
+          });
+
+          tbody.appendChild(childTr);
+        });
+      }
+    } else {
+      // Prodotto Standard
+      const item = entry.item;
+      const tr = document.createElement("tr");
+      const isChecked = selectedProductIds.has(item.id);
+      if (isChecked) {
+        tr.classList.add("row-selected");
+      }
+
+      const checkboxTd = isSelectionModeActive
+        ? `<td class="col-checkbox col-center" onclick="event.stopPropagation()"><input type="checkbox" class="row-checkbox" ${isChecked ? "checked" : ""} onchange="toggleItemSelection(${item.id}, this.checked)" /></td>`
+        : "";
+
+      // Status Badge Info
+      let statusClass = "stock";
+      let statusLabel = "In Magazzino";
+      if (item.status === "preorder") {
+        statusClass = "preorder";
+        statusLabel = "Pre-ordine";
+      } else if (item.status === "active-sale") {
+        statusClass = "active-sale";
+        statusLabel = "In Vendita";
+      } else if (item.status === "completed") {
+        statusClass = "completed";
+        statusLabel = "Venduto";
+      }
+
+      // Le vendite completate non possono essere modificate (solo visualizzazione/storico)
+      const editBtnHtml = (item.status === "completed") ? "" : `
+        <button class="btn-action-icon" title="Modifica Prodotto" onclick="event.stopPropagation(); editProduct(${item.id})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
+      `;
+
+      // Action buttons html
+      const actionBtnsHtml = `
+        <div class="action-btns">
+          <button class="btn-action-icon" title="Stima Prezzi eBay" onclick="event.stopPropagation(); openEbayPriceLookup('${item.name.replace(/'/g, "\\'")}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          ${editBtnHtml}
+          <button class="btn-action-icon delete" title="Elimina" onclick="event.stopPropagation(); deleteProduct(${item.id})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+        </div>
+      `;
+
+      if (isStockView) {
+        tr.innerHTML = `
+          ${checkboxTd}
+          <td class="col-prod" title="${item.name}">
+            <div class="product-cell">
+              <div class="product-name">${item.name}</div>
+              <div class="product-brand">${item.purchasedPlace || "In Magazzino"}</div>
+            </div>
+          </td>
+          <td class="col-size col-center"><strong>${item.size}</strong></td>
+          <td class="col-qty col-center">${item.quantity} pz</td>
+          <td class="col-buy">${formatMoney(item.purchasedPrice)}</td>
+          <td class="col-place" style="color: var(--text-muted);">${item.purchasedPlace}</td>
+          <td class="col-status col-center">
+            <span class="status-badge ${statusClass}">
+              <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
+              ${statusLabel}
+            </span>
+          </td>
+          <td class="col-actions col-center">
+            ${actionBtnsHtml}
+          </td>
+        `;
+      } else {
+        // Calcolo Utile & ROI
+        const netProfit = (item.salePrice || 0) - item.purchasedPrice - (item.fees || 0);
+        const roi = item.purchasedPrice > 0 ? (netProfit / item.purchasedPrice) * 100 : 0;
+        const hasSaleData = item.status === "completed" || item.status === "active-sale";
+        const salePriceHtml = hasSaleData && item.salePrice ? formatMoney(item.salePrice) : `<span style="color:var(--text-dim)">-</span>`;
+        const sellingPlaceHtml = hasSaleData && item.sellingPlace ? `<span style="font-size: 11.5px; color: var(--text-muted);">${item.sellingPlace}</span>` : `<span style="color:var(--text-dim)">-</span>`;
+        const profitHtml = hasSaleData ? `<span class="profit-pos">+${formatMoney(netProfit)}</span>` : `<span style="color:var(--text-dim)">-</span>`;
+        const roiHtml = hasSaleData ? `<span class="roi-badge">+${roi.toFixed(1)}%</span>` : `<span style="color:var(--text-dim)">-</span>`;
+
+        tr.innerHTML = `
+          ${checkboxTd}
+          <td class="col-prod" title="${item.name}">
+            <div class="product-cell">
+              <div class="product-name">${item.name}</div>
+              <div class="product-brand">${item.purchasedPlace || "Canale Diretto"}</div>
+            </div>
+          </td>
+          <td class="col-size col-center"><strong>${item.size}</strong></td>
+          <td class="col-qty col-center">${item.quantity} pz</td>
+          <td class="col-buy">${formatMoney(item.purchasedPrice)}</td>
+          <td class="col-sell">${salePriceHtml}</td>
+          <td class="col-channel">${sellingPlaceHtml}</td>
+          <td class="col-profit">${profitHtml}</td>
+          <td class="col-roi col-center">${roiHtml}</td>
+          <td class="col-status col-center">
+            <span class="status-badge ${statusClass}">
+              <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
+              ${statusLabel}
+            </span>
+          </td>
+          <td class="col-actions col-center">
+            ${actionBtnsHtml}
+          </td>
+        `;
+      }
+
+      // Gestione click riga: se selezione attiva fa toggle checkbox; altrimenti apre il drawer
+      if (isSelectionModeActive) {
+        tr.addEventListener("click", () => toggleItemSelection(item.id));
+      } else {
+        tr.addEventListener("click", () => openDrawer(item.id));
+        tr.addEventListener("dblclick", () => openDrawer(item.id));
+      }
+
+      // Menu contestuale personalizzato col tasto destro del mouse
+      tr.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!selectedProductIds.has(item.id)) {
+          if (!isSelectionModeActive) {
+            selectedProductIds.clear();
+          }
+          selectedProductIds.add(item.id);
+          updateSelectionBadge();
+          renderTable();
+        }
+        showContextMenu(e.clientX, e.clientY);
+      });
+
+      tbody.appendChild(tr);
+    }
   });
 
   // Aggiorna checkbox master nell'intestazione
@@ -1369,6 +1615,60 @@ function toggleSelectAll(checked) {
   renderTable();
 }
 
+function toggleBundleExpand(bundleId) {
+  if (expandedBundles.has(bundleId)) {
+    expandedBundles.delete(bundleId);
+  } else {
+    expandedBundles.add(bundleId);
+  }
+  renderTable();
+}
+
+function toggleBundleSelection(bundleId, forceChecked = null) {
+  const items = inventoryData.filter((p) => (p.bundle_id || p.bundleId) === bundleId);
+  if (!items.length) return;
+  const isAllChecked = items.every((r) => selectedProductIds.has(r.id));
+  const shouldCheck = (forceChecked !== null) ? forceChecked : !isAllChecked;
+
+  items.forEach((r) => {
+    if (shouldCheck) {
+      selectedProductIds.add(r.id);
+    } else {
+      selectedProductIds.delete(r.id);
+    }
+  });
+
+  updateSelectionBadge();
+  renderTable();
+}
+
+async function deleteBundle(bundleId) {
+  const items = inventoryData.filter((p) => (p.bundle_id || p.bundleId) === bundleId);
+  if (!items.length) return;
+  if (!confirm(`Sei sicuro di voler eliminare tutti i ${items.length} prodotti di questa vendita multipla dal database?`)) {
+    return;
+  }
+  const ids = items.map((p) => p.id);
+  try {
+    const res = await callApi("/products/bulk-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      ids.forEach((id) => selectedProductIds.delete(id));
+      updateSelectionBadge();
+      await loadProductsFromBackend();
+      showToast(`Vendita multipla eliminata con successo (${items.length} prodotti).`);
+    } else {
+      showToast(`Errore eliminazione bundle: ${json.error}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  }
+}
+
 // Visualizzazione menu contestuale
 function showContextMenu(x, y) {
   const menu = document.getElementById("tableContextMenu");
@@ -1592,7 +1892,7 @@ async function ctxActionDelete() {
   }
 }
 
-// Modale Vendita Multipla (Bulk Sale Modal)
+// Modale Vendita Multipla / Metti in Vendita (Bulk Status & Partial Move)
 function openBulkSaleModal() {
   const modal = document.getElementById("bulkSaleModal");
   if (!modal) return;
@@ -1600,8 +1900,52 @@ function openBulkSaleModal() {
   if (count === 0) return;
 
   const titleEl = document.getElementById("bulkSaleModalTitle");
-  if (titleEl) {
-    titleEl.textContent = `Metti in Vendita (${count} Prodott${count === 1 ? "o" : "i"})`;
+  const subtitleEl = document.getElementById("bulkSaleModalSubtitle");
+  const qtyGroup = document.getElementById("bulk-sale-qty-group");
+  const qtySelect = document.getElementById("bulk-sale-qty-select");
+  const qtyHint = document.getElementById("bulk-sale-qty-hint");
+  const priceLabel = document.getElementById("bulk-sale-price-label");
+
+  if (count === 1) {
+    const singleId = Array.from(selectedProductIds)[0];
+    const item = inventoryData.find((p) => p.id === singleId);
+    if (titleEl) titleEl.textContent = "Metti in Vendita";
+    if (subtitleEl) subtitleEl.textContent = `Configura la vendita per "${item ? item.name : "il prodotto selezionato"}".`;
+    if (priceLabel) priceLabel.textContent = "Prezzo di Vendita (€) *";
+
+    if (item && item.quantity > 1) {
+      if (qtyGroup) qtyGroup.style.display = "block";
+      if (qtySelect) {
+        qtySelect.innerHTML = "";
+        for (let q = 1; q <= item.quantity; q++) {
+          const opt = document.createElement("option");
+          opt.value = q;
+          opt.textContent = `${q} di ${item.quantity} pz`;
+          if (q === item.quantity) opt.selected = true;
+          qtySelect.appendChild(opt);
+        }
+        qtySelect.onchange = () => {
+          const chosen = parseInt(qtySelect.value, 10);
+          if (qtyHint) {
+            const remaining = item.quantity - chosen;
+            if (remaining > 0) {
+              const placeText = item.status === "preorder" ? "pre-ordine" : "magazzino";
+              qtyHint.textContent = `${chosen} pz andranno in Vendita Attiva, ${remaining} pz rimarranno in ${placeText}.`;
+            } else {
+              qtyHint.textContent = `Tutti i ${chosen} pz verranno messi in vendita.`;
+            }
+          }
+        };
+        qtySelect.dispatchEvent(new Event("change"));
+      }
+    } else {
+      if (qtyGroup) qtyGroup.style.display = "none";
+    }
+  } else {
+    if (titleEl) titleEl.textContent = `Metti in Vendita (${count} Prodotti)`;
+    if (subtitleEl) subtitleEl.textContent = "Stai per mettere in vendita i prodotti selezionati insieme come bundle. Il prezzo totale e le commissioni verranno ripartiti equamente e verrà visualizzato un unico gruppo di vendita.";
+    if (priceLabel) priceLabel.textContent = "Prezzo di Vendita TOTALE (€) *";
+    if (qtyGroup) qtyGroup.style.display = "none";
   }
 
   const datalist = document.getElementById("bulk-selling-places-list");
@@ -1642,21 +1986,29 @@ async function handleBulkSaleSubmit(e) {
   const placeVal = document.getElementById("bulk-sale-place").value.trim();
 
   if (priceVal <= 0) {
-    showToast("Inserisci un prezzo di vendita totale valido!");
+    showToast("Inserisci un prezzo di vendita valido!");
     return;
+  }
+
+  const payload = {
+    ids,
+    status: "active-sale",
+    sold_price_total: priceVal,
+    fees_total: feesVal,
+    selling_place: placeVal,
+  };
+
+  const qtyGroup = document.getElementById("bulk-sale-qty-group");
+  const qtySelect = document.getElementById("bulk-sale-qty-select");
+  if (ids.length === 1 && qtyGroup && qtyGroup.style.display !== "none" && qtySelect) {
+    payload.quantity_to_sell = parseInt(qtySelect.value, 10);
   }
 
   try {
     const res = await callApi("/products/bulk-status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ids,
-        status: "active-sale",
-        sold_price_total: priceVal,
-        fees_total: feesVal,
-        selling_place: placeVal,
-      }),
+      body: JSON.stringify(payload),
     });
     const json = await res.json();
     if (json.success) {
@@ -1668,9 +2020,9 @@ async function handleBulkSaleSubmit(e) {
         pill.classList.toggle("active", pill.getAttribute("data-filter") === "active-sale");
       });
       await loadProductsFromBackend();
-      showToast(`${ids.length} prodotti messi in vendita con successo!`);
+      showToast(`${ids.length === 1 ? "Prodotto messo" : ids.length + " prodotti messi"} in vendita con successo!`);
     } else {
-      showToast(`Errore vendita multipla: ${json.error}`);
+      showToast(`Errore vendita: ${json.error}`);
     }
   } catch (err) {
     showToast(`Errore di rete: ${err.message}`);
@@ -2273,11 +2625,14 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll(".table-tab-pill").forEach((p) => p.classList.remove("active"));
       pill.classList.add("active");
       activeFilter = pill.getAttribute("data-filter");
-      // La selezione si azzera solo nel caso si cambi tabella come richiesto dall'utente
-      if (selectedProductIds.size > 0) {
-        selectedProductIds.clear();
-        updateSelectionBadge();
-      }
+
+      // Reset completo della modalità selezione passando da una tabella all'altra
+      isSelectionModeActive = false;
+      const btnToggle = document.getElementById("btnToggleSelect");
+      if (btnToggle) btnToggle.classList.remove("active");
+      selectedProductIds.clear();
+      updateSelectionBadge();
+
       renderTable();
     });
   });
@@ -2301,11 +2656,12 @@ document.addEventListener("DOMContentLoaded", () => {
         activeFilter = "all";
       }
 
-      // La selezione si azzera solo nel caso si cambi tabella come richiesto dall'utente
-      if (selectedProductIds.size > 0) {
-        selectedProductIds.clear();
-        updateSelectionBadge();
-      }
+      // Reset completo della modalità selezione passando da una tabella all'altra
+      isSelectionModeActive = false;
+      const btnToggle = document.getElementById("btnToggleSelect");
+      if (btnToggle) btnToggle.classList.remove("active");
+      selectedProductIds.clear();
+      updateSelectionBadge();
 
       // Sincronizza anche la pill attiva
       document.querySelectorAll(".table-tab-pill").forEach((pill) => {

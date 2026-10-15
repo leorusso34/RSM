@@ -84,6 +84,10 @@ def main() -> None:
     dist_dir.mkdir(parents=True, exist_ok=True)
     target_exe = dist_dir / ("RSM.exe" if sys.platform == "win32" else "RSM")
 
+    if sys.platform == "win32":
+        # Chiude eventuali istanze attive per evitare lock di file su Windows
+        subprocess.run(["taskkill", "/F", "/IM", "RSM.exe"], capture_output=True, check=False)
+
     print(f"Copia dell'eseguibile in {target_exe}...")
     shutil.copy2(compiled_exe, target_exe)
 

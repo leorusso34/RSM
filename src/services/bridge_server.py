@@ -734,6 +734,44 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                         extra["selling_place"] = str(body["selling_place"]).strip()
 
                     extra["sold_date"] = datetime.now(tz=timezone.utc).astimezone().date().isoformat()
+
+                    # Gestione vendita parziale per singolo prodotto (quantità residua in magazzino)
+                    qty_to_sell = body.get("quantity_to_sell")
+                    if len(ids) == 1 and qty_to_sell:
+                        chosen_qty = int(qty_to_sell)
+                        prod_id = ids[0]
+                        rec = self.db.get(prod_id)
+                        if rec and 0 < chosen_qty < (rec.get("quantity", 1) or 1):
+                            original_qty = rec.get("quantity", 1) or 1
+                            remaining = original_qty - chosen_qty
+
+                            # Aggiorna record originale lasciando rimanenza nello stato attuale
+                            updated_orig = dict(rec)
+                            updated_orig["quantity"] = remaining
+                            self.db.save(updated_orig, prod_id)
+
+                            # Crea nuovo record per la quota venduta in Vendite Attive
+                            new_sold = dict(rec)
+                            new_sold.pop("id", None)
+                            new_sold["quantity"] = chosen_qty
+                            new_sold["status"] = STATUS_SOLD
+                            new_sold["is_completed"] = 0
+                            new_sold["selling_price"] = extra.get("sold_price")
+                            new_sold["sold_price"] = extra.get("sold_price")
+                            new_sold["fees"] = extra.get("fees", Decimal(0))
+                            new_sold["selling_place"] = extra.get("selling_place", "")
+                            new_sold["sold_date"] = extra.get("sold_date", "")
+                            new_sold["bundle_id"] = ""
+                            new_id = self.db.save(new_sold)
+                            self._send_json({
+                                "success": True,
+                                "updated_count": 1,
+                                "partial": True,
+                                "new_id": new_id,
+                                "remaining": remaining,
+                            })
+                            return
+
                     extra["bundle_id"] = str(uuid.uuid4()) if len(ids) > 1 else ""
 
                     self.db.update_status_many(ids, STATUS_SOLD, extra_data=extra)
