@@ -1134,46 +1134,79 @@ function initCharts() {
     updateMonthlyChart();
   }
 
-  // Chart 2: Piattaforme Reale (dal database SQLite calibrato su base 100%)
+  // Chart 2: Piattaforme Reale (ripartizione per numero di vendite, base 100%)
   const ctxPlatform = document.getElementById("platformPieChart");
   if (ctxPlatform) {
     let platLabels = [];
     let platData = [];
-    let platRawValues = [];
-    const platColors = ["#6366f1", "#10b981", "#8b5cf6", "#f59e0b", "#3b82f6", "#ec4899", "#14b8a6"];
+    let platCounts = [];
+    const platColors = ["#6366f1", "#10b981", "#8b5cf6", "#f59e0b", "#3b82f6", "#ec4899", "#14b8a6", "#06b6d4"];
 
-    let rawItems = [];
-    if (realPlatformProfits && realPlatformProfits.length > 0) {
-      const positive = realPlatformProfits.filter((p) => Number(p.profit || 0) > 0);
-      if (positive.length > 0) {
-        rawItems = positive.map((p) => ({
-          label: p.platform || "Altro",
-          value: Number(p.profit || 0),
-        }));
+    // Raggruppamento per NUMERO DI VENDITE con normalizzazione case-insensitive
+    const channelMap = new Map();
+
+    inventoryData.forEach((item) => {
+      const isSold = item.status === "completed" || item.status === "active-sale";
+      if (!isSold) return;
+
+      const rawPlace = (item.sellingPlace || "").trim();
+      const lower = rawPlace.toLowerCase();
+      const qty = parseInt(item.quantity, 10) || 1;
+
+      let cleanLabel = rawPlace || "N.S.";
+      if (lower === "ebay") cleanLabel = "eBay";
+      else if (lower === "stockx") cleanLabel = "StockX";
+      else if (lower === "vinted") cleanLabel = "Vinted";
+      else if (lower === "restocks") cleanLabel = "Restocks";
+      else if (lower === "wallapop") cleanLabel = "Wallapop";
+      else if (!rawPlace || lower === "n.s." || lower === "n.s" || lower === "ns") cleanLabel = "N.S.";
+      else cleanLabel = rawPlace.charAt(0).toUpperCase() + rawPlace.slice(1);
+
+      const groupKey = cleanLabel.toLowerCase();
+      if (channelMap.has(groupKey)) {
+        channelMap.get(groupKey).count += qty;
       } else {
-        rawItems = realPlatformProfits.map((p) => ({
-          label: p.platform || "Altro",
-          value: Math.max(0, Number(p.revenue || p.count || 0)),
-        }));
+        channelMap.set(groupKey, { label: cleanLabel, count: qty });
       }
-    } else if (metricsData && metricsData.platforms && Object.keys(metricsData.platforms).length > 0) {
-      rawItems = Object.entries(metricsData.platforms).map(([k, v]) => ({
-        label: k || "Altro",
-        value: Number(v || 0),
-      }));
+    });
+
+    // Se inventoryData non ha ancora vendite attive o completate caricate, fallback su metricsData.platforms
+    if (channelMap.size === 0 && metricsData && metricsData.platforms && Object.keys(metricsData.platforms).length > 0) {
+      Object.entries(metricsData.platforms).forEach(([k, v]) => {
+        const rawPlace = (k || "").trim();
+        const lower = rawPlace.toLowerCase();
+        let cleanLabel = rawPlace || "N.S.";
+        if (lower === "ebay") cleanLabel = "eBay";
+        else if (lower === "stockx") cleanLabel = "StockX";
+        else if (lower === "vinted") cleanLabel = "Vinted";
+        else if (lower === "restocks") cleanLabel = "Restocks";
+        else if (!rawPlace || lower === "n.s.") cleanLabel = "N.S.";
+        else cleanLabel = rawPlace.charAt(0).toUpperCase() + rawPlace.slice(1);
+
+        const groupKey = cleanLabel.toLowerCase();
+        const cnt = Number(v || 0);
+        if (cnt > 0) {
+          if (channelMap.has(groupKey)) {
+            channelMap.get(groupKey).count += cnt;
+          } else {
+            channelMap.set(groupKey, { label: cleanLabel, count: cnt });
+          }
+        }
+      });
     }
 
-    const totalRaw = rawItems.reduce((acc, curr) => acc + curr.value, 0);
+    const sortedChannels = Array.from(channelMap.values()).sort((a, b) => b.count - a.count);
+    const totalSalesUnits = sortedChannels.reduce((sum, ch) => sum + ch.count, 0);
 
-    if (rawItems.length > 0 && totalRaw > 0) {
-      platLabels = rawItems.map((item) => item.label);
+    if (sortedChannels.length > 0 && totalSalesUnits > 0) {
+      platLabels = sortedChannels.map((item) => item.label);
       // Calibrazione rigorosa su base 100%
-      platData = rawItems.map((item) => Number(((item.value / totalRaw) * 100).toFixed(1)));
-      platRawValues = rawItems.map((item) => item.value);
+      platData = sortedChannels.map((item) => Number(((item.count / totalSalesUnits) * 100).toFixed(1)));
+      platCounts = sortedChannels.map((item) => item.count);
     } else {
       platLabels = ["Nessuna vendita"];
       platData = [100];
-      platRawValues = [0];
+      platCounts = [0];
     }
 
     platformPieChart = new Chart(ctxPlatform, {
@@ -1207,11 +1240,11 @@ function initCharts() {
           legend: {
             position: "bottom",
             labels: {
-              color: "#94a3b8",
+              color: "#cbd5e1",
               boxWidth: 8,
               boxHeight: 8,
               padding: 8,
-              font: { size: 10.5 },
+              font: { size: 10.5, family: "Segoe UI, sans-serif" },
               generateLabels: (chart) => {
                 const data = chart.data;
                 if (data.labels.length && data.datasets.length) {
@@ -1223,6 +1256,7 @@ function initCharts() {
                       fillStyle: dataset.backgroundColor[i],
                       strokeStyle: dataset.borderColor || "#101726",
                       lineWidth: dataset.borderWidth || 1,
+                      fontColor: "#cbd5e1",
                       hidden: false,
                       index: i
                     };
@@ -1236,6 +1270,8 @@ function initCharts() {
             backgroundColor: "#111827",
             borderColor: "rgba(255, 255, 255, 0.1)",
             borderWidth: 1,
+            titleColor: "#f8fafc",
+            bodyColor: "#cbd5e1",
             callbacks: {
               label: (context) => {
                 if (platLabels[0] === "Nessuna vendita") {
@@ -1243,8 +1279,9 @@ function initCharts() {
                 }
                 const idx = context.dataIndex;
                 const pct = context.parsed;
-                const rawVal = platRawValues[idx] || 0;
-                return ` ${context.label}: € ${rawVal.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${pct}% del totale)`;
+                const count = platCounts[idx] || 0;
+                const plural = count === 1 ? "pezzo venduto" : "pezzi venduti";
+                return ` ${context.label}: ${count} ${plural} (${pct}% del totale)`;
               }
             }
           }

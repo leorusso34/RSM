@@ -4,6 +4,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -87,9 +88,29 @@ def main() -> None:
     if sys.platform == "win32":
         # Chiude eventuali istanze attive per evitare lock di file su Windows
         subprocess.run(["taskkill", "/F", "/IM", "RSM.exe"], capture_output=True, check=False)
+        time.sleep(0.5)
 
     print(f"Copia dell'eseguibile in {target_exe}...")
-    shutil.copy2(compiled_exe, target_exe)
+    copied = False
+    for _ in range(8):
+        try:
+            shutil.copy2(compiled_exe, target_exe)
+            copied = True
+            break
+        except PermissionError:
+            time.sleep(0.4)
+    if not copied:
+        old_exe = target_exe.with_suffix(".old.exe")
+        if old_exe.exists():
+            try:
+                old_exe.unlink(missing_ok=True)
+            except OSError:
+                pass
+        try:
+            target_exe.rename(old_exe)
+            shutil.copy2(compiled_exe, target_exe)
+        except Exception as e:
+            raise PermissionError(f"Impossibile accedere a {target_exe}: chiudi l'applicazione prima di compilare.") from e
 
     # Copia delle librerie dinamiche necessarie (es. WebView2Loader.dll per il runtime WebView2 su Windows)
     for dll in compiled_exe.parent.glob("*.dll"):
