@@ -11,15 +11,39 @@
 const API_BASE = "http://127.0.0.1:28472/api";
 let inventoryData = [];
 let currentEditingId = null;
+let metricsData = null;
+let realMonthlySales = [];
+let realPlatformProfits = [];
+
+function formatMoney(val) {
+  if (val === null || val === undefined || isNaN(val)) return "-";
+  return `€ ${Number(val).toLocaleString("it-IT", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+}
 
 async function loadProductsFromBackend(retries = 6, delay = 500) {
   for (let i = 0; i < retries; i++) {
     try {
-      const res = await fetch(`${API_BASE}/products`);
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-      const json = await res.json();
+      const [resProd, resMetrics] = await Promise.all([
+        fetch(`${API_BASE}/products`),
+        fetch(`${API_BASE}/metrics`).catch(() => null)
+      ]);
+      if (!resProd.ok) throw new Error(`HTTP error ${resProd.status}`);
+      const json = await resProd.json();
       if (json.success && Array.isArray(json.data)) {
         inventoryData = json.data;
+        if (resMetrics && resMetrics.ok) {
+          try {
+            const mJson = await resMetrics.json();
+            if (mJson.success) {
+              metricsData = mJson;
+              realMonthlySales = mJson.monthlySales || [];
+              realPlatformProfits = mJson.platformProfits || [];
+            }
+          } catch (_) {}
+        }
         renderTable();
         updateDashboardMetrics();
         initCharts();
@@ -338,7 +362,7 @@ function renderTable() {
         </td>
         <td><strong>${item.size}</strong></td>
         <td>${item.quantity} pz</td>
-        <td>€ ${item.purchasedPrice.toFixed(2)}</td>
+        <td>${formatMoney(item.purchasedPrice)}</td>
         <td style="color: var(--text-muted);">${item.purchasedPlace}</td>
         <td class="col-center">
           <span class="status-badge ${statusClass}">
@@ -355,9 +379,9 @@ function renderTable() {
       const netProfit = (item.salePrice || 0) - item.purchasedPrice - (item.fees || 0);
       const roi = item.purchasedPrice > 0 ? (netProfit / item.purchasedPrice) * 100 : 0;
       const hasSaleData = item.status === "completed" || item.status === "active-sale";
-      const salePriceHtml = hasSaleData && item.salePrice ? `€ ${item.salePrice.toFixed(2)}` : `<span style="color:var(--text-dim)">-</span>`;
+      const salePriceHtml = hasSaleData && item.salePrice ? formatMoney(item.salePrice) : `<span style="color:var(--text-dim)">-</span>`;
       const sellingPlaceHtml = hasSaleData && item.sellingPlace ? `<span style="font-size: 11.5px; color: var(--text-muted);">${item.sellingPlace}</span>` : `<span style="color:var(--text-dim)">-</span>`;
-      const profitHtml = hasSaleData ? `<span class="profit-pos">+€ ${netProfit.toFixed(2)}</span>` : `<span style="color:var(--text-dim)">-</span>`;
+      const profitHtml = hasSaleData ? `<span class="profit-pos">+${formatMoney(netProfit)}</span>` : `<span style="color:var(--text-dim)">-</span>`;
       const roiHtml = hasSaleData ? `<span class="roi-badge">+${roi.toFixed(1)}%</span>` : `<span style="color:var(--text-dim)">-</span>`;
 
       tr.innerHTML = `
@@ -369,7 +393,7 @@ function renderTable() {
         </td>
         <td><strong>${item.size}</strong></td>
         <td>${item.quantity} pz</td>
-        <td>€ ${item.purchasedPrice.toFixed(2)}</td>
+        <td>${formatMoney(item.purchasedPrice)}</td>
         <td>${salePriceHtml}</td>
         <td>${sellingPlaceHtml}</td>
         <td>${profitHtml}</td>
@@ -412,21 +436,41 @@ function initCharts() {
     platformPieChart = null;
   }
 
-  // Chart 1: Andamento Profitto Mensile
+  // Chart 1: Andamento Profitto Mensile Reale (dal database SQLite)
   const ctxMonthly = document.getElementById("monthlyProfitChart");
   if (ctxMonthly) {
     const gradient = ctxMonthly.getContext("2d").createLinearGradient(0, 0, 0, 260);
     gradient.addColorStop(0, "rgba(99, 102, 241, 0.45)");
     gradient.addColorStop(1, "rgba(99, 102, 241, 0.0)");
 
+    let monthLabels = [];
+    let monthData = [];
+
+    if (realMonthlySales && realMonthlySales.length > 0) {
+      const itMonths = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+      monthLabels = realMonthlySales.map((m) => {
+        const parts = String(m.month || "").split("-");
+        if (parts.length === 2) {
+          const mIdx = parseInt(parts[1], 10) - 1;
+          const yr = parts[0].slice(2);
+          return `${itMonths[mIdx] || parts[1]} '${yr}`;
+        }
+        return m.month || "Mese";
+      });
+      monthData = realMonthlySales.map((m) => Number(m.profit || 0));
+    } else {
+      monthLabels = ["Nessun dato vendite"];
+      monthData = [0];
+    }
+
     monthlyProfitChart = new Chart(ctxMonthly, {
       type: "line",
       data: {
-        labels: ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott (Live)"],
+        labels: monthLabels,
         datasets: [
           {
             label: "Utile Netto (€)",
-            data: [620, 850, 1140, 980, 1420, 1780, 1340, 1590, 2210, 2680],
+            data: monthData,
             borderColor: "#6366f1",
             borderWidth: 3,
             fill: true,
@@ -455,7 +499,7 @@ function initCharts() {
             padding: 12,
             displayColors: false,
             callbacks: {
-              label: (context) => ` Utile: € ${context.parsed.y.toLocaleString("it-IT")},00`
+              label: (context) => ` Utile: € ${Number(context.parsed.y).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             }
           }
         },
@@ -469,7 +513,7 @@ function initCharts() {
             ticks: {
               color: "#94a3b8",
               font: { size: 11 },
-              callback: (value) => `€ ${value}`
+              callback: (value) => `€ ${Number(value).toLocaleString("it-IT")}`
             }
           }
         }
@@ -477,23 +521,32 @@ function initCharts() {
     });
   }
 
-  // Chart 2: Piattaforma Donut
+  // Chart 2: Piattaforme Reale (dal database SQLite)
   const ctxPlatform = document.getElementById("platformPieChart");
   if (ctxPlatform) {
+    let platLabels = [];
+    let platData = [];
+    const platColors = ["#6366f1", "#10b981", "#8b5cf6", "#f59e0b", "#3b82f6", "#ec4899", "#14b8a6"];
+
+    if (realPlatformProfits && realPlatformProfits.length > 0) {
+      platLabels = realPlatformProfits.map((p) => p.platform || "Altro");
+      platData = realPlatformProfits.map((p) => Math.max(0, Number(p.profit || 0)));
+    } else if (metricsData && metricsData.platforms && Object.keys(metricsData.platforms).length > 0) {
+      platLabels = Object.keys(metricsData.platforms);
+      platData = Object.values(metricsData.platforms);
+    } else {
+      platLabels = ["Nessuna vendita"];
+      platData = [1];
+    }
+
     platformPieChart = new Chart(ctxPlatform, {
       type: "doughnut",
       data: {
-        labels: ["StockX", "Vinted", "Privato", "Alias/GOAT", "eBay"],
+        labels: platLabels,
         datasets: [
           {
-            data: [42, 28, 16, 9, 5],
-            backgroundColor: [
-              "#6366f1", // Indigo
-              "#10b981", // Emerald
-              "#8b5cf6", // Purple
-              "#f59e0b", // Amber
-              "#3b82f6"  // Blue
-            ],
+            data: platData,
+            backgroundColor: platColors.slice(0, platLabels.length),
             borderWidth: 2,
             borderColor: "#101726",
             hoverOffset: 4
@@ -544,6 +597,7 @@ function initCharts() {
 function openAddProductModal() {
   currentEditingId = null;
   closeDrawer();
+  closeModal();
   const modal = document.getElementById("productModal");
   if (!modal) return;
   modal.classList.add("open");
@@ -551,25 +605,25 @@ function openAddProductModal() {
   const modalTitle = document.querySelector("#productModal .modal-header h3");
   if (modalTitle) modalTitle.textContent = "Aggiungi Nuovo Prodotto";
 
-  // Reset form
+  // Reset form pulito al 100% (senza dati fittizi)
   document.getElementById("prod-name").value = "";
-  document.getElementById("prod-brand").value = "Nike";
-  document.getElementById("prod-size").value = "EU 43";
+  document.getElementById("prod-brand").value = "";
+  document.getElementById("prod-size").value = "";
   document.getElementById("prod-qty").value = "1";
   document.getElementById("prod-buy-price").value = "";
-  document.getElementById("prod-buy-place").value = "SNKRS";
+  document.getElementById("prod-buy-place").value = "";
   document.getElementById("prod-sell-price").value = "";
-  document.getElementById("prod-sell-place").value = "StockX";
+  document.getElementById("prod-sell-place").value = "";
   document.getElementById("prod-status").value = "stock";
-  updateModalProfitPreview();
+  const previewEl = document.getElementById("modal-profit-preview");
+  if (previewEl) previewEl.textContent = "€ 0,00";
 }
 
 function closeModal() {
-  const modal = document.getElementById("productModal");
-  if (modal) modal.classList.remove("open");
-
-  const ebayModal = document.getElementById("ebayModal");
-  if (ebayModal) ebayModal.classList.remove("open");
+  ["productModal", "ebayModal", "aiModal", "emailSyncModal"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("open");
+  });
 }
 
 // ==========================================================================
@@ -605,12 +659,12 @@ function openDrawer(id) {
   if (drawerId) drawerId.textContent = item.id;
   if (drawerTitle) drawerTitle.textContent = item.name;
   if (drawerBrand) drawerBrand.textContent = `${item.brand} • ${item.status === 'stock' ? 'In Stock' : (item.status === 'preorder' ? 'Pre-ordine' : 'Vendita')}`;
-  if (drawerBuyPrice) drawerBuyPrice.textContent = `€ ${item.purchasedPrice.toFixed(2)}`;
-  if (drawerSellPrice) drawerSellPrice.textContent = item.salePrice ? `€ ${item.salePrice.toFixed(2)}` : "-";
+  if (drawerBuyPrice) drawerBuyPrice.textContent = formatMoney(item.purchasedPrice);
+  if (drawerSellPrice) drawerSellPrice.textContent = item.salePrice ? formatMoney(item.salePrice) : "-";
 
   if (drawerProfit) {
     if (hasSaleData) {
-      drawerProfit.textContent = `+€ ${netProfit.toFixed(2)}`;
+      drawerProfit.textContent = `+${formatMoney(netProfit)}`;
       drawerProfit.className = "drawer-metric-val profit";
     } else {
       drawerProfit.textContent = "-";
@@ -624,7 +678,7 @@ function openDrawer(id) {
   if (drawerDate) drawerDate.textContent = item.date || "Recente";
   if (drawerChannel) drawerChannel.textContent = item.sellingPlace || "-";
   if (drawerRoi) drawerRoi.textContent = hasSaleData ? `+${roi.toFixed(1)}%` : "-";
-  if (drawerFees) drawerFees.textContent = item.fees ? `€ ${item.fees.toFixed(2)}` : "€ 0,00";
+  if (drawerFees) drawerFees.textContent = item.fees ? formatMoney(item.fees) : "€ 0,00";
 
   if (drawerNotes) {
     drawerNotes.textContent = item.notes || `Prodotto autentico verificato (${item.name}). Condizioni perfette DSWT, scatola integra e accessori originali inclusi.`;
@@ -916,52 +970,353 @@ async function openEbayPriceLookup(productName, size = "") {
   }
 }
 
-async function simulateEmailSync() {
-  showToast("📬 Sincronizzazione ordini Gmail in corso...");
-  try {
-    const res = await fetch(`${API_BASE}/sync-email`, { method: "POST" });
-    const json = await res.json();
-    if (json.success) {
-      await loadProductsFromBackend();
-      showToast(`✨ Sincronizzazione completata: ${json.imported_count || 0} nuovi ordini importati!`);
-    } else {
-      showToast(`⚠️ Gmail: ${json.error || "Nessuna nuova email trovata"}`);
+// ==========================================================================
+// ASSISTENTE AI GEMINI (INSERIMENTO RAPIDO - IDENTICO AD AIDIALOG)
+// ==========================================================================
+let aiExtractedProducts = [];
+let speechRecognitionInstance = null;
+let isVoiceRecording = false;
+
+function openAIModal() {
+  closeDrawer();
+  closeModal();
+  const modal = document.getElementById("aiModal");
+  if (!modal) return;
+  modal.classList.add("open");
+
+  document.getElementById("ai-prompt-text").value = "";
+  document.getElementById("ai-status-msg").textContent = "Scrivi o detta i prodotti da inserire.";
+  document.getElementById("ai-results-wrap").style.display = "none";
+  document.getElementById("btn-ai-save-all").style.display = "none";
+  document.getElementById("btn-ai-analyze").disabled = false;
+  aiExtractedProducts = [];
+}
+
+function toggleVoiceRecording() {
+  const btn = document.getElementById("btn-mic");
+  const statusEl = document.getElementById("ai-status-msg");
+  const promptEl = document.getElementById("ai-prompt-text");
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast("Dettatura vocale non supportata direttamente dal browser.");
+    return;
+  }
+
+  if (isVoiceRecording) {
+    if (speechRecognitionInstance) {
+      speechRecognitionInstance.stop();
     }
+    isVoiceRecording = false;
+    if (btn) btn.classList.remove("recording");
+    if (statusEl) statusEl.textContent = "Dettatura completata.";
+    return;
+  }
+
+  try {
+    speechRecognitionInstance = new SpeechRecognition();
+    speechRecognitionInstance.lang = "it-IT";
+    speechRecognitionInstance.continuous = false;
+    speechRecognitionInstance.interimResults = false;
+
+    speechRecognitionInstance.onstart = () => {
+      isVoiceRecording = true;
+      if (btn) btn.classList.add("recording");
+      if (statusEl) statusEl.textContent = "Ascolto in corso... parla ora.";
+    };
+
+    speechRecognitionInstance.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript) {
+        promptEl.value = (promptEl.value ? promptEl.value + " " : "") + transcript;
+      }
+    };
+
+    speechRecognitionInstance.onerror = (event) => {
+      console.warn("Speech error:", event.error);
+      if (statusEl) statusEl.textContent = `Errore microfono: ${event.error}`;
+      isVoiceRecording = false;
+      if (btn) btn.classList.remove("recording");
+    };
+
+    speechRecognitionInstance.onend = () => {
+      isVoiceRecording = false;
+      if (btn) btn.classList.remove("recording");
+      if (statusEl) statusEl.textContent = "Dettatura terminata. Fai clic su 'Analizza e Crea'.";
+    };
+
+    speechRecognitionInstance.start();
   } catch (err) {
-    showToast(`❌ Errore sync email: ${err.message}`);
+    console.error("Speech error:", err);
+    showToast("Impossibile avviare il microfono.");
   }
 }
 
-async function simulateAIAssistant() {
-  const promptText = prompt("Inserisci i dettagli del prodotto per l'AI (es. 'Jordan 4 Retro White Thunder taglia 44 comprata a 215 su SNKRS'):");
-  if (!promptText || !promptText.trim()) return;
+async function handleAIAnalyze() {
+  const prompt = document.getElementById("ai-prompt-text").value.trim();
+  const statusEl = document.getElementById("ai-status-msg");
+  const btnAnalyze = document.getElementById("btn-ai-analyze");
 
-  showToast("🤖 Gemini AI in elaborazione...");
+  if (!prompt) {
+    showToast("Scrivi o detta i prodotti prima di analizzare.");
+    return;
+  }
+
+  btnAnalyze.disabled = true;
+  statusEl.textContent = "Analisi del testo con Gemini in corso...";
+
   try {
     const res = await fetch(`${API_BASE}/ai-parse`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: promptText })
+      body: JSON.stringify({ prompt })
     });
     const json = await res.json();
-    if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-      const prod = json.data[0];
-      openAddProductModal();
-      document.getElementById("prod-name").value = prod.name || "";
-      document.getElementById("prod-brand").value = prod.brand || "Nike";
-      document.getElementById("prod-size").value = prod.size || "UNI";
-      document.getElementById("prod-buy-price").value = prod.purchased_price || "";
-      document.getElementById("prod-buy-place").value = prod.purchased_place || "";
-      document.getElementById("prod-sell-price").value = prod.selling_price || "";
-      document.getElementById("prod-sell-place").value = prod.selling_place || "StockX";
-      document.getElementById("prod-status").value = prod.status === "Pre-ordine" ? "preorder" : "stock";
-      updateModalProfitPreview();
-      showToast("⚡ Dati estratti con successo da Gemini AI!");
+    btnAnalyze.disabled = false;
+
+    if (!res.ok || !json.success || !Array.isArray(json.data) || json.data.length === 0) {
+      statusEl.textContent = "Nessun prodotto valido rilevato dall'AI.";
+      showToast("L'AI non ha trovato prodotti validi nel testo inserito.");
+      return;
+    }
+
+    aiExtractedProducts = json.data;
+    statusEl.textContent = `Rilevati ${aiExtractedProducts.length} prodotti con successo!`;
+
+    const tbody = document.getElementById("ai-results-body");
+    tbody.innerHTML = "";
+    aiExtractedProducts.forEach((p) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${p.name || "Sconosciuto"}</strong></td>
+        <td>${p.size || "UNI"}</td>
+        <td>${p.quantity || 1} pz</td>
+        <td>${formatMoney(p.purchased_price || 0)}</td>
+        <td style="color:var(--text-muted);">${p.purchased_place || "-"}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("ai-results-wrap").style.display = "block";
+    document.getElementById("btn-ai-save-all").style.display = "inline-flex";
+  } catch (err) {
+    btnAnalyze.disabled = false;
+    statusEl.textContent = "Errore durante l'analisi AI.";
+    showToast(`Errore AI: ${err.message}`);
+  }
+}
+
+async function handleAISaveAll() {
+  if (!aiExtractedProducts || aiExtractedProducts.length === 0) return;
+  const btnSave = document.getElementById("btn-ai-save-all");
+  btnSave.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/products-batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ products: aiExtractedProducts })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(`${json.inserted_count} prodotti salvati con successo in SQLite!`);
+      closeModal();
+      await loadProductsFromBackend();
     } else {
-      showToast(`⚠️ AI: ${json.error || "Impossibile estrarre i dati del prodotto."}`);
+      showToast(`Errore salvataggio: ${json.error}`);
     }
   } catch (err) {
-    showToast(`❌ Errore AI: ${err.message}`);
+    showToast(`Errore: ${err.message}`);
+  } finally {
+    btnSave.disabled = false;
+  }
+}
+
+// ==========================================================================
+// SINCRONIZZAZIONE EMAIL GMAIL (IDENTICO AD EMAILSYNCDIALOG)
+// ==========================================================================
+let emailScannedItems = [];
+
+async function openEmailSyncModal() {
+  closeDrawer();
+  closeModal();
+  const modal = document.getElementById("emailSyncModal");
+  if (!modal) return;
+  modal.classList.add("open");
+
+  document.getElementById("email-scan-status").textContent = "Pronto per la scansione delle email.";
+  document.getElementById("email-sync-count-info").textContent = "Nessun prodotto in attesa di importazione.";
+  document.getElementById("btn-save-email-preorders").style.display = "none";
+  emailScannedItems = [];
+
+  // Carica credenziali correnti dal database
+  try {
+    const res = await fetch(`${API_BASE}/settings`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.email_sync_address) {
+        document.getElementById("email-sync-address").value = data.email_sync_address;
+      }
+    }
+  } catch (_) {}
+}
+
+function toggleEmailPwdVisibility(show) {
+  const pwdInput = document.getElementById("email-sync-pwd");
+  if (pwdInput) {
+    pwdInput.type = show ? "text" : "password";
+  }
+}
+
+async function saveEmailCredentials() {
+  const email = document.getElementById("email-sync-address").value.trim();
+  const pwd = document.getElementById("email-sync-pwd").value.replace(/\s+/g, "").trim();
+
+  if (!email || !pwd) {
+    showToast("Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri.");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email_sync_address: email, email_sync_app_password: pwd })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast("Credenziali email salvate con successo nel database!");
+    } else {
+      showToast(`Errore salvataggio: ${json.error}`);
+    }
+  } catch (err) {
+    showToast(`Errore: ${err.message}`);
+  }
+}
+
+async function testEmailConnection() {
+  const email = document.getElementById("email-sync-address").value.trim();
+  const pwd = document.getElementById("email-sync-pwd").value.replace(/\s+/g, "").trim();
+  const statusEl = document.getElementById("email-scan-status");
+
+  if (!email || !pwd) {
+    showToast("Compila prima Email e Password per le App.");
+    return;
+  }
+
+  statusEl.textContent = "Verifica connessione a Gmail in corso...";
+  try {
+    const res = await fetch(`${API_BASE}/test-email-connection`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email_sync_address: email, email_sync_app_password: pwd })
+    });
+    const json = await res.json();
+    if (json.success) {
+      statusEl.textContent = "Connessione a Gmail stabilita con successo!";
+      showToast("Connessione a Gmail riuscita!");
+    } else {
+      statusEl.textContent = "Errore di connessione a Gmail.";
+      showToast(`Connessione fallita: ${json.error || json.message}`);
+    }
+  } catch (err) {
+    statusEl.textContent = "Errore durante il test di connessione.";
+    showToast(`Errore: ${err.message}`);
+  }
+}
+
+async function startEmailScan() {
+  const email = document.getElementById("email-sync-address").value.trim();
+  const pwd = document.getElementById("email-sync-pwd").value.replace(/\s+/g, "").trim();
+  const statusEl = document.getElementById("email-scan-status");
+  const btnScan = document.getElementById("btn-start-email-scan");
+  const tbody = document.getElementById("email-sync-table-body");
+  const countInfo = document.getElementById("email-sync-count-info");
+  const btnSave = document.getElementById("btn-save-email-preorders");
+
+  if (!email || !pwd) {
+    showToast("Inserisci Email e Password per le App prima di avviare la scansione.");
+    return;
+  }
+
+  btnScan.disabled = true;
+  statusEl.textContent = "Connessione a Gmail e ricerca nuove email non lette...";
+
+  try {
+    const res = await fetch(`${API_BASE}/scan-emails`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email_sync_address: email, email_sync_app_password: pwd })
+    });
+    const json = await res.json();
+    btnScan.disabled = false;
+
+    if (!res.ok || !json.success) {
+      statusEl.textContent = "Errore durante la scansione.";
+      showToast(`Scansione fallita: ${json.error || "Impossibile leggere la casella Gmail."}`);
+      return;
+    }
+
+    emailScannedItems = json.items || [];
+    const scannedCount = json.emails_scanned || 0;
+
+    if (emailScannedItems.length === 0) {
+      statusEl.textContent = `Scansione completata: ${scannedCount} email analizzate, nessun prodotto nuovo rilevato.`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-dim); padding:20px;">Nessuna nuova email d'ordine rilevata nella casella INBOX.</td></tr>`;
+      countInfo.textContent = "Nessun prodotto da importare.";
+      btnSave.style.display = "none";
+      return;
+    }
+
+    statusEl.textContent = `Scansione completata: ${emailScannedItems.length} prodotti trovati in ${scannedCount} email.`;
+    countInfo.textContent = `${emailScannedItems.length} prodotti pronti per l'importazione nei Pre-ordini.`;
+    btnSave.style.display = "inline-flex";
+
+    tbody.innerHTML = "";
+    emailScannedItems.forEach((item) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${item.name}</strong></td>
+        <td class="col-center"><strong>${item.size || "UNI"}</strong></td>
+        <td class="col-center">${item.quantity || 1} pz</td>
+        <td class="col-center">${formatMoney(item.price || 0)}</td>
+        <td>${item.store || "Email"}</td>
+        <td class="col-center" style="color:var(--text-muted);">${item.date || "-"}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    btnScan.disabled = false;
+    statusEl.textContent = "Errore durante la scansione.";
+    showToast(`Errore: ${err.message}`);
+  }
+}
+
+async function saveEmailPreorders() {
+  if (!emailScannedItems || emailScannedItems.length === 0) return;
+  const btnSave = document.getElementById("btn-save-email-preorders");
+  btnSave.disabled = true;
+
+  const uids = emailScannedItems.map((i) => i.uid).filter(Boolean);
+
+  try {
+    const res = await fetch(`${API_BASE}/save-scanned-emails`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: emailScannedItems, uids })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(`${json.saved_count} pre-ordini importati con successo dalle email!`);
+      closeModal();
+      await loadProductsFromBackend();
+    } else {
+      showToast(`Errore salvataggio: ${json.error}`);
+    }
+  } catch (err) {
+    showToast(`Errore: ${err.message}`);
+  } finally {
+    btnSave.disabled = false;
   }
 }
 

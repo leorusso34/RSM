@@ -23,16 +23,8 @@
          ==================================================================== -->
     <aside class="sidebar" id="appSidebar">
       <div>
-        <!-- Intestazione Sidebar: Logo / Profilo e Pulsante Chiudi -->
-        <div class="brand-section">
-          <div class="brand-left">
-            <div class="brand-logo">R</div>
-            <div class="brand-text">
-              <h1>RSM</h1>
-              <p>Reseller Suite</p>
-            </div>
-          </div>
-          <!-- Pulsante per chiudere la colonna sinistra (tutto schermo) -->
+        <!-- Intestazione Sidebar: Pulizia massima (senza nome progetto) e Pulsante Chiudi -->
+        <div class="brand-section" style="justify-content: flex-end; padding: 12px 14px 4px 14px;">
           <button class="sidebar-toggle-btn" id="closeSidebarBtn" title="Nascondi barra laterale" onclick="toggleSidebar(false)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
@@ -40,13 +32,23 @@
           </button>
         </div>
 
-        <!-- Pulsante Azione Rapida Integrato nella Sidebar -->
-        <div class="sidebar-action-wrap">
-          <button class="btn-sidebar-add" onclick="openAddProductModal()">
+        <!-- Pulsanti Azione Rapida Integrati nella Sidebar -->
+        <div class="sidebar-action-wrap" style="display: flex; gap: 6px; padding: 8px 14px 12px 14px;">
+          <button class="btn-sidebar-add" style="flex: 1;" onclick="openAddProductModal()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
             <span>Nuovo Prodotto</span>
+          </button>
+          <button class="btn-sidebar-icon" onclick="openAIModal()" title="Inserimento Rapido con AI Gemini">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>
+            </svg>
+          </button>
+          <button class="btn-sidebar-icon" onclick="openEmailSyncModal()" title="Sincronizzazione Email Gmail">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+            </svg>
           </button>
         </div>
 
@@ -91,13 +93,13 @@
 
         <div class="nav-group-title">INTEGRAZIONI</div>
         <ul class="nav-list">
-          <li class="nav-item" onclick="simulateAIAssistant()">
+          <li class="nav-item" onclick="openAIModal()">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
               <span>Assistente AI Gemini</span>
             </div>
           </li>
-          <li class="nav-item" onclick="simulateEmailSync()">
+          <li class="nav-item" onclick="openEmailSyncModal()">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
               <span>Sincronizzazione Email</span>
@@ -248,7 +250,7 @@
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
                   </svg>
-                  <input type="text" id="global-search-input" placeholder="Cerca prodotto, taglia, brand..." />
+                  <input type="text" id="global-search-input" />
                 </div>
 
                 <!-- Mini Quadratino Ordinamento -->
@@ -322,17 +324,17 @@
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label">Nome Prodotto / Modello</label>
-            <input type="text" id="prod-name" class="form-input" placeholder="Es. Travis Scott x Air Jordan 1 Low" required />
+            <input type="text" id="prod-name" class="form-input" required />
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Brand / Marchio</label>
-              <input type="text" id="prod-brand" class="form-input" placeholder="Nike, Supreme, Jordan..." />
+              <input type="text" id="prod-brand" class="form-input" />
             </div>
             <div class="form-group">
               <label class="form-label">Taglia</label>
-              <input type="text" id="prod-size" class="form-input" placeholder="EU 43 / Size L" required />
+              <input type="text" id="prod-size" class="form-input" required />
             </div>
           </div>
 
@@ -343,25 +345,25 @@
             </div>
             <div class="form-group">
               <label class="form-label">Prezzo Acquisto (€)</label>
-              <input type="number" step="0.5" id="prod-buy-price" class="form-input" placeholder="160.00" required />
+              <input type="number" step="0.01" id="prod-buy-price" class="form-input" required />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Luogo di Acquisto</label>
-              <input type="text" id="prod-buy-place" class="form-input" placeholder="SNKRS, Store, Drop..." />
+              <input type="text" id="prod-buy-place" class="form-input" />
             </div>
             <div class="form-group">
               <label class="form-label">Prezzo Vendita Previsto (€)</label>
-              <input type="number" step="0.5" id="prod-sell-price" class="form-input" placeholder="380.00" />
+              <input type="number" step="0.01" id="prod-sell-price" class="form-input" />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Canale di Vendita</label>
-              <input type="text" id="prod-sell-place" class="form-input" placeholder="StockX, Vinted, Privato..." />
+              <input type="text" id="prod-sell-place" class="form-input" />
             </div>
             <div class="form-group">
               <label class="form-label">Stato Iniziale</label>
@@ -437,6 +439,157 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODALE: INSERIMENTO RAPIDO CON AI GEMINI (IDENTICO AD AIDIALOG)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="aiModal">
+    <div class="modal-card" style="width: 580px; max-width: 92vw;">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Inserimento Rapido con AI</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+            Descrivi i prodotti a voce o per testo e Gemini estrarrà automaticamente tutti i dati.
+          </p>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-main); letter-spacing: 0.5px;">COSA VUOI AGGIUNGERE?</span>
+            <button type="button" id="btn-mic" class="btn-icon-square" onclick="toggleVoiceRecording()" title="Dettatura vocale con microfono">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" x2="12" y1="19" y2="22"/>
+              </svg>
+            </button>
+          </div>
+          <textarea id="ai-prompt-text" class="form-input" style="height: 110px; resize: vertical; line-height: 1.5; font-family: inherit; width: 100%;"></textarea>
+        </div>
+
+        <div id="ai-status-msg" style="font-size: 11.5px; color: var(--text-muted); min-height: 16px;"></div>
+
+        <!-- Tabella anteprima prodotti estratti -->
+        <div id="ai-results-wrap" style="display: none;">
+          <div style="font-size: 11px; font-weight: 700; color: #818cf8; margin-bottom: 6px; text-transform: uppercase;">Prodotti Estratti:</div>
+          <div style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+            <table class="inventory-table" style="font-size: 11px;">
+              <thead>
+                <tr>
+                  <th>Prodotto</th>
+                  <th>Taglia</th>
+                  <th>Q.tà</th>
+                  <th>P. Acquisto</th>
+                  <th>Luogo</th>
+                </tr>
+              </thead>
+              <tbody id="ai-results-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" id="btn-ai-analyze" class="btn btn-primary" onclick="handleAIAnalyze()">Analizza e Crea</button>
+          <button type="button" id="btn-ai-save-all" class="btn btn-primary" style="background: #059669; display: none;" onclick="handleAISaveAll()">Salva nell'Inventario</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODALE: SINCRONIZZAZIONE EMAIL ORDINI (IDENTICO AD EMAILSYNCDIALOG)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="emailSyncModal">
+    <div class="modal-card" style="width: 860px; max-width: 94vw;">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Sincronizzazione Ordini via Email</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+            Scarica le conferme d'ordine non lette da Gmail ed estrai i prodotti nei Pre-ordini con Gemini.
+          </p>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Box Credenziali -->
+        <div style="background: #0b101c; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+          <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+              <label class="form-label" style="font-size: 11px;">Email Gmail:</label>
+              <input type="email" id="email-sync-address" class="form-input" style="height: 32px; font-size: 12px;" />
+            </div>
+            <div style="flex: 1; min-width: 180px;">
+              <label class="form-label" style="font-size: 11px;">Password App (16 car.):</label>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <input type="password" id="email-sync-pwd" class="form-input" style="height: 32px; font-size: 12px; flex: 1;" />
+                <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; white-space: nowrap;">
+                  <input type="checkbox" id="email-show-pwd" onchange="toggleEmailPwdVisibility(this.checked)" /> Mostra
+                </label>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary" style="height: 32px; font-size: 11.5px;" onclick="testEmailConnection()">Test Connessione</button>
+              <button type="button" class="btn btn-primary" style="height: 32px; font-size: 11.5px; background: #2563eb;" onclick="saveEmailCredentials()">Salva Dati</button>
+            </div>
+          </div>
+          <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 6px;">
+            Inserisci una password per le app di Google generata con verifica a 2 fattori attiva.
+          </div>
+        </div>
+
+        <!-- Barra di scansione -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; margin-bottom: 2px; flex-wrap: wrap; gap: 10px;">
+          <button type="button" id="btn-start-email-scan" class="btn btn-primary" onclick="startEmailScan()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            <span>Avvia Scansione Email Non Lette</span>
+          </button>
+          <div id="email-scan-status" style="font-size: 11.5px; color: var(--text-muted);">Pronto per la scansione delle email.</div>
+        </div>
+
+        <!-- Tabella Prodotti Rilevati -->
+        <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+          <table class="inventory-table" style="font-size: 11.5px;">
+            <thead>
+              <tr>
+                <th>PRODOTTO RILEVATO</th>
+                <th class="col-center">TAGLIA</th>
+                <th class="col-center">Q.TÀ</th>
+                <th class="col-center">PREZZO (€)</th>
+                <th>NEGOZIO / SITO</th>
+                <th class="col-center">DATA ORDINE</th>
+              </tr>
+            </thead>
+            <tbody id="email-sync-table-body">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 20px;">
+                  Nessun prodotto in attesa di importazione. Fai clic su "Avvia Scansione Email Non Lette".
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <div id="email-sync-count-info" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">
+          Nessun prodotto in attesa di importazione.
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Chiudi</button>
+          <button type="button" id="btn-save-email-preorders" class="btn btn-primary" style="background: #059669; display: none;" onclick="saveEmailPreorders()">
+            Salva Tutti nei Pre-ordini
+          </button>
+        </div>
       </div>
     </div>
   </div>

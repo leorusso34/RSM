@@ -205,6 +205,60 @@ body {
   background: var(--accent-primary-hover);
 }
 
+.btn-sidebar-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: #111827;
+  border: 1px solid var(--border-color);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-sidebar-icon:hover {
+  background: #1e293b;
+  color: #fff;
+  border-color: #38bdf8;
+}
+
+.btn-icon-square {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-icon-square:hover {
+  background: #1e293b;
+  color: #fff;
+  border-color: #334155;
+}
+
+.btn-icon-square.recording {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ef4444;
+  animation: pulse-recording 1.2s infinite;
+}
+
+@keyframes pulse-recording {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
 /* Nav Groups */
 .nav-group-title {
   font-size: 10.5px;

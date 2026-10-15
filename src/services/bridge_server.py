@@ -198,6 +198,10 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
             avg_roi = (total_roi_sum / completed_count) if completed_count > 0 else 0.0
 
+            monthly_sales = self.db.get_monthly_sales()
+            platform_profits = self.db.get_profit_by_platform()
+            top_products = self.db.get_top_profitable_products(limit=6)
+
             self._send_json({
                 "success": True,
                 "kpi": {
@@ -211,6 +215,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     "preorderCount": sum(1 for p in products if p.get("status") == STATUS_PREORDER),
                 },
                 "platforms": platforms_count,
+                "monthlySales": monthly_sales,
+                "platformProfits": platform_profits,
+                "topProducts": top_products,
             })
             return
 
@@ -306,6 +313,101 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self._send_json({"success": True, "imported_count": len(imported), "products": imported})
             except Exception as e:
                 self._send_error(f"Sincronizzazione fallita: {e}")
+            return
+
+        # Test connessione Gmail
+        if path == "/api/test-email-connection":
+            email_addr = (body.get("email_sync_address") or self.db.get_setting("email_sync_address", "")).strip()
+            app_pwd = (body.get("email_sync_app_password") or self.db.get_setting("email_sync_app_password", "")).replace(" ", "").strip()
+            if not email_addr or not app_pwd:
+                self._send_error("Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri.")
+                return
+            try:
+                from src.email_sync import test_gmail_connection
+                ok, msg = test_gmail_connection(email_addr, app_pwd)
+                self._send_json({"success": ok, "message": msg})
+            except Exception as e:
+                self._send_error(f"Errore connessione: {e}")
+            return
+
+        # Scansione Email Gmail con anteprima
+        if path == "/api/scan-emails":
+            email_addr = (body.get("email_sync_address") or self.db.get_setting("email_sync_address", "")).strip()
+            app_pwd = (body.get("email_sync_app_password") or self.db.get_setting("email_sync_app_password", "")).replace(" ", "").strip()
+            if not email_addr or not app_pwd:
+                self._send_error("Configura prima l'indirizzo Gmail e la Password per le App.")
+                return
+            try:
+                from src.email_sync import fetch_unread_order_emails, parse_order_email_with_gemini
+                emails = fetch_unread_order_emails(email_addr, app_pwd, max_emails=15)
+                extracted_items = []
+                for em in emails:
+                    try:
+                        parsed = parse_order_email_with_gemini(em)
+                        for prod in parsed:
+                            extracted_items.append({
+                                "name": prod.get("name", "Prodotto da Email"),
+                                "size": prod.get("size", "UNI"),
+                                "quantity": int(prod.get("quantity", 1)),
+                                "price": float(prod.get("purchased_price", 0)),
+                                "store": prod.get("purchased_place", "Email"),
+                                "date": prod.get("release_date") or em.get("date", ""),
+                                "uid": em.get("uid"),
+                            })
+                    except Exception as err:
+                        print(f"Errore parsing email UID {em.get('uid')}: {err}")
+                self._send_json({
+                    "success": True,
+                    "emails_scanned": len(emails),
+                    "items": extracted_items
+                })
+            except Exception as e:
+                self._send_error(f"Scansione fallita: {e}")
+            return
+
+        # Salvataggio ordini email nei Pre-ordini
+        if path == "/api/save-scanned-emails":
+            items = body.get("items", [])
+            uids = body.get("uids", [])
+            email_addr = (self.db.get_setting("email_sync_address", "")).strip()
+            app_pwd = (self.db.get_setting("email_sync_app_password", "")).replace(" ", "").strip()
+            saved_count = 0
+            for item in items:
+                self.db.save({
+                    "name": str(item.get("name", "Prodotto Email")).strip(),
+                    "size": str(item.get("size", "UNI")).strip(),
+                    "quantity": int(item.get("quantity", 1)),
+                    "purchased_price": Decimal(str(item.get("price", 0))),
+                    "purchased_place": str(item.get("store", "Email")).strip(),
+                    "status": STATUS_PREORDER,
+                    "notes": "Importato automaticamente da email di ordine.",
+                })
+                saved_count += 1
+            if uids and email_addr and app_pwd:
+                try:
+                    from src.email_sync import mark_emails_as_read
+                    mark_emails_as_read(email_addr, app_pwd, uids)
+                except Exception as e:
+                    print(f"Errore marcatura email lette: {e}")
+            self._send_json({"success": True, "saved_count": saved_count})
+            return
+
+        # Inserimento batch di prodotti da AI
+        if path == "/api/products-batch":
+            records = body.get("products", [])
+            inserted = 0
+            for p in records:
+                self.db.save({
+                    "name": str(p.get("name", "")).strip(),
+                    "size": str(p.get("size", "UNI")).strip(),
+                    "quantity": int(p.get("quantity", 1)),
+                    "purchased_price": Decimal(str(p.get("purchased_price", 0))),
+                    "purchased_place": str(p.get("purchased_place", "")).strip(),
+                    "status": p.get("status", STATUS_STOCK),
+                    "notes": p.get("notes", "Generato automaticamente tramite AI."),
+                })
+                inserted += 1
+            self._send_json({"success": True, "inserted_count": inserted})
             return
 
         # Salvataggio impostazioni
