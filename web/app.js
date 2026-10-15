@@ -12,20 +12,26 @@ const API_BASE = "http://127.0.0.1:28472/api";
 let inventoryData = [];
 let currentEditingId = null;
 
-async function loadProductsFromBackend() {
-  try {
-    const res = await fetch(`${API_BASE}/products`);
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-    const json = await res.json();
-    if (json.success && Array.isArray(json.data)) {
-      inventoryData = json.data;
-      renderTable();
-      updateDashboardMetrics();
-      initCharts();
-      return true;
+async function loadProductsFromBackend(retries = 6, delay = 500) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(`${API_BASE}/products`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        inventoryData = json.data;
+        renderTable();
+        updateDashboardMetrics();
+        initCharts();
+        return true;
+      }
+    } catch (err) {
+      if (i < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        console.warn("Bridge locale in attesa di avvio o non raggiungibile:", err);
+      }
     }
-  } catch (err) {
-    console.warn("Bridge locale in attesa di avvio o non raggiungibile:", err);
   }
   return false;
 }

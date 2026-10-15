@@ -47,19 +47,44 @@ fn find_bridge_script() -> Option<(PathBuf, PathBuf)> {
 }
 
 fn find_python_executable(work_dir: &Path) -> PathBuf {
-    let venv_py = work_dir.join(".venv").join("Scripts").join("python.exe");
-    if venv_py.exists() {
-        return venv_py;
+    let mut check_dirs = vec![work_dir.to_path_buf()];
+    let mut curr = work_dir.parent();
+    while let Some(p) = curr {
+        check_dirs.push(p.to_path_buf());
+        curr = p.parent();
     }
+
     if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(parent) = exe_path.parent() {
-            let local_py = parent.join("python.exe");
-            if local_py.exists() {
-                return local_py;
-            }
+        let mut curr_exe = exe_path.parent();
+        while let Some(p) = curr_exe {
+            check_dirs.push(p.to_path_buf());
+            curr_exe = p.parent();
         }
     }
-    PathBuf::from("python")
+
+    for dir in &check_dirs {
+        let venv_py = dir.join(".venv").join("Scripts").join("python.exe");
+        if venv_py.exists() {
+            return venv_py;
+        }
+        let local_py = dir.join("python.exe");
+        if local_py.exists() {
+            return local_py;
+        }
+    }
+
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        let p1 = PathBuf::from(&local_app_data).join("Python").join("bin").join("python.exe");
+        if p1.exists() {
+            return p1;
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    return PathBuf::from("python.exe");
+
+    #[cfg(not(target_os = "windows"))]
+    return PathBuf::from("python3");
 }
 
 fn ensure_bridge_server() {
@@ -83,8 +108,9 @@ fn ensure_bridge_server() {
         });
     } else {
         // Fallback generico
-        thread::spawn(|| {
-            let mut cmd = Command::new("python");
+        let py_bin = find_python_executable(Path::new("."));
+        thread::spawn(move || {
+            let mut cmd = Command::new(py_bin);
             cmd.arg("src/services/bridge_server.py");
 
             #[cfg(target_os = "windows")]

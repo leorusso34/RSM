@@ -46,13 +46,10 @@ def main() -> None:
     backup_data = project_root / "data_backup_temp"
     dist_config = dist_dir / "config.json"
 
-    # 1. Salvataggio sicuro del database di produzione prima della ricompilazione
+    # 1. Rilevamento database di produzione
     dist_db = dist_data / "russo_stock.db"
     if dist_db.exists() and dist_db.stat().st_size > 0:
-        print("Salvataggio del database attuale in corso...")
-        if backup_data.exists():
-            shutil.rmtree(backup_data)
-        shutil.copytree(dist_data, backup_data)
+        print(f"Database di produzione rilevato in dist/RSM/data ({dist_db.stat().st_size} byte).")
 
     # 2. Gestione sicura dei percorsi con spazi per MinGW / windres su Windows
     subst_drive = None
@@ -92,26 +89,36 @@ def main() -> None:
     print(f"Copia dell'eseguibile in {target_exe}...")
     shutil.copy2(compiled_exe, target_exe)
 
+    # Copia delle librerie dinamiche necessarie (es. WebView2Loader.dll per il runtime WebView2 su Windows)
+    for dll in compiled_exe.parent.glob("*.dll"):
+        print(f"Copia della libreria runtime {dll.name} in dist/RSM/...")
+        shutil.copy2(dll, dist_dir / dll.name)
+
+    webview2_target = dist_dir / "WebView2Loader.dll"
+    if sys.platform == "win32" and not webview2_target.exists():
+        for candidate in tauri_project_dir.glob("target/**/WebView2Loader.dll"):
+            if "x64" in str(candidate) or candidate.parent.name == "release":
+                shutil.copy2(candidate, webview2_target)
+                print(f"Copia della libreria WebView2Loader.dll da {candidate}...")
+                break
+
     # 6. Copia del backend Python e dei servizi necessari per il micro-server bridge
     src_target = dist_dir / "src"
     if src_target.exists():
         shutil.rmtree(src_target, ignore_errors=True)
     shutil.copytree(project_root / "src", src_target)
 
-    # 7. Ripristino / Copia sicura del database SQLite
-    if not dist_data.exists():
-        dist_data.mkdir(parents=True, exist_ok=True)
+    # 7. Garanzia presenza database SQLite in dist/RSM/data
+    dist_data.mkdir(parents=True, exist_ok=True)
+    dist_db = dist_data / "russo_stock.db"
+    source_db = project_root / "data" / "russo_stock.db"
 
-    source_data = project_root / "data"
-    if backup_data.exists():
-        print("Ripristino del database di produzione in dist/RSM/data...")
-        shutil.rmtree(dist_data, ignore_errors=True)
-        shutil.copytree(backup_data, dist_data)
-        shutil.rmtree(backup_data, ignore_errors=True)
-    elif source_data.exists():
-        print("Copia del database iniziale in dist/RSM/data...")
-        shutil.rmtree(dist_data, ignore_errors=True)
-        shutil.copytree(source_data, dist_data)
+    if not dist_db.exists() or dist_db.stat().st_size == 0:
+        if source_db.exists():
+            print("Copia del database iniziale (data/russo_stock.db) in dist/RSM/data...")
+            shutil.copy2(source_db, dist_db)
+    else:
+        print(f"Database SQLite di produzione preservato ({dist_db.name}).")
 
     # 8. Copia file di configurazione config.json
     source_config = project_root / "config.json"
