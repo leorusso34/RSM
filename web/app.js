@@ -1445,6 +1445,185 @@ async function saveEmailPreorders() {
   }
 }
 
+// ==========================================================================
+// IMPORTAZIONE EXCEL / SPREADSHEET CON AI & MAPPER (IDENTICO AD EXCELIMPORTDIALOG)
+// ==========================================================================
+let pendingExcelFile = null;
+let excelExtractedProducts = [];
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function triggerExcelFileInput() {
+  const input = document.getElementById("excelFileInput");
+  if (input) {
+    input.value = "";
+    input.click();
+  }
+}
+
+function handleExcelFileSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  pendingExcelFile = file;
+
+  closeDrawer();
+  closeModal();
+
+  const hintModal = document.getElementById("excelHintModal");
+  if (hintModal) {
+    document.getElementById("excel-hint-filename").textContent = `File selezionato: ${file.name}`;
+    document.getElementById("excel-hint-text").value = "";
+    document.getElementById("excel-parse-status").textContent = "";
+    const btnNoHint = document.getElementById("btn-excel-no-hint");
+    const btnWithHint = document.getElementById("btn-excel-with-hint");
+    if (btnNoHint) btnNoHint.disabled = false;
+    if (btnWithHint) btnWithHint.disabled = false;
+    hintModal.classList.add("open");
+  }
+}
+
+async function executeExcelAnalysis(useHint) {
+  if (!pendingExcelFile) return;
+
+  const hintText = useHint ? document.getElementById("excel-hint-text").value.trim() : "";
+  const statusEl = document.getElementById("excel-parse-status");
+  const btnNoHint = document.getElementById("btn-excel-no-hint");
+  const btnWithHint = document.getElementById("btn-excel-with-hint");
+
+  if (btnNoHint) btnNoHint.disabled = true;
+  if (btnWithHint) btnWithHint.disabled = true;
+  if (statusEl) statusEl.textContent = "Lettura del foglio di calcolo e analisi AI con Gemini in corso...";
+
+  try {
+    const reader = new FileReader();
+    const base64Data = await new Promise((resolve, reject) => {
+      reader.onload = () => {
+        const result = reader.result;
+        const b64 = typeof result === "string" ? result.split(",")[1] : "";
+        resolve(b64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(pendingExcelFile);
+    });
+
+    const res = await callApi("/parse-excel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: pendingExcelFile.name,
+        file_base64: base64Data,
+        user_hint: hintText
+      })
+    });
+    const json = await res.json();
+
+    if (!json.success || !json.products || json.products.length === 0) {
+      const errMsg = json.error || "Nessun prodotto valido rilevato nel file.";
+      if (statusEl) statusEl.textContent = `Errore: ${errMsg}`;
+      showToast(`Excel: ${errMsg}`);
+      if (btnNoHint) btnNoHint.disabled = false;
+      if (btnWithHint) btnWithHint.disabled = false;
+      return;
+    }
+
+    excelExtractedProducts = json.products;
+    closeModal();
+    openExcelPreviewModal();
+  } catch (err) {
+    if (statusEl) statusEl.textContent = `Errore: ${err.message}`;
+    showToast(`Errore analisi Excel: ${err.message}`);
+    if (btnNoHint) btnNoHint.disabled = false;
+    if (btnWithHint) btnWithHint.disabled = false;
+  }
+}
+
+function openExcelPreviewModal() {
+  const modal = document.getElementById("excelPreviewModal");
+  if (!modal) return;
+  modal.classList.add("open");
+
+  const count = excelExtractedProducts.length;
+  const subtitleEl = document.getElementById("excel-preview-subtitle");
+  if (subtitleEl) {
+    subtitleEl.textContent = `L'AI ha analizzato il file e trovato ${count} prodott${count === 1 ? 'o' : 'i'} pronti per l'importazione. Controlla l'anteprima e conferma.`;
+  }
+
+  const summaryCountEl = document.getElementById("excel-summary-count");
+  if (summaryCountEl) {
+    summaryCountEl.textContent = `${count} prodott${count === 1 ? 'o' : 'i'} pronti per l'importazione.`;
+  }
+
+  const tbody = document.getElementById("excel-preview-tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  excelExtractedProducts.forEach((p) => {
+    const rawStatus = (p.status || "").trim();
+    let labelStatus = "In Magazzino";
+    let statusClass = "stock";
+    if (rawStatus === "Venduto" || rawStatus === "Vendite Attive" || rawStatus === "completed" || rawStatus === "active-sale") {
+      labelStatus = "Vendite Attive";
+      statusClass = "active-sale";
+    } else if (rawStatus === "Pre-ordine" || rawStatus === "Preordine" || rawStatus === "preorder") {
+      labelStatus = "Pre-ordine";
+      statusClass = "preorder";
+    }
+
+    const buyPrice = parseFloat(p.purchased_price) || 0;
+    const formattedPrice = `€ ${buyPrice.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="font-weight: 600; color: #fff;">${escapeHtml(p.name || "-")}</td>
+      <td class="col-center"><span class="table-size-pill">${escapeHtml(p.size || "UNI")}</span></td>
+      <td class="col-center">${parseInt(p.quantity, 10) || 1}</td>
+      <td class="col-center" style="font-weight: 700; color: #34d399;">${formattedPrice}</td>
+      <td>${escapeHtml(p.purchased_place || "-")}</td>
+      <td>${escapeHtml(p.selling_place || "-")}</td>
+      <td class="col-center"><span class="status-badge ${statusClass}">${labelStatus}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function saveExcelExtractedProducts() {
+  if (!excelExtractedProducts || excelExtractedProducts.length === 0) return;
+
+  const btnSave = document.getElementById("btn-excel-confirm-save");
+  if (btnSave) btnSave.disabled = true;
+
+  try {
+    const res = await callApi("/save-excel-products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ products: excelExtractedProducts })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(`${json.saved_count || excelExtractedProducts.length} prodotti importati con successo nel database!`);
+      closeModal();
+      excelExtractedProducts = [];
+      pendingExcelFile = null;
+      await loadProductsFromBackend();
+    } else {
+      showToast(`Errore salvataggio: ${json.error || "Operazione non riuscita"}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  } finally {
+    if (btnSave) btnSave.disabled = false;
+  }
+}
+
 // Toast Helper (Zero-Emoji Guaranteed)
 function showToast(message) {
   const toast = document.getElementById("toastNotification");

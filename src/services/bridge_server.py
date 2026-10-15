@@ -4,12 +4,15 @@ Zero dipendenze esterne: utilizza esclusivamente la libreria standard di Python 
 Latenza su localhost: <1ms.
 """
 
+import base64
 import json
 import os
 import re
 import sys
+import tempfile
 import threading
 import time
+from datetime import datetime, timezone
 from decimal import Decimal
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -577,6 +580,107 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self._send_json({"success": True, "id": new_id, "message": "Prodotto salvato con successo!"})
             except Exception as e:  # noqa: BLE001
                 self._send_error(f"Errore durante il salvataggio: {e}")
+            return
+
+        # Analisi file Excel / CSV con AI Gemini
+        if path == "/api/parse-excel":
+            file_b64 = body.get("file_base64", "")
+            filename = str(body.get("filename", "import.xlsx")).strip()
+            user_hint = str(body.get("user_hint", "")).strip()
+
+            if not file_b64:
+                self._send_error("Nessun contenuto file ricevuto.")
+                return
+
+            from src.ai_agent import parse_excel_with_ai
+            from src.utils import read_spreadsheet_raw
+
+            suffix = Path(filename).suffix or ".xlsx"
+            temp_file = None
+            try:
+                raw_bytes = base64.b64decode(file_b64)
+                with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tf:
+                    tf.write(raw_bytes)
+                    temp_file = tf.name
+
+                raw_text = read_spreadsheet_raw(temp_file)
+                if not raw_text.strip():
+                    self._send_error("Il file selezionato non contiene dati leggibili.")
+                    return
+
+                products = parse_excel_with_ai(raw_text, user_hint=user_hint)
+                self._send_json({"success": True, "products": products, "count": len(products)})
+            except Exception as e:  # noqa: BLE001
+                self._send_error(f"Errore durante l'analisi del file: {e}")
+            finally:
+                if temp_file and os.path.exists(temp_file):
+                    try:
+                        os.remove(temp_file)
+                    except OSError:
+                        pass
+            return
+
+        # Salvataggio prodotti confermati dall'importazione Excel
+        if path == "/api/save-excel-products":
+            products = body.get("products", [])
+            if not products:
+                self._send_error("Nessun prodotto da salvare.")
+                return
+
+            saved_count = 0
+            for p in products:
+                try:
+                    raw_status = str(p.get("status", "")).strip()
+                    if raw_status in ("Venduto", "Vendite Attive", STATUS_SOLD):
+                        db_status = STATUS_SOLD
+                    elif raw_status in ("Pre-ordine", "Preordine", STATUS_PREORDER):
+                        db_status = STATUS_PREORDER
+                    else:
+                        db_status = STATUS_STOCK
+
+                    purchased_raw = p.get("purchased_price", 0) or 0
+                    purchased = Decimal(str(purchased_raw)).quantize(Decimal("0.01"))
+
+                    selling_raw = p.get("selling_price")
+                    selling = Decimal(str(selling_raw)).quantize(Decimal("0.01")) if selling_raw is not None else None
+
+                    sold_raw = p.get("sold_price")
+                    sold = Decimal(str(sold_raw)).quantize(Decimal("0.01")) if sold_raw is not None else None
+
+                    fees_raw = p.get("fees", 0) or 0
+                    fees = Decimal(str(fees_raw)).quantize(Decimal("0.01"))
+
+                    qty = int(p.get("quantity", 1) or 1)
+                    if qty <= 0:
+                        qty = 1
+
+                    sold_date = str(p.get("sold_date", "") or "").strip()
+                    if db_status == STATUS_SOLD and not sold_date:
+                        sold_date = datetime.now(tz=timezone.utc).astimezone().date().isoformat()
+                    release_date = str(p.get("release_date", "") or "").strip()
+                    notes = str(p.get("notes", "") or "").strip()
+
+                    record = {
+                        "name": str(p.get("name", "")).strip(),
+                        "size": str(p.get("size", "UNI") or "UNI").strip() or "UNI",
+                        "quantity": qty,
+                        "purchased_price": purchased,
+                        "purchased_place": str(p.get("purchased_place", "") or "").strip(),
+                        "selling_place": str(p.get("selling_place", "") or "").strip(),
+                        "selling_price": selling,
+                        "sold_price": sold,
+                        "fees": fees,
+                        "sold_date": sold_date,
+                        "status": db_status,
+                        "release_date": release_date if db_status == STATUS_PREORDER else "",
+                        "notes": notes,
+                    }
+                    self.db.save(record)
+                    saved_count += 1
+                except (ValueError, KeyError, OSError) as e:
+                    print(f"Errore salvataggio record Excel: {e}")
+
+            self._send_json({"success": True, "saved_count": saved_count})
             return
 
         self._send_error("Endpoint POST non trovato", status=HTTPStatus.NOT_FOUND)

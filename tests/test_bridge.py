@@ -5,7 +5,7 @@ from http.server import ThreadingHTTPServer
 from urllib import request
 from urllib.error import HTTPError
 
-from src.config import STATUS_SOLD, STATUS_STOCK
+from src.config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
 from src.database import InventoryDatabase
 from src.services.bridge_server import RSMBridgeHandler, _thread_local
 
@@ -109,6 +109,125 @@ def test_bridge_completed_sale_cannot_be_modified(tmp_path):
         assert updated_row["name"] == "Jordan 4 Aggiornata"
         assert updated_row["purchased_price"] == Decimal("210.00")
         assert updated_row["purchased_place"] == "Nike Store Milano"
+
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_bridge_excel_endpoints(tmp_path):
+    """Verifica il corretto salvataggio e gestione degli endpoint Excel del bridge server."""
+    test_db = tmp_path / "test_excel_bridge.db"
+    db = InventoryDatabase(test_db)
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        # 1. Test /api/save-excel-products con prodotti estratti
+        excel_payload = json.dumps({
+            "products": [
+                {
+                    "name": "Nike Dunk Low Retro",
+                    "size": "42.5",
+                    "quantity": 2,
+                    "purchased_price": 110.0,
+                    "purchased_place": "SNKRS",
+                    "status": "In Stock",
+                    "notes": "Taglia popolare",
+                },
+                {
+                    "name": "Jordan 1 High Lost & Found",
+                    "size": "44",
+                    "quantity": 1,
+                    "purchased_price": 180.0,
+                    "purchased_place": "Foot Locker",
+                    "status": "Pre-ordine",
+                    "release_date": "2026-11-01",
+                    "notes": "Consegna programmata",
+                },
+                {
+                    "name": "Yeezy Slide Onyx",
+                    "size": "43",
+                    "quantity": 1,
+                    "purchased_price": 70.0,
+                    "purchased_place": "Confirmed",
+                    "selling_place": "Vinted",
+                    "sold_price": 120.0,
+                    "fees": 5.0,
+                    "status": "Venduto",
+                    "notes": "Vendita conclusa",
+                },
+            ]
+        }).encode("utf-8")
+
+        req = request.Request(
+            f"http://127.0.0.1:{port}/api/save-excel-products",
+            data=excel_payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["saved_count"] == 3
+
+        # Verifica nel database
+        products = db.all_products()
+        assert len(products) == 3
+        dunk = next(p for p in products if p["name"] == "Nike Dunk Low Retro")
+        assert dunk["size"] == "42.5"
+        assert dunk["quantity"] == 2
+        assert dunk["purchased_price"] == Decimal("110.00")
+        assert dunk["status"] == STATUS_STOCK
+
+        jordan = next(p for p in products if p["name"] == "Jordan 1 High Lost & Found")
+        assert jordan["status"] == STATUS_PREORDER
+        assert jordan["release_date"] == "2026-11-01"
+
+        yeezy = next(p for p in products if p["name"] == "Yeezy Slide Onyx")
+        assert yeezy["status"] == STATUS_SOLD
+        assert yeezy["sold_price"] == Decimal("120.00")
+        assert yeezy["fees"] == Decimal("5.00")
+
+        # 2. Test salvataggio payload vuoto -> solleva errore
+        empty_req = request.Request(
+            f"http://127.0.0.1:{port}/api/save-excel-products",
+            data=json.dumps({"products": []}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            request.urlopen(empty_req)
+            raise AssertionError("Dovrebbe sollevare errore su products vuoti")
+        except HTTPError as err:
+            assert err.code == 400
+            err_json = json.loads(err.read().decode("utf-8"))
+            assert "Nessun prodotto da salvare" in err_json["error"]
+
+        # 3. Test /api/parse-excel senza file base64 -> solleva errore 400
+        parse_req = request.Request(
+            f"http://127.0.0.1:{port}/api/parse-excel",
+            data=json.dumps({}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            request.urlopen(parse_req)
+            raise AssertionError("Dovrebbe sollevare errore se file_base64 è assente")
+        except HTTPError as err:
+            assert err.code == 400
+            err_json = json.loads(err.read().decode("utf-8"))
+            assert "Nessun contenuto file ricevuto" in err_json["error"]
 
     finally:
         server.shutdown()

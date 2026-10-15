@@ -1796,11 +1796,6 @@
           </div>
         </div>
 
-        <!-- Badges & Hero Copy -->
-        <div class="hero-eyebrow">
-          <span class="hero-badge-capsule" id="hero-badge-txt">⚡ Resell &amp; Inventory Cockpit · Gemini AI Powered</span>
-        </div>
-
         <h1 class="hero-title" id="hero-title">
           La suite definitiva per il reselling professionale.
         </h1>
@@ -2216,9 +2211,9 @@
         <div class="point-eyebrow">
           <span id="p4-eyebrow">04 / 06 — VOCE IT &amp; GEMINI 3.1 FLASH LITE</span>
         </div>
-        <h2 id="p4-title">Detta a voce in italiano. Gemini compila tutto.</h2>
+        <h2 id="p4-title">Dettatura continua in italiano: zero inserimenti manuali.</h2>
         <p id="p4-desc">
-          In <code>ai_dialog.py</code> e <code>speech_helper.py</code> premi l'icona microfono a 48kHz o scrivi una nota veloce: scorri per vedere lo spettrogramma vocale trascrivere la frase e popolare i campi con l'AI di Google Gemini.
+          Registrazione vocale a 48kHz e parsing semantico istantaneo con Gemini AI per aggiungere nuovi lotti a voce in pochi secondi.
         </p>
         <div class="point-controls">
           <button class="ui-btn ghost interactive-btn" type="button" id="p4-mic-btn" onclick="toggleVoiceDemo()"><svg class="btn-icon-svg mic-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg><span id="p4-ctrl-1">Microfono 48kHz HD</span></button>
@@ -2282,9 +2277,9 @@
         <div class="point-eyebrow">
           <span id="p5-eyebrow">05 / 06 — EBAY API × CLOUDFLARE WORKER</span>
         </div>
-        <h2 id="p5-title">Confronta il tuo costo con le vendite reali su eBay.</h2>
+        <h2 id="p5-title">Quotazioni di mercato istantanee per vendere al prezzo migliore.</h2>
         <p id="p5-desc">
-          <code>ebay_api.py</code> interroga le API ufficiali eBay passando dal proxy sicuro su <strong>Cloudflare Workers</strong> (chiave segreta protetta all'edge), calcolando prezzo minimo, medio, massimo e margine netto potenziale.
+          Analisi statistica delle vendite reali su eBay con calcolo automatico di mediana, spread e ROI atteso.
         </p>
         <div class="point-controls">
           <button class="ui-btn ghost interactive-btn" type="button" id="p5-lookup-btn" onclick="runEbayLookup()"><svg class="btn-icon-svg search-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span id="p5-ctrl-1">Lookup Prezzi eBay</span></button>
@@ -2377,7 +2372,7 @@
         </div>
         <h2 id="p6-title">Testato con Pytest e Ruff. Compilato in un unico `.exe`.</h2>
         <p id="p6-desc">
-          Configurazione prioritaria in <code>config.json</code>, backup sicuro del database SQLite locale durante la compilazione, test unitari automatici e script <code>build.py</code> per generare il pacchetto standalone per Windows 10/11.
+          Test unitari continui, configurazione protetta in locale e compilazione in un unico .exe leggero e indipendente.
         </p>
         <div class="point-controls">
           <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="ui-btn download-action" id="p6-ctrl-1-link" target="_blank" rel="noopener noreferrer" style="text-decoration:none; cursor:pointer;"><svg class="btn-icon-svg rocket-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span id="p6-ctrl-1">Scarica dist/RSM/RSM.exe</span></a>
@@ -2465,7 +2460,6 @@
     const I18N = {
       it: {
         hdrDownload: 'Download RSM.exe (v1.5.0)',
-        heroBadge: '⚡ Resell & Inventory Cockpit · Gemini AI Powered',
         heroVersion: 'v1.5.0 Standalone Ready',
         heroTitle: 'La suite definitiva per il reselling professionale.',
         heroExploreBtn: 'Esplora Funzionalità',
@@ -2521,8 +2515,8 @@
         bundleDesc3: 'Bundle Completo (3 lotti · 5 unità sigillate)',
 
         p3Eyebrow: '03 / 06 — GMAIL IMAP + GEMINI AI',
-        p3Title: 'Il laser AI legge le tue email di conferma ordine.',
-        p3Desc: "Configurato in <code>config.json</code> con la tua password per le app a 16 caratteri, <code>email_sync.py</code> si collega via SSL IMAP a Gmail, legge le ricevute in arrivo e usa <strong>Google Gemini</strong> per popolare automaticamente i Pre-ordini in SQLite.",
+        p3Title: 'Dalle email di acquisto al magazzino in un istante.',
+        p3Desc: "Il parser intelligente legge le conferme d'ordine su Gmail e registra automaticamente i nuovi lotti nel database locale SQLite.",
         p3Ctrl1: 'Sincronizza Email IMAP',
         p3Ctrl2: 'config.json: email_sync_address',
         emailVerified: 'Verificato',
@@ -2545,8 +2539,8 @@
         v4: '18 Ottobre 2026',
 
         p4Eyebrow: '04 / 06 — VOCE IT & GEMINI 3.1 FLASH LITE',
-        p4Title: 'Detta a voce in italiano. Gemini compila tutto.',
-        p4Desc: "In <code>ai_dialog.py</code> e <code>speech_helper.py</code> premi l'icona microfono a 48kHz o scrivi una nota veloce: scorri per vedere lo spettrogramma vocale trascrivere la frase e popolare i campi con l'AI di Google Gemini.",
+        p4Title: 'Dettatura continua in italiano: zero inserimenti manuali.',
+        p4Desc: "Registrazione vocale a 48kHz e parsing semantico istantaneo con Gemini AI per aggiungere nuovi lotti a voce in pochi secondi.",
         p4Ctrl1: 'Microfono 48kHz HD',
         p4Ctrl2: 'Modello: Gemini 3.1 Flash Lite',
         p4TopbarTitle: 'src/ui/ai_dialog.py',
@@ -2563,8 +2557,8 @@
         p4FooterNote: 'PARSING STRUTTURATO JSON & VAD IN TEMPO REALE',
 
         p5Eyebrow: '05 / 06 — EBAY API × CLOUDFLARE WORKER',
-        p5Title: 'Confronta il tuo costo con le vendite reali su eBay.',
-        p5Desc: "<code>ebay_api.py</code> interroga le API ufficiali eBay passando dal proxy sicuro su <strong>Cloudflare Workers</strong> (chiave segreta protetta all'edge), calcolando prezzo minimo, medio, massimo e margine netto potenziale.",
+        p5Title: 'Quotazioni di mercato istantanee per vendere al prezzo migliore.',
+        p5Desc: "Analisi statistica delle vendite reali su eBay con calcolo automatico di mediana, spread e ROI atteso.",
         p5Ctrl1: 'Lookup Prezzi eBay',
         p5Ctrl2: 'Proxy: rsm-proxy.workers.dev',
         ebayDistTitle: 'DISTRIBUZIONE PREZZI VENDUTI',
@@ -2575,7 +2569,7 @@
 
         p6Eyebrow: '06 / 06 — QUALITÀ, CONFIG & BUILD .EXE',
         p6Title: 'Testato con Pytest e Ruff. Compilato in un unico `.exe`.',
-        p6Desc: 'Configurazione prioritaria in <code>config.json</code>, backup sicuro del database SQLite locale durante la compilazione, test unitari automatici e script <code>build.py</code> per generare il pacchetto standalone per Windows 10/11.',
+        p6Desc: 'Test unitari continui, configurazione protetta in locale e compilazione in un unico .exe leggero e indipendente.',
         p6Ctrl1: 'Scarica dist/RSM/RSM.exe',
         p6Ctrl2: 'CI: Pytest + Ruff',
         p6T1: '1. Parsing <strong>config.json</strong> & Backup WAL SQLite',
@@ -2592,7 +2586,6 @@
       },
       en: {
         hdrDownload: 'Download RSM.exe (v1.5.0)',
-        heroBadge: '⚡ Resell & Inventory Cockpit · Gemini AI Powered',
         heroVersion: 'v1.5.0 Standalone Ready',
         heroTitle: 'The definitive suite for professional reselling.',
         heroExploreBtn: 'Explore Features',
@@ -2648,8 +2641,8 @@
         bundleDesc3: 'Full Bundle (3 lots · 5 sealed units)',
 
         p3Eyebrow: '03 / 06 — GMAIL IMAP + GEMINI AI',
-        p3Title: 'The AI laser reads your order confirmation emails.',
-        p3Desc: 'Configured in <code>config.json</code> with your 16-character app password, <code>email_sync.py</code> connects via SSL IMAP to Gmail, parses incoming receipts and uses <strong>Google Gemini</strong> to automatically populate Pre-orders in SQLite.',
+        p3Title: 'From purchase receipts to inventory in an instant.',
+        p3Desc: 'The intelligent parser reads order confirmations from Gmail and automatically registers new lots in the local SQLite database.',
         p3Ctrl1: 'Sync Orders from Email',
         p3Ctrl2: 'config.json: email_sync_address',
         emailVerified: 'Verified',
@@ -2672,8 +2665,8 @@
         v4: 'October 18, 2026',
 
         p4Eyebrow: '04 / 06 — VOICE STREAM & GEMINI 3.1 FLASH LITE',
-        p4Title: 'Dictate with your voice. Gemini parses everything.',
-        p4Desc: 'In <code>ai_dialog.py</code> and <code>speech_helper.py</code>, click the 48kHz microphone icon or write a quick note: scroll to watch the voice spectrogram transcribe the sentence and populate fields with Google Gemini AI.',
+        p4Title: 'Seamless voice input: zero manual typing required.',
+        p4Desc: 'High-fidelity 48kHz voice capture and instant semantic parsing with Gemini AI to register new inventory lots by voice in seconds.',
         p4Ctrl1: '48kHz HD Microphone',
         p4Ctrl2: 'Model: Gemini 3.1 Flash Lite',
         p4TopbarTitle: 'src/ui/ai_dialog.py',
@@ -2690,8 +2683,8 @@
         p4FooterNote: 'STRUCTURED JSON PARSING & VAD IN REAL TIME',
 
         p5Eyebrow: '05 / 06 — EBAY API × CLOUDFLARE WORKER',
-        p5Title: 'Compare your cost with real sales on eBay.',
-        p5Desc: '<code>ebay_api.py</code> queries the official eBay APIs through the secure proxy on <strong>Cloudflare Workers</strong> (secret key protected at the edge), computing min, average, max prices and potential net margin.',
+        p5Title: 'Instant market valuations to sell at the best price.',
+        p5Desc: 'Statistical analysis of actual completed eBay sales with automatic calculation of median price, spread, and expected ROI.',
         p5Ctrl1: 'Lookup eBay Prices',
         p5Ctrl2: 'Proxy: rsm-proxy.workers.dev',
         ebayDistTitle: 'SOLD PRICE DISTRIBUTION',
@@ -2702,7 +2695,7 @@
 
         p6Eyebrow: '06 / 06 — QUALITY, CONFIG & .EXE BUILD',
         p6Title: 'Tested with Pytest and Ruff. Compiled into a standalone `.exe`.',
-        p6Desc: 'Priority configuration in <code>config.json</code>, secure SQLite database backup during compilation, automated unit tests, and <code>build.py</code> script to generate the standalone Windows 10/11 package.',
+        p6Desc: 'Continuous unit testing, secure local configuration, and compilation into a single lightweight, self-contained .exe.',
         p6Ctrl1: 'Download dist/RSM/RSM.exe',
         p6Ctrl2: 'CI: Pytest + Ruff',
         p6T1: '1. Parse <strong>config.json</strong> & SQLite WAL Backup',
@@ -2734,8 +2727,6 @@
       }
 
       // Hero Section
-      const hBadge = document.getElementById('hero-badge-txt');
-      if (hBadge) hBadge.textContent = t.heroBadge;
       const hVer = document.getElementById('hero-version-txt');
       if (hVer) hVer.textContent = t.heroVersion;
       const hTitle = document.getElementById('hero-title');

@@ -100,7 +100,14 @@
               <span>Sincronizzazione Email</span>
             </div>
           </li>
+          <li class="nav-item" onclick="triggerExcelFileInput()">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <span>Importa Excel / CSV</span>
+            </div>
+          </li>
         </ul>
+        <input type="file" id="excelFileInput" accept=".xlsx,.xlsm,.xls,.csv" style="display:none;" onchange="handleExcelFileSelected(event)" />
       </div>
 
       <!-- Footer della Sidebar -->
@@ -570,6 +577,90 @@
           <button type="button" class="btn btn-secondary" onclick="closeModal()">Chiudi</button>
           <button type="button" id="btn-save-email-preorders" class="btn btn-primary" style="background: #059669; display: none;" onclick="saveEmailPreorders()">
             Salva Tutti nei Pre-ordini
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODALE: SUGGERIMENTO CONTESTUALE IMPORTAZIONE EXCEL / CSV (EXCELHINTDIALOG)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="excelHintModal">
+    <div class="modal-card" style="width: 540px; max-width: 92vw;">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Suggerimento per l'AI (opzionale)</h3>
+          <p id="excel-hint-filename" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+            File selezionato: -
+          </p>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+          Puoi fornire indicazioni contestuali per aiutare Gemini a interpretare correttamente il foglio di calcolo. Lascia vuoto per procedere con le regole standard.
+        </p>
+
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px;">
+          <textarea id="excel-hint-text" class="form-input" style="height: 100px; resize: vertical; line-height: 1.5; font-family: inherit; width: 100%;" placeholder="Es: Dalla riga 15 in poi sono pre-ordini, oppure il campo Costo corrisponde al prezzo di acquisto..."></textarea>
+        </div>
+
+        <div id="excel-parse-status" style="font-size: 11.5px; color: #818cf8; min-height: 16px; margin-top: 8px;"></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary" id="btn-excel-no-hint" onclick="executeExcelAnalysis(false)">Procedi senza note</button>
+          <button type="button" class="btn btn-primary" id="btn-excel-with-hint" onclick="executeExcelAnalysis(true)">Procedi con nota</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODALE: ANTEPRIMA IMPORTAZIONE EXCEL CON AI (EXCELIMPORTDIALOG)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="excelPreviewModal">
+    <div class="modal-card" style="width: 860px; max-width: 95vw;">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Importazione Excel con AI</h3>
+          <p id="excel-preview-subtitle" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+            L'AI ha analizzato il file e identificato i prodotti pronti per l'importazione.
+          </p>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Tabella Anteprima Prodotti Estratti -->
+        <div style="max-height: 340px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+          <table class="inventory-table" style="font-size: 11.5px;">
+            <thead>
+              <tr>
+                <th>PRODOTTO</th>
+                <th class="col-center">TAGLIA</th>
+                <th class="col-center">Q.TÀ</th>
+                <th class="col-center">P. ACQUISTO</th>
+                <th>L. ACQUISTO</th>
+                <th>L. VENDITA</th>
+                <th class="col-center">STATO</th>
+              </tr>
+            </thead>
+            <tbody id="excel-preview-tbody">
+              <!-- Popolato dinamicamente da app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <div id="excel-summary-count" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">
+          0 prodotti pronti per l'importazione.
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+          <button type="button" id="btn-excel-confirm-save" class="btn btn-primary" style="background: #059669;" onclick="saveExcelExtractedProducts()">
+            Conferma e Salva
           </button>
         </div>
       </div>
