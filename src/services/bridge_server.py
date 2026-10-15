@@ -7,6 +7,8 @@ Latenza su localhost: <1ms.
 import json
 import re
 import sys
+import threading
+import time
 from decimal import Decimal
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -41,8 +43,6 @@ class DecimalEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-import threading
-
 _thread_local = threading.local()
 
 def get_thread_db() -> InventoryDatabase:
@@ -50,6 +50,90 @@ def get_thread_db() -> InventoryDatabase:
     if not hasattr(_thread_local, "db"):
         _thread_local.db = InventoryDatabase()
     return _thread_local.db
+
+
+# --------------------------------------------------------------------------
+# GESTIONE TRASCRIZIONE VOCALE BACKGROUND (sounddevice + Gemini / Google Speech)
+# --------------------------------------------------------------------------
+_speech_lock = threading.Lock()
+_active_transcriber: Any = None
+_transcription_status = {
+    "is_recording": False,
+    "is_processing": False,
+    "text": "",
+    "error": "",
+}
+
+def _start_voice_recording() -> tuple[bool, str]:
+    global _active_transcriber, _transcription_status
+    with _speech_lock:
+        if _active_transcriber and getattr(_active_transcriber, "is_recording", False):
+            return True, "already_recording"
+        
+        _transcription_status["is_recording"] = True
+        _transcription_status["is_processing"] = False
+        _transcription_status["text"] = ""
+        _transcription_status["error"] = ""
+
+        def _on_result(text: str):
+            with _speech_lock:
+                _transcription_status["is_recording"] = False
+                _transcription_status["is_processing"] = False
+                _transcription_status["text"] = text
+
+        def _on_error(err: str):
+            with _speech_lock:
+                _transcription_status["is_recording"] = False
+                _transcription_status["is_processing"] = False
+                _transcription_status["error"] = err
+
+        def _on_listening():
+            with _speech_lock:
+                _transcription_status["is_recording"] = True
+                _transcription_status["is_processing"] = False
+
+        try:
+            from src.speech_helper import SpeechTranscriber
+            from src.config import GEMINI_API_KEY
+            _active_transcriber = SpeechTranscriber()
+            _active_transcriber.start(
+                on_result=_on_result,
+                on_error=_on_error,
+                on_listening=_on_listening,
+                api_key=GEMINI_API_KEY,
+                max_duration=300,  # fino a 5 minuti senza spegnimento automatico
+                language="it-IT",
+            )
+            return True, "started"
+        except Exception as exc:
+            _transcription_status["is_recording"] = False
+            _transcription_status["is_processing"] = False
+            _transcription_status["error"] = str(exc)
+            return False, str(exc)
+
+def _stop_voice_recording() -> tuple[bool, str]:
+    global _active_transcriber, _transcription_status
+    with _speech_lock:
+        if not _active_transcriber or not getattr(_active_transcriber, "is_recording", False):
+            if _transcription_status["text"]:
+                return True, _transcription_status["text"]
+            return False, "Nessuna registrazione attiva."
+        
+        _transcription_status["is_recording"] = False
+        _transcription_status["is_processing"] = True
+        _active_transcriber.stop()
+
+    start_t = time.time()
+    while time.time() - start_t < 15:
+        with _speech_lock:
+            if not _transcription_status["is_processing"]:
+                if _transcription_status["text"]:
+                    return True, _transcription_status["text"]
+                elif _transcription_status["error"]:
+                    return False, _transcription_status["error"]
+        time.sleep(0.1)
+
+    return False, "Tempo di elaborazione trascrizione scaduto."
 
 
 class RSMBridgeHandler(BaseHTTPRequestHandler):
@@ -97,7 +181,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
     # --------------------------------------------------------------------------
     def do_GET(self) -> None:
         parsed_url = urlparse(self.path)
-        path = parsed_url.path
+        path = parsed_url.path.rstrip("/") or "/"
         params = parse_qs(parsed_url.query)
 
         # Health Check
@@ -109,6 +193,21 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 "version": APP_VERSION,
                 "database_products_count": len(products),
             })
+            return
+
+        # Controllo Versione
+        if path == "/api/version":
+            self._send_json({"success": True, "version": APP_VERSION, "name": APP_NAME})
+            return
+
+        # Stato microfono / trascrizione vocale
+        if path == "/api/speech/status":
+            with _speech_lock:
+                self._send_json({
+                    "success": True,
+                    "is_recording": _transcription_status["is_recording"],
+                    "is_processing": _transcription_status["is_processing"],
+                })
             return
 
         # Lista Prodotti
@@ -264,8 +363,26 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
     # GESTIONE METODI POST
     # --------------------------------------------------------------------------
     def do_POST(self) -> None:
-        path = urlparse(self.path).path
+        path = urlparse(self.path).path.rstrip("/") or "/"
         body = self._read_body_json()
+
+        # Avvio registrazione vocale SpeechTranscriber
+        if path == "/api/speech/start":
+            ok, msg = _start_voice_recording()
+            if ok:
+                self._send_json({"success": True, "status": msg})
+            else:
+                self._send_error(msg)
+            return
+
+        # Arresto registrazione vocale e trascrizione con Gemini
+        if path == "/api/speech/stop":
+            ok, result_or_err = _stop_voice_recording()
+            if ok:
+                self._send_json({"success": True, "text": result_or_err})
+            else:
+                self._send_error(result_or_err)
+            return
 
         # Analisi AI con Gemini
         if path == "/api/ai-parse":
@@ -392,8 +509,8 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             self._send_json({"success": True, "saved_count": saved_count})
             return
 
-        # Inserimento batch di prodotti da AI
-        if path == "/api/products-batch":
+        # Inserimento batch di prodotti da AI (accetta sia /api/products-batch sia /api/products con products)
+        if (path == "/api/products-batch" or path == "/api/products") and "products" in body:
             records = body.get("products", [])
             inserted = 0
             for p in records:

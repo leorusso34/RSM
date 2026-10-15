@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RSM • Next-Gen Reseller Suite</title>
+  <title></title>
   <link rel="stylesheet" href="styles.css" />
   <script src="chart.min.js"></script>
 </head>
@@ -23,8 +23,15 @@
          ==================================================================== -->
     <aside class="sidebar" id="appSidebar">
       <div>
-        <!-- Intestazione Sidebar: Pulizia massima (senza nome progetto) e Pulsante Chiudi -->
-        <div class="brand-section" style="justify-content: flex-end; padding: 12px 14px 4px 14px;">
+        <!-- Intestazione Sidebar con Brand & Logo RSM e Pulsante Chiudi -->
+        <div class="brand-section">
+          <div class="brand-left">
+            <div class="brand-logo">R</div>
+            <div class="brand-text">
+              <h1>RSM</h1>
+              <p>Reseller Suite</p>
+            </div>
+          </div>
           <button class="sidebar-toggle-btn" id="closeSidebarBtn" title="Nascondi barra laterale" onclick="toggleSidebar(false)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
@@ -200,9 +207,9 @@
                   <p>Guadagno netto mese per mese</p>
                 </div>
                 <div class="timeframe-pills">
-                  <button class="timeframe-pill active">Anno 2026</button>
-                  <button class="timeframe-pill">6 Mesi</button>
-                  <button class="timeframe-pill">Tutto</button>
+                  <button type="button" class="timeframe-pill active" data-range="year" onclick="setProfitTimeframe('year')">1 Anno</button>
+                  <button type="button" class="timeframe-pill" data-range="6m" onclick="setProfitTimeframe('6m')">6 Mesi</button>
+                  <button type="button" class="timeframe-pill" data-range="all" onclick="setProfitTimeframe('all')">Tutto</button>
                 </div>
               </div>
               <div class="chart-canvas-container">
@@ -355,36 +362,25 @@
               <input type="text" id="prod-buy-place" class="form-input" />
             </div>
             <div class="form-group">
-              <label class="form-label">Prezzo Vendita Previsto (€)</label>
-              <input type="number" step="0.01" id="prod-sell-price" class="form-input" />
+              <label class="form-label">Canale di Vendita</label>
+              <input type="text" id="prod-sell-place" class="form-input" />
             </div>
           </div>
 
           <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Canale di Vendita</label>
-              <input type="text" id="prod-sell-place" class="form-input" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Stato Iniziale</label>
-              <select id="prod-status" class="form-input" style="background:#0b101c; color:#fff;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Stato</label>
+              <select id="prod-status" class="form-input" style="background:#0b101c; color:#fff;" onchange="onModalStatusChange(this.value)">
                 <option value="stock">Magazzino</option>
                 <option value="preorder">Pre-ordine</option>
                 <option value="active-sale">In Vendita Attiva</option>
                 <option value="completed">Venduto</option>
               </select>
             </div>
-          </div>
-
-          <!-- Anteprima calcolo live -->
-          <div class="modal-preview-box">
-            <div>
-              <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
-                Stima Utile Netto (Netto ~9% Fee)
-              </div>
-              <div style="font-size: 11px; color: var(--text-dim);">Ricalcolo automatico</div>
+            <div class="form-group" id="prod-sold-price-group" style="flex: 1; display: none;">
+              <label class="form-label">Prezzo Vendita Effettivo (€)</label>
+              <input type="number" step="0.01" id="prod-sold-price" class="form-input" />
             </div>
-            <div class="modal-preview-val" id="modal-profit-preview">€ 0.00</div>
           </div>
 
         </div>

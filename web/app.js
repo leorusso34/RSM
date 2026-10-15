@@ -419,8 +419,53 @@ function renderTable() {
 }
 
 // ==========================================================================
-// CHARTS INITIALIZATION (CHART.JS)
+// CHARTS INITIALIZATION (CHART.JS) & TIMEFRAME FILTERS
 // ==========================================================================
+let currentProfitTimeframe = "year"; // 'all', 'year', '6m'
+
+function setProfitTimeframe(range) {
+  currentProfitTimeframe = range;
+  document.querySelectorAll(".timeframe-pill").forEach((pill) => {
+    pill.classList.toggle("active", pill.getAttribute("data-range") === range);
+  });
+  updateMonthlyChart();
+}
+
+function updateMonthlyChart() {
+  if (!monthlyProfitChart) return;
+  let dataset = (realMonthlySales && realMonthlySales.length > 0) ? [...realMonthlySales] : [];
+
+  if (currentProfitTimeframe === "6m") {
+    dataset = dataset.slice(-6);
+  } else if (currentProfitTimeframe === "year") {
+    dataset = dataset.slice(-12);
+  }
+
+  const itMonths = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+  let labels = [];
+  let data = [];
+
+  if (dataset.length > 0) {
+    labels = dataset.map((m) => {
+      const parts = String(m.month || "").split("-");
+      if (parts.length === 2) {
+        const mIdx = parseInt(parts[1], 10) - 1;
+        const yr = parts[0].slice(2);
+        return `${itMonths[mIdx] || parts[1]} '${yr}`;
+      }
+      return m.month || "Mese";
+    });
+    data = dataset.map((m) => Number(m.profit || 0));
+  } else {
+    labels = ["Nessun dato vendite"];
+    data = [0];
+  }
+
+  monthlyProfitChart.data.labels = labels;
+  monthlyProfitChart.data.datasets[0].data = data;
+  monthlyProfitChart.update();
+}
+
 function initCharts() {
   if (typeof Chart === "undefined") {
     console.warn("Chart.js non ancora caricato.");
@@ -443,34 +488,14 @@ function initCharts() {
     gradient.addColorStop(0, "rgba(99, 102, 241, 0.45)");
     gradient.addColorStop(1, "rgba(99, 102, 241, 0.0)");
 
-    let monthLabels = [];
-    let monthData = [];
-
-    if (realMonthlySales && realMonthlySales.length > 0) {
-      const itMonths = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
-      monthLabels = realMonthlySales.map((m) => {
-        const parts = String(m.month || "").split("-");
-        if (parts.length === 2) {
-          const mIdx = parseInt(parts[1], 10) - 1;
-          const yr = parts[0].slice(2);
-          return `${itMonths[mIdx] || parts[1]} '${yr}`;
-        }
-        return m.month || "Mese";
-      });
-      monthData = realMonthlySales.map((m) => Number(m.profit || 0));
-    } else {
-      monthLabels = ["Nessun dato vendite"];
-      monthData = [0];
-    }
-
     monthlyProfitChart = new Chart(ctxMonthly, {
       type: "line",
       data: {
-        labels: monthLabels,
+        labels: [],
         datasets: [
           {
             label: "Utile Netto (€)",
-            data: monthData,
+            data: [],
             borderColor: "#6366f1",
             borderWidth: 3,
             fill: true,
@@ -519,6 +544,8 @@ function initCharts() {
         }
       }
     });
+
+    updateMonthlyChart();
   }
 
   // Chart 2: Piattaforme Reale (dal database SQLite)
@@ -612,11 +639,20 @@ function openAddProductModal() {
   document.getElementById("prod-qty").value = "1";
   document.getElementById("prod-buy-price").value = "";
   document.getElementById("prod-buy-place").value = "";
-  document.getElementById("prod-sell-price").value = "";
   document.getElementById("prod-sell-place").value = "";
   document.getElementById("prod-status").value = "stock";
-  const previewEl = document.getElementById("modal-profit-preview");
-  if (previewEl) previewEl.textContent = "€ 0,00";
+
+  const soldGroup = document.getElementById("prod-sold-price-group");
+  if (soldGroup) soldGroup.style.display = "none";
+  const soldPriceInput = document.getElementById("prod-sold-price");
+  if (soldPriceInput) soldPriceInput.value = "";
+}
+
+function onModalStatusChange(val) {
+  const soldGroup = document.getElementById("prod-sold-price-group");
+  if (soldGroup) {
+    soldGroup.style.display = (val === "completed") ? "block" : "none";
+  }
 }
 
 function closeModal() {
@@ -813,20 +849,7 @@ function closeDrawer() {
   currentDrawerItem = null;
 }
 
-function updateModalProfitPreview() {
-  const buy = parseFloat(document.getElementById("prod-buy-price").value) || 0;
-  const sell = parseFloat(document.getElementById("prod-sell-price").value) || 0;
-  const qty = parseInt(document.getElementById("prod-qty").value, 10) || 1;
-
-  const fees = sell * 0.09; // stima 9% commissioni StockX/eBay
-  const net = (sell - buy - fees) * qty;
-  const roi = buy > 0 ? (net / (buy * qty)) * 100 : 0;
-
-  const previewEl = document.getElementById("modal-profit-preview");
-  if (previewEl) {
-    previewEl.innerHTML = `€ ${net.toFixed(2)} <span style="font-size:12px; color:#818cf8;">(ROI: +${roi.toFixed(1)}%)</span>`;
-  }
-}
+function updateModalProfitPreview() {}
 
 async function handleSaveProduct(e) {
   e.preventDefault();
@@ -836,9 +859,12 @@ async function handleSaveProduct(e) {
   const quantity = parseInt(document.getElementById("prod-qty").value, 10) || 1;
   const purchasedPrice = parseFloat(document.getElementById("prod-buy-price").value) || 0;
   const purchasedPlace = document.getElementById("prod-buy-place").value.trim();
-  const salePrice = parseFloat(document.getElementById("prod-sell-price").value) || null;
   const sellingPlace = document.getElementById("prod-sell-place").value.trim();
   const status = document.getElementById("prod-status").value;
+
+  const isSold = (status === "completed");
+  const soldPriceEl = document.getElementById("prod-sold-price");
+  const salePrice = isSold && soldPriceEl ? (parseFloat(soldPriceEl.value) || null) : null;
 
   if (!name) {
     showToast("⚠️ Inserisci un nome per il prodotto!");
@@ -921,16 +947,20 @@ function editProduct(id) {
   const modalTitle = document.querySelector("#productModal .modal-header h3");
   if (modalTitle) modalTitle.textContent = `Modifica Prodotto #${id}`;
 
-  document.getElementById("prod-name").value = item.name;
+  document.getElementById("prod-name").value = item.name || "";
   document.getElementById("prod-brand").value = item.brand || "";
   document.getElementById("prod-size").value = item.size || "";
   document.getElementById("prod-qty").value = item.quantity || 1;
   document.getElementById("prod-buy-price").value = item.purchasedPrice || 0;
   document.getElementById("prod-buy-place").value = item.purchasedPlace || "";
-  document.getElementById("prod-sell-price").value = item.salePrice || "";
-  document.getElementById("prod-sell-place").value = item.sellingPlace || "StockX";
+  document.getElementById("prod-sell-place").value = item.sellingPlace || "";
   document.getElementById("prod-status").value = item.status || "stock";
-  updateModalProfitPreview();
+
+  const isSold = (item.status === "completed" || item.status === "active-sale");
+  const soldGroup = document.getElementById("prod-sold-price-group");
+  const soldPriceInput = document.getElementById("prod-sold-price");
+  if (soldGroup) soldGroup.style.display = isSold ? "block" : "none";
+  if (soldPriceInput) soldPriceInput.value = item.salePrice || "";
 }
 
 // ==========================================================================
@@ -992,63 +1022,52 @@ function openAIModal() {
   aiExtractedProducts = [];
 }
 
-function toggleVoiceRecording() {
+async function toggleVoiceRecording() {
   const btn = document.getElementById("btn-mic");
   const statusEl = document.getElementById("ai-status-msg");
   const promptEl = document.getElementById("ai-prompt-text");
 
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    showToast("Dettatura vocale non supportata direttamente dal browser.");
-    return;
-  }
+  if (!isVoiceRecording) {
+    // 1° Clic: Avvia registrazione con microfono di sistema
+    isVoiceRecording = true;
+    if (btn) btn.classList.add("recording");
+    if (statusEl) statusEl.textContent = "Microfono attivo: parla ora... (clicca di nuovo sul microfono per terminare e trascrivere)";
 
-  if (isVoiceRecording) {
-    if (speechRecognitionInstance) {
-      speechRecognitionInstance.stop();
+    try {
+      const res = await fetch(`${API_BASE}/speech/start`, { method: "POST" });
+      const json = await res.json();
+      if (!json.success) {
+        throw new Error(json.error || "Impossibile attivare il microfono");
+      }
+    } catch (err) {
+      isVoiceRecording = false;
+      if (btn) btn.classList.remove("recording");
+      if (statusEl) statusEl.textContent = `⚠️ Errore microfono: ${err.message}`;
+      showToast(`Errore microfono: ${err.message}`);
     }
+  } else {
+    // 2° Clic: Arresta registrazione e trascrivi con Gemini
     isVoiceRecording = false;
     if (btn) btn.classList.remove("recording");
-    if (statusEl) statusEl.textContent = "Dettatura completata.";
-    return;
-  }
+    if (statusEl) statusEl.textContent = "Elaborazione audio e trascrizione con Gemini in corso...";
 
-  try {
-    speechRecognitionInstance = new SpeechRecognition();
-    speechRecognitionInstance.lang = "it-IT";
-    speechRecognitionInstance.continuous = false;
-    speechRecognitionInstance.interimResults = false;
-
-    speechRecognitionInstance.onstart = () => {
-      isVoiceRecording = true;
-      if (btn) btn.classList.add("recording");
-      if (statusEl) statusEl.textContent = "Ascolto in corso... parla ora.";
-    };
-
-    speechRecognitionInstance.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      if (transcript) {
-        promptEl.value = (promptEl.value ? promptEl.value + " " : "") + transcript;
+    try {
+      const res = await fetch(`${API_BASE}/speech/stop`, { method: "POST" });
+      const json = await res.json();
+      if (json.success && json.text) {
+        if (statusEl) statusEl.textContent = "Trascrizione vocale completata con successo!";
+        const current = promptEl.value.trim();
+        promptEl.value = current ? `${current} ${json.text}` : json.text;
+        showToast("Audio trascritto con successo!");
+      } else {
+        const errMsg = json.error || "Nessun parlato rilevato";
+        if (statusEl) statusEl.textContent = `⚠️ ${errMsg}`;
+        showToast(`Trascrizione: ${errMsg}`);
       }
-    };
-
-    speechRecognitionInstance.onerror = (event) => {
-      console.warn("Speech error:", event.error);
-      if (statusEl) statusEl.textContent = `Errore microfono: ${event.error}`;
-      isVoiceRecording = false;
-      if (btn) btn.classList.remove("recording");
-    };
-
-    speechRecognitionInstance.onend = () => {
-      isVoiceRecording = false;
-      if (btn) btn.classList.remove("recording");
-      if (statusEl) statusEl.textContent = "Dettatura terminata. Fai clic su 'Analizza e Crea'.";
-    };
-
-    speechRecognitionInstance.start();
-  } catch (err) {
-    console.error("Speech error:", err);
-    showToast("Impossibile avviare il microfono.");
+    } catch (err) {
+      if (statusEl) statusEl.textContent = `⚠️ Errore trascrizione: ${err.message}`;
+      showToast(`Errore: ${err.message}`);
+    }
   }
 }
 
@@ -1112,18 +1131,26 @@ async function handleAISaveAll() {
   btnSave.disabled = true;
 
   try {
-    const res = await fetch(`${API_BASE}/products-batch`, {
+    let res = await fetch(`${API_BASE}/products-batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ products: aiExtractedProducts })
     });
+    // Fallback sicuro se un bridge precedente non ha la route separata
+    if (res.status === 404) {
+      res = await fetch(`${API_BASE}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ products: aiExtractedProducts })
+      });
+    }
     const json = await res.json();
     if (json.success) {
-      showToast(`${json.inserted_count} prodotti salvati con successo in SQLite!`);
+      showToast(`${json.inserted_count || aiExtractedProducts.length} prodotti salvati con successo in SQLite!`);
       closeModal();
       await loadProductsFromBackend();
     } else {
-      showToast(`Errore salvataggio: ${json.error}`);
+      showToast(`Errore salvataggio: ${json.error || "Operazione non riuscita"}`);
     }
   } catch (err) {
     showToast(`Errore: ${err.message}`);
@@ -1415,13 +1442,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Form Inputs live preview
-  ["prod-buy-price", "prod-sell-price", "prod-qty"].forEach((id) => {
-    const input = document.getElementById(id);
-    if (input) {
-      input.addEventListener("input", updateModalProfitPreview);
-    }
-  });
+
 
   // Delegazione click per ordinamento colonne tabella
   const tableHead = document.getElementById("inventory-table-head");
