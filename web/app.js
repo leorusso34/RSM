@@ -60,6 +60,7 @@ async function loadProductsFromBackend(retries = 6, delay = 500) {
             }
           } catch (_) {}
         }
+        updateFilterPlacesOptions();
         renderTable();
         updateDashboardMetrics();
         initCharts();
@@ -80,6 +81,12 @@ let activeFilter = "all";
 let searchTerm = "";
 let sortField = "date";
 let sortOrder = "desc";
+
+// Filtri Avanzati di Tabella
+let filterPurchasedPlace = "";
+let filterSellingPlace = "";
+let filterMinPrice = null;
+let filterMaxPrice = null;
 
 let monthlyProfitChart = null;
 let platformPieChart = null;
@@ -165,6 +172,137 @@ document.addEventListener("click", (e) => {
     if (btn) btn.classList.remove("active");
   }
 });
+
+// ==========================================================================
+// FILTRI AVANZATI DI TABELLA (Luogo Acquisto, Luogo Vendita, Prezzo Min/Max)
+// ==========================================================================
+function updateFilterPlacesOptions() {
+  const pSelect = document.getElementById("filter-purchased-place");
+  const sSelect = document.getElementById("filter-selling-place");
+  if (!pSelect || !sSelect) return;
+
+  const currentP = pSelect.value;
+  const currentS = sSelect.value;
+
+  const purchasedSet = new Set();
+  const sellingSet = new Set();
+
+  inventoryData.forEach((item) => {
+    if (item.purchasedPlace && item.purchasedPlace.trim()) {
+      purchasedSet.add(item.purchasedPlace.trim());
+    }
+    if (item.sellingPlace && item.sellingPlace.trim()) {
+      sellingSet.add(item.sellingPlace.trim());
+    }
+  });
+
+  const pList = Array.from(purchasedSet).sort((a, b) => a.localeCompare(b));
+  const sList = Array.from(sellingSet).sort((a, b) => a.localeCompare(b));
+
+  pSelect.innerHTML = '<option value="">Tutti i luoghi</option>';
+  pList.forEach((place) => {
+    const opt = document.createElement("option");
+    opt.value = place;
+    opt.textContent = place;
+    if (place === currentP) opt.selected = true;
+    pSelect.appendChild(opt);
+  });
+
+  sSelect.innerHTML = '<option value="">Tutti i marketplace</option>';
+  sList.forEach((place) => {
+    const opt = document.createElement("option");
+    opt.value = place;
+    opt.textContent = place;
+    if (place === currentS) opt.selected = true;
+    sSelect.appendChild(opt);
+  });
+}
+
+function toggleAdvancedFilters() {
+  const panel = document.getElementById("advancedFiltersPanel");
+  const btn = document.getElementById("btnToggleFilters");
+  const arrow = document.getElementById("toggleFilterArrow");
+  if (!panel) return;
+
+  const isHidden = panel.style.display === "none";
+  panel.style.display = isHidden ? "block" : "none";
+  if (btn) btn.classList.toggle("active", isHidden);
+  if (arrow) {
+    arrow.style.transform = isHidden ? "rotate(180deg)" : "rotate(0deg)";
+  }
+}
+
+function onFilterChanged() {
+  const pSelect = document.getElementById("filter-purchased-place");
+  const sSelect = document.getElementById("filter-selling-place");
+  const minInput = document.getElementById("filter-min-price");
+  const maxInput = document.getElementById("filter-max-price");
+
+  filterPurchasedPlace = pSelect ? pSelect.value.trim() : "";
+  filterSellingPlace = sSelect ? sSelect.value.trim() : "";
+
+  const minVal = minInput && minInput.value !== "" ? parseFloat(minInput.value) : NaN;
+  filterMinPrice = !isNaN(minVal) ? minVal : null;
+
+  const maxVal = maxInput && maxInput.value !== "" ? parseFloat(maxInput.value) : NaN;
+  filterMaxPrice = !isNaN(maxVal) ? maxVal : null;
+
+  updateFilterIndicators();
+  renderTable();
+}
+
+function updateFilterIndicators() {
+  const hasActiveAdvanced = Boolean(
+    filterPurchasedPlace ||
+    filterSellingPlace ||
+    (filterMinPrice !== null && filterMinPrice !== undefined) ||
+    (filterMaxPrice !== null && filterMaxPrice !== undefined)
+  );
+
+  const hasAnyFilter = Boolean(hasActiveAdvanced || searchTerm);
+
+  const btnToggle = document.getElementById("btnToggleFilters");
+  if (btnToggle) {
+    btnToggle.classList.toggle("has-active-filters", hasActiveAdvanced);
+  }
+
+  const btnReset = document.getElementById("btnResetFilters");
+  if (btnReset) {
+    btnReset.style.display = hasAnyFilter ? "inline-block" : "none";
+  }
+}
+
+function resetAllFilters() {
+  searchTerm = "";
+  const searchInput = document.getElementById("global-search-input");
+  if (searchInput) searchInput.value = "";
+
+  filterPurchasedPlace = "";
+  const pSelect = document.getElementById("filter-purchased-place");
+  if (pSelect) pSelect.value = "";
+
+  filterSellingPlace = "";
+  const sSelect = document.getElementById("filter-selling-place");
+  if (sSelect) sSelect.value = "";
+
+  filterMinPrice = null;
+  const minInput = document.getElementById("filter-min-price");
+  if (minInput) minInput.value = "";
+
+  filterMaxPrice = null;
+  const maxInput = document.getElementById("filter-max-price");
+  if (maxInput) maxInput.value = "";
+
+  sortField = "date";
+  sortOrder = "desc";
+
+  document.querySelectorAll(".sort-menu-item").forEach((item) => {
+    item.classList.toggle("active", item.getAttribute("data-sort-key") === "date-desc");
+  });
+
+  updateFilterIndicators();
+  renderTable();
+}
 
 // ==========================================================================
 // METRIC COUNTERS (Instant render, 0 CPU delay)
@@ -333,18 +471,40 @@ function renderTable() {
   }
 
   let filtered = inventoryData.filter((item) => {
-    // Filtro per stato
+    // 1. Filtro per stato tab
     if (activeFilter !== "all" && item.status !== activeFilter) return false;
-    // Filtro di ricerca
+
+    // 2. Filtro di ricerca testuale
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       const match =
         item.name.toLowerCase().includes(term) ||
         item.size.toLowerCase().includes(term) ||
         (item.sellingPlace && item.sellingPlace.toLowerCase().includes(term)) ||
-        item.purchasedPlace.toLowerCase().includes(term);
+        (item.purchasedPlace && item.purchasedPlace.toLowerCase().includes(term));
       if (!match) return false;
     }
+
+    // 3. Filtro Luogo di Acquisto
+    if (filterPurchasedPlace) {
+      if ((item.purchasedPlace || "").trim() !== filterPurchasedPlace) return false;
+    }
+
+    // 4. Filtro Luogo di Vendita
+    if (filterSellingPlace) {
+      if ((item.sellingPlace || "").trim() !== filterSellingPlace) return false;
+    }
+
+    // 5. Filtro Prezzo Minimo
+    if (filterMinPrice !== null && filterMinPrice !== undefined && !isNaN(filterMinPrice)) {
+      if ((item.purchasedPrice || 0) < filterMinPrice) return false;
+    }
+
+    // 6. Filtro Prezzo Massimo
+    if (filterMaxPrice !== null && filterMaxPrice !== undefined && !isNaN(filterMaxPrice)) {
+      if ((item.purchasedPrice || 0) > filterMaxPrice) return false;
+    }
+
     return true;
   });
 
@@ -361,12 +521,16 @@ function renderTable() {
       const pB = (b.salePrice || 0) - b.purchasedPrice - (b.fees || 0);
       valA = a.purchasedPrice > 0 ? (pA / a.purchasedPrice) * 100 : 0;
       valB = b.purchasedPrice > 0 ? (pB / b.purchasedPrice) * 100 : 0;
+    } else if (sortField === "date") {
+      valA = a.date || "";
+      valB = b.date || "";
+      return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
     }
 
     if (typeof valA === "string") {
       return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
     }
-    return sortOrder === "asc" ? valA - valB : valB - valA;
+    return sortOrder === "asc" ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
   });
 
   tbody.innerHTML = "";
@@ -376,8 +540,8 @@ function renderTable() {
     tbody.innerHTML = `
       <tr>
         <td colspan="${totalCols}" style="text-align: center; padding: 40px; color: var(--text-dim);">
-          <div style="font-size: 28px; margin-bottom: 8px;">🔍</div>
-          Nessun prodotto trovato per i criteri selezionati.
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <div style="font-size: 12px; font-weight: 500;">Nessun prodotto trovato per i criteri selezionati.</div>
         </td>
       </tr>
     `;
@@ -1679,6 +1843,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
       searchTerm = e.target.value;
+      updateFilterIndicators();
       renderTable();
     });
   }

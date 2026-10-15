@@ -244,14 +244,30 @@
                 <button class="table-tab-pill" data-filter="completed">Vendite Completate</button>
               </div>
 
-              <!-- Controlli a destra: Ricerca + Quadratino Ordinamento -->
+              <!-- Controlli a destra: Ricerca + Filtri Avanzati + Ordinamento -->
               <div class="table-controls-right">
                 <div class="table-search-wrap">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
                   </svg>
-                  <input type="text" id="global-search-input" />
+                  <input type="text" id="global-search-input" placeholder="Cerca prodotto o luogo..." />
                 </div>
+
+                <!-- Pulsante Mostra/Nascondi Filtri Avanzati -->
+                <button type="button" class="btn-toggle-filters" id="btnToggleFilters" onclick="toggleAdvancedFilters()" title="Mostra/Nascondi filtri avanzati">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                  </svg>
+                  <span>Filtri</span>
+                  <svg id="toggleFilterArrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition: transform 0.2s ease;">
+                    <path d="m6 9 6 6 6-6"/>
+                  </svg>
+                </button>
+
+                <!-- Pulsante Rapido Azzera Filtri -->
+                <button type="button" class="btn btn-secondary" id="btnResetFilters" onclick="resetAllFilters()" title="Azzera tutti i filtri" style="padding: 6px 10px; font-size: 11.5px; height: 32px; display: none;">
+                  Azzera
+                </button>
 
                 <!-- Mini Quadratino Ordinamento -->
                 <div class="sort-dropdown-wrap">
@@ -287,6 +303,46 @@
                       <span>Nome prodotto (A → Z)</span>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pannello a scomparsa: Filtri Avanzati di Tabella -->
+            <div id="advancedFiltersPanel" class="advanced-filters-panel" style="display: none; padding: 12px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 12px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) 80px; gap: 12px; align-items: flex-end;">
+                <!-- Luogo Acquisto -->
+                <div>
+                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Luogo Acquisto</label>
+                  <select id="filter-purchased-place" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" onchange="onFilterChanged()">
+                    <option value="">Tutti i luoghi</option>
+                  </select>
+                </div>
+
+                <!-- Luogo Vendita -->
+                <div>
+                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Luogo Vendita</label>
+                  <select id="filter-selling-place" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" onchange="onFilterChanged()">
+                    <option value="">Tutti i marketplace</option>
+                  </select>
+                </div>
+
+                <!-- Prezzo Minimo -->
+                <div>
+                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Prezzo Min (€)</label>
+                  <input type="number" step="0.01" min="0" id="filter-min-price" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" oninput="onFilterChanged()" />
+                </div>
+
+                <!-- Prezzo Massimo -->
+                <div>
+                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Prezzo Max (€)</label>
+                  <input type="number" step="0.01" min="0" id="filter-max-price" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" oninput="onFilterChanged()" />
+                </div>
+
+                <!-- Bottone Reset rapido -->
+                <div>
+                  <button type="button" class="btn btn-secondary" onclick="resetAllFilters()" style="height: 32px; width: 100%; font-size: 11.5px; padding: 0;">
+                    Azzera
+                  </button>
                 </div>
               </div>
             </div>

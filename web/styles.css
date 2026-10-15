@@ -658,6 +658,40 @@ body {
   color: var(--text-dim);
 }
 
+.btn-toggle-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-toggle-filters:hover {
+  background: #192338;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.btn-toggle-filters.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.btn-toggle-filters.has-active-filters {
+  border-color: #10b981;
+  color: #34d399;
+}
+
 /* Mini Square Sorting Button */
 .sort-dropdown-wrap {
   position: relative;
