@@ -18,9 +18,9 @@ def kill_stale_bridge(port: int = 28472) -> None:
         return
     try:
         cmd = f'powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue | ForEach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"'
-        subprocess.run(cmd, shell=True, capture_output=True, timeout=5)
-    except Exception:
-        pass
+        subprocess.run(cmd, shell=True, capture_output=True, timeout=5, check=False)
+    except (subprocess.SubprocessError, OSError) as err:
+        print(f"[RSM] Avviso chiusura bridge obsoleto: {err}")
 
 
 def start_bridge_server(root_dir: Path, port: int = 28472) -> None:
@@ -47,9 +47,9 @@ def start_bridge_server(root_dir: Path, port: int = 28472) -> None:
                 s.connect(("127.0.0.1", port))
                 s.close()
                 break
-            except Exception:
+            except OSError:
                 time.sleep(0.1)
-    except Exception as err:
+    except (OSError, RuntimeError) as err:
         print(f"[RSM] Avviso avvio bridge: {err}")
 
 
@@ -71,8 +71,8 @@ def main() -> None:
     if src_bridge.exists() and dist_bridge.parent.exists():
         try:
             shutil.copy2(src_bridge, dist_bridge)
-        except Exception:
-            pass
+        except OSError as err:
+            print(f"[RSM] Avviso copia bridge_server: {err}")
 
     # 3. Avvia il server bridge con il Python attivo
     start_bridge_server(root_dir, 28472)
@@ -95,7 +95,7 @@ def main() -> None:
             else:
                 subprocess.Popen([str(target_exe)])
             return
-        except Exception as err:
+        except OSError as err:
             print(f"[RSM] Errore nell'avvio di {target_exe}: {err}")
 
     print("Eseguibile non trovato. Esegui 'python build.py' per compilare la versione Tauri.")

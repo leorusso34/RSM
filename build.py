@@ -1,7 +1,6 @@
 """Script per la build dell'eseguibile Windows nativo tramite Tauri e Rust per RSM."""
 
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -43,7 +42,6 @@ def main() -> None:
     dist_root = project_root / "dist"
     dist_dir = dist_root / "RSM"
     dist_data = dist_dir / "data"
-    backup_data = project_root / "data_backup_temp"
     dist_config = dist_dir / "config.json"
 
     # 1. Rilevamento database di produzione
@@ -56,8 +54,8 @@ def main() -> None:
     build_cwd = tauri_project_dir
     if sys.platform == "win32" and " " in str(project_root):
         subst_drive = "R:"
-        subprocess.run(["subst", subst_drive, "/D"], capture_output=True)
-        subst_res = subprocess.run(["subst", subst_drive, str(project_root)], capture_output=True)
+        subprocess.run(["subst", subst_drive, "/D"], capture_output=True, check=False)
+        subst_res = subprocess.run(["subst", subst_drive, str(project_root)], capture_output=True, check=False)
         if subst_res.returncode == 0:
             build_cwd = Path(f"{subst_drive}/src-tauri")
 
@@ -74,7 +72,7 @@ def main() -> None:
     finally:
         # Smonta sempre l'unità virtuale temporanea
         if subst_drive:
-            subprocess.run(["subst", subst_drive, "/D"], capture_output=True)
+            subprocess.run(["subst", subst_drive, "/D"], capture_output=True, check=False)
 
     # 4. Individua il binario compilato
     compiled_exe = tauri_project_dir / "target" / "release" / ("rsm-desktop.exe" if sys.platform == "win32" else "rsm-desktop")

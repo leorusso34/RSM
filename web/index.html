@@ -23,14 +23,10 @@
          ==================================================================== -->
     <aside class="sidebar" id="appSidebar">
       <div>
-        <!-- Intestazione Sidebar con Brand & Logo RSM e Pulsante Chiudi -->
+        <!-- Intestazione Sidebar con solo il Logo del Progetto e Pulsante Chiudi -->
         <div class="brand-section">
           <div class="brand-left">
             <div class="brand-logo">R</div>
-            <div class="brand-text">
-              <h1>RSM</h1>
-              <p>Reseller Suite</p>
-            </div>
           </div>
           <button class="sidebar-toggle-btn" id="closeSidebarBtn" title="Nascondi barra laterale" onclick="toggleSidebar(false)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -39,23 +35,13 @@
           </button>
         </div>
 
-        <!-- Pulsanti Azione Rapida Integrati nella Sidebar -->
-        <div class="sidebar-action-wrap" style="display: flex; gap: 6px; padding: 8px 14px 12px 14px;">
-          <button class="btn-sidebar-add" style="flex: 1;" onclick="openAddProductModal()">
+        <!-- Pulsante Nuovo Prodotto (Singolo a tutta larghezza) -->
+        <div class="sidebar-action-wrap">
+          <button class="btn-sidebar-add" onclick="openAddProductModal()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
             <span>Nuovo Prodotto</span>
-          </button>
-          <button class="btn-sidebar-icon" onclick="openAIModal()" title="Inserimento Rapido con AI Gemini">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>
-            </svg>
-          </button>
-          <button class="btn-sidebar-icon" onclick="openEmailSyncModal()" title="Sincronizzazione Email Gmail">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-            </svg>
           </button>
         </div>
 
@@ -336,38 +322,31 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Brand / Marchio</label>
-              <input type="text" id="prod-brand" class="form-input" />
-            </div>
-            <div class="form-group">
               <label class="form-label">Taglia</label>
               <input type="text" id="prod-size" class="form-input" required />
             </div>
-          </div>
-
-          <div class="form-row">
             <div class="form-group">
               <label class="form-label">Quantità</label>
               <input type="number" id="prod-qty" class="form-input" value="1" min="1" />
             </div>
+          </div>
+
+          <div class="form-row">
             <div class="form-group">
               <label class="form-label">Prezzo Acquisto (€)</label>
               <input type="number" step="0.01" id="prod-buy-price" class="form-input" required />
             </div>
-          </div>
-
-          <div class="form-row">
             <div class="form-group">
               <label class="form-label">Luogo di Acquisto</label>
               <input type="text" id="prod-buy-place" class="form-input" />
             </div>
-            <div class="form-group">
-              <label class="form-label">Canale di Vendita</label>
-              <input type="text" id="prod-sell-place" class="form-input" />
-            </div>
           </div>
 
           <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Canale di Vendita</label>
+              <input type="text" id="prod-sell-place" class="form-input" />
+            </div>
             <div class="form-group" style="flex: 1;">
               <label class="form-label">Stato</label>
               <select id="prod-status" class="form-input" style="background:#0b101c; color:#fff;" onchange="onModalStatusChange(this.value)">
@@ -377,10 +356,11 @@
                 <option value="completed">Venduto</option>
               </select>
             </div>
-            <div class="form-group" id="prod-sold-price-group" style="flex: 1; display: none;">
-              <label class="form-label">Prezzo Vendita Effettivo (€)</label>
-              <input type="number" step="0.01" id="prod-sold-price" class="form-input" />
-            </div>
+          </div>
+
+          <div class="form-group" id="prod-sold-price-group" style="display: none; margin-top: 6px;">
+            <label class="form-label">Prezzo Vendita Effettivo (€)</label>
+            <input type="number" step="0.01" id="prod-sold-price" class="form-input" />
           </div>
 
         </div>
@@ -612,10 +592,10 @@
 
     <!-- Body Scrollabile -->
     <div class="drawer-body">
-      <!-- Titolo & Brand -->
+      <!-- Titolo & Luogo Acquisto -->
       <div class="drawer-title-section">
         <h2 id="drawerTitle">Nome Prodotto</h2>
-        <p id="drawerBrand">Brand • Categoria</p>
+        <p id="drawerPlace" style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Luogo di Acquisto</p>
       </div>
 
       <!-- Quick Metrics Grid -->

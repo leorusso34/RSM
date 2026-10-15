@@ -291,7 +291,6 @@ function renderTable() {
       const term = searchTerm.toLowerCase();
       const match =
         item.name.toLowerCase().includes(term) ||
-        item.brand.toLowerCase().includes(term) ||
         item.size.toLowerCase().includes(term) ||
         (item.sellingPlace && item.sellingPlace.toLowerCase().includes(term)) ||
         item.purchasedPlace.toLowerCase().includes(term);
@@ -353,15 +352,20 @@ function renderTable() {
       statusLabel = "Venduto";
     }
 
-    // Action buttons html (riutilizzabile con allineamento centrale e stopPropagation)
+    // Le vendite completate non possono essere modificate (solo visualizzazione/storico)
+    const editBtnHtml = (item.status === "completed") ? "" : `
+      <button class="btn-action-icon" title="Modifica Prodotto" onclick="event.stopPropagation(); editProduct(${item.id})">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+      </button>
+    `;
+
+    // Action buttons html
     const actionBtnsHtml = `
       <div class="action-btns">
         <button class="btn-action-icon" title="Stima Prezzi eBay" onclick="event.stopPropagation(); openEbayPriceLookup('${item.name.replace(/'/g, "\\'")}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </button>
-        <button class="btn-action-icon" title="Modifica Prodotto" onclick="event.stopPropagation(); editProduct(${item.id})">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-        </button>
+        ${editBtnHtml}
         <button class="btn-action-icon delete" title="Elimina" onclick="event.stopPropagation(); deleteProduct(${item.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
         </button>
@@ -373,7 +377,7 @@ function renderTable() {
         <td class="col-prod" title="${item.name}">
           <div class="product-cell">
             <div class="product-name">${item.name}</div>
-            <div class="product-brand">${item.brand}</div>
+            <div class="product-brand">${item.purchasedPlace || "In Magazzino"}</div>
           </div>
         </td>
         <td class="col-size col-center"><strong>${item.size}</strong></td>
@@ -404,7 +408,7 @@ function renderTable() {
         <td class="col-prod" title="${item.name}">
           <div class="product-cell">
             <div class="product-name">${item.name}</div>
-            <div class="product-brand">${item.brand} • ${item.purchasedPlace}</div>
+            <div class="product-brand">${item.purchasedPlace || "Canale Diretto"}</div>
           </div>
         </td>
         <td class="col-size col-center"><strong>${item.size}</strong></td>
@@ -652,7 +656,6 @@ function openAddProductModal() {
 
   // Reset form pulito al 100% (senza dati fittizi)
   document.getElementById("prod-name").value = "";
-  document.getElementById("prod-brand").value = "";
   document.getElementById("prod-size").value = "";
   document.getElementById("prod-qty").value = "1";
   document.getElementById("prod-buy-price").value = "";
@@ -697,7 +700,7 @@ function openDrawer(id) {
 
   const drawerId = document.getElementById("drawerId");
   const drawerTitle = document.getElementById("drawerTitle");
-  const drawerBrand = document.getElementById("drawerBrand");
+  const drawerPlace = document.getElementById("drawerPlace") || document.getElementById("drawerBrand");
   const drawerBuyPrice = document.getElementById("drawerBuyPrice");
   const drawerSellPrice = document.getElementById("drawerSellPrice");
   const drawerProfit = document.getElementById("drawerProfit");
@@ -712,7 +715,7 @@ function openDrawer(id) {
 
   if (drawerId) drawerId.textContent = item.id;
   if (drawerTitle) drawerTitle.textContent = item.name;
-  if (drawerBrand) drawerBrand.textContent = `${item.brand} • ${item.status === 'stock' ? 'In Stock' : (item.status === 'preorder' ? 'Pre-ordine' : 'Vendita')}`;
+  if (drawerPlace) drawerPlace.textContent = item.purchasedPlace ? `Luogo Acquisto: ${item.purchasedPlace}` : "Acquisto Diretto";
   if (drawerBuyPrice) drawerBuyPrice.textContent = formatMoney(item.purchasedPrice);
   if (drawerSellPrice) drawerSellPrice.textContent = item.salePrice ? formatMoney(item.salePrice) : "-";
 
@@ -816,34 +819,20 @@ function openDrawer(id) {
     };
   }
 
-  if (editBtn) {
-    editBtn.onclick = () => {
-      closeDrawer();
-      editProduct(item.id);
-    };
-  }
-
-  if (statusBtn) {
-    if (item.status === "completed") {
-      statusBtn.textContent = "Ripristina in Stock";
-      statusBtn.className = "btn btn-secondary";
-      statusBtn.onclick = async () => {
-        try {
-          const res = await fetch(`${API_BASE}/products/${item.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: "stock", salePrice: null })
-          });
-          if (res.ok) {
-            closeDrawer();
-            await loadProductsFromBackend();
-            showToast(`Prodotto #${item.id} riportato in Magazzino!`);
-          }
-        } catch (e) {
-          showToast(`Errore: ${e.message}`);
-        }
+  // Le vendite completate non consentono modifiche né ripristino in stock
+  if (item.status === "completed") {
+    if (editBtn) editBtn.style.display = "none";
+    if (statusBtn) statusBtn.style.display = "none";
+  } else {
+    if (editBtn) {
+      editBtn.style.display = "inline-flex";
+      editBtn.onclick = () => {
+        closeDrawer();
+        editProduct(item.id);
       };
-    } else {
+    }
+    if (statusBtn) {
+      statusBtn.style.display = "inline-flex";
       statusBtn.textContent = "Segna Venduto";
       statusBtn.className = "btn btn-primary";
       statusBtn.onclick = () => {
@@ -872,7 +861,6 @@ function updateModalProfitPreview() {}
 async function handleSaveProduct(e) {
   e.preventDefault();
   const name = document.getElementById("prod-name").value.trim();
-  const brand = document.getElementById("prod-brand").value.trim();
   const size = document.getElementById("prod-size").value.trim();
   const quantity = parseInt(document.getElementById("prod-qty").value, 10) || 1;
   const purchasedPrice = parseFloat(document.getElementById("prod-buy-price").value) || 0;
@@ -892,7 +880,6 @@ async function handleSaveProduct(e) {
   const existingItem = currentEditingId ? inventoryData.find((i) => i.id === currentEditingId) : null;
   const payload = {
     name,
-    brand,
     size,
     quantity,
     purchasedPrice,
@@ -959,6 +946,10 @@ async function deleteProduct(id) {
 function editProduct(id) {
   const item = inventoryData.find((i) => i.id === id);
   if (!item) return;
+  if (item.status === "completed") {
+    showToast("⚠️ Le vendite completate non possono essere modificate.");
+    return;
+  }
   closeDrawer();
   closeModal();
   openAddProductModal();
@@ -971,7 +962,6 @@ function editProduct(id) {
   if (submitBtn) submitBtn.textContent = "Aggiorna Prodotto";
 
   document.getElementById("prod-name").value = item.name || "";
-  document.getElementById("prod-brand").value = item.brand || "";
   document.getElementById("prod-size").value = item.size || "";
   document.getElementById("prod-qty").value = item.quantity || 1;
   document.getElementById("prod-buy-price").value = item.purchasedPrice || 0;

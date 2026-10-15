@@ -688,15 +688,13 @@
 
     .hero-scroll-indicator {
       display: inline-flex;
-      flex-direction: column;
       align-items: center;
-      gap: 0.35rem;
+      justify-content: center;
+      padding: 0.5rem;
       margin-top: 1.8rem;
       cursor: pointer;
       color: var(--text-dim);
-      font-size: 0.75rem;
-      letter-spacing: 0.02em;
-      transition: color 0.2s;
+      transition: color 0.2s, transform 0.2s;
     }
 
     .hero-scroll-indicator:hover {
@@ -962,6 +960,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 0.45rem;
       font-size: 0.68rem;
     }
 
@@ -971,6 +970,9 @@
       font-weight: 600;
       padding: 0.1rem 0.4rem;
       border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      line-height: 1.2;
     }
     .kpi-trend.positive {
       color: var(--accent-emerald);
@@ -1762,7 +1764,7 @@
       </span>
     </a>
 
-    <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="ui-btn download-action" id="hdr-download-link" title="Scarica RSM.exe (v1.5.0) da GitHub Releases" target="_blank" rel="noopener noreferrer" onclick="triggerDownloadToast(event)"><svg class="btn-icon-svg rocket-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span id="hdr-download-btn">Download RSM.exe (v1.5.0)</span></a>
+    <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="ui-btn download-action" id="hdr-download-link" title="Scarica RSM.exe (v1.5.0) da GitHub Releases" target="_blank" rel="noopener noreferrer"><svg class="btn-icon-svg rocket-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span id="hdr-download-btn">Download RSM.exe (v1.5.0)</span></a>
   </header>
 
   <main class="page-wrap">
@@ -1807,7 +1809,7 @@
             </svg>
             <span id="hero-explore-btn-txt">Esplora Funzionalità</span>
           </button>
-          <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="hero-btn-secondary download-action" id="hero-download-btn" target="_blank" rel="noopener noreferrer" onclick="triggerDownloadToast(event)">
+          <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="hero-btn-secondary download-action" id="hero-download-btn" target="_blank" rel="noopener noreferrer">
             <svg class="btn-icon-svg rocket-icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
               <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
@@ -1819,8 +1821,7 @@
         </div>
 
         <!-- Scroll down prompt indicator -->
-        <div class="hero-scroll-indicator" onclick="scrollToPoint1()">
-          <span id="hero-scroll-hint">Scrolla per scoprire le 6 innovazioni</span>
+        <div class="hero-scroll-indicator" onclick="scrollToPoint1()" aria-label="Scrolla verso il basso">
           <svg class="hero-chevron-bounce" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="m6 9 6 6 6-6"/>
           </svg>
@@ -1841,9 +1842,9 @@
           Il modulo <code>dashboard_view.py</code> e l'engine statistico calcolano istantaneamente capitale investito, valore reale di magazzino, utile netto generato e ROI effettivo, tracciando l’andamento mensile e la ripartizione per piattaforma di vendita.
         </p>
         <div class="point-controls">
-          <button class="ui-btn mock-ctrl" type="button" tabindex="-1" aria-disabled="true"><svg class="btn-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg><span id="p1-ctrl-1">Vista KPI Attiva</span></button>
-          <div class="ui-select mock-ctrl" aria-disabled="true"><span id="p1-ctrl-2">Canali: ["StockX", "Vinted", "eBay"]</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
-          <div class="ui-select mock-ctrl" aria-disabled="true"><span id="p1-ctrl-3">Anno: 2026</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+          <button class="ui-btn interactive-btn" type="button" id="p1-kpi-btn" onclick="cycleTimeframe()"><svg class="btn-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg><span id="p1-ctrl-1">Vista KPI Attiva</span></button>
+          <div class="ui-select" style="pointer-events:none;"><span id="p1-ctrl-2">Canali: ["StockX", "Vinted", "eBay"]</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="ui-select" style="pointer-events:none;"><span id="p1-ctrl-3">Anno: 2026</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
         </div>
       </div>
 
@@ -1858,7 +1859,7 @@
           <div class="win-title">
             <span id="p1-topbar-title">RSM Reseller Suite · Panoramica KPI</span>
           </div>
-          <div class="status-pill-live">
+          <div class="status-pill-live" style="cursor:pointer;" onclick="cycleTimeframe()" title="Clicca per cambiare periodo di visualizzazione">
             <span class="pulsing-dot"></span>
             <span>LIVE SYNC · 0ms</span>
           </div>
@@ -1902,7 +1903,7 @@
             </div>
             <div class="kpi-value num" id="p1-profit" style="color:var(--accent-emerald);">+ € 0</div>
             <div class="kpi-footer-row">
-              <span class="kpi-trend positive" id="p1-roi">+0% ROI</span>
+              <span class="kpi-trend positive" id="p1-roi">+0,0%</span>
               <span style="color:var(--text-dim);" id="kpi-sub-profit">Netto commissioni</span>
             </div>
           </div>
@@ -1915,9 +1916,9 @@
               <div style="font-size:0.7rem; color:var(--text-dim);" id="chart-lbl-sub">Utili netti per ciascun mese di vendita</div>
             </div>
             <div class="timeframe-pills">
-              <span class="timeframe-pill active" id="pill-time-1">Anno 2026</span>
-              <span class="timeframe-pill" id="pill-time-2">6 Mesi</span>
-              <span class="timeframe-pill" id="pill-time-3">Tutto</span>
+              <span class="timeframe-pill active" id="pill-time-1" onclick="selectTimeframe(1)">Anno 2026</span>
+              <span class="timeframe-pill" id="pill-time-2" onclick="selectTimeframe(2)">6 Mesi</span>
+              <span class="timeframe-pill" id="pill-time-3" onclick="selectTimeframe(3)">Tutto</span>
             </div>
           </div>
 
@@ -1991,9 +1992,9 @@
           I 5 stati del database (<code>In Stock</code>, <code>Pre-ordine</code>, <code>Venduto</code>, <code>Completato</code>) convivono in una tabella unificata con ricerca globale. Trascina più lotti nello slot <strong>Bundle</strong> per aggregare commissioni e calcolare l'utile netto, oppure consulta la scheda logistica nel <strong>Side-Drawer</strong> laterale.
         </p>
         <div class="point-controls">
-          <button class="ui-btn ghost mock-ctrl" type="button" tabindex="-1" aria-disabled="true"><svg class="btn-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg><span id="p2-ctrl-1">Crea Bundle</span></button>
-          <div class="ui-select mock-ctrl" aria-disabled="true"><span id="p2-ctrl-2">Filtri: In Magazzino (24)</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
-          <div class="ui-select mock-ctrl" aria-disabled="true"><span id="p2-ctrl-3">Drawer: Cronistoria Attiva</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+          <button class="ui-btn ghost interactive-btn" type="button" id="p2-bundle-btn" onclick="toggleBundleDemo()"><svg class="btn-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg><span id="p2-ctrl-1">Crea Bundle</span></button>
+          <div class="ui-select" style="pointer-events:none;"><span id="p2-ctrl-2">Filtri: In Magazzino (24)</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="ui-select" style="pointer-events:none;"><span id="p2-ctrl-3">Drawer: Cronistoria Attiva</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
         </div>
       </div>
 
@@ -2008,7 +2009,7 @@
           <div class="win-title">
             <span id="p2-topbar-title">RSM • Magazzino &amp; Gestione Lotti</span>
           </div>
-          <div class="status-pill-live" style="background:rgba(79,70,229,0.12); border-color:rgba(79,70,229,0.3); color:#818cf8;">
+          <div class="status-pill-live" id="p2-badge-pill" style="background:rgba(79,70,229,0.12); border-color:rgba(79,70,229,0.3); color:#818cf8; cursor:pointer;" onclick="toggleBundleDemo()" title="Clicca per testare la selezione bundle">
             <span id="p2-badge">1/3 NEL BUNDLE</span>
           </div>
         </div>
@@ -2016,17 +2017,17 @@
         <div class="table-layout-wrap">
           <div class="table-toolbar-head">
             <div class="table-tab-chips">
-              <span class="table-chip active" id="tab-chip-1">Tutti (122)</span>
-              <span class="table-chip" id="tab-chip-2">Magazzino (24)</span>
-              <span class="table-chip" id="tab-chip-3">Pre-ordini (6)</span>
-              <span class="table-chip" id="tab-chip-4">Vendite Attive (8)</span>
+              <span class="table-chip active" id="tab-chip-1" onclick="selectInventoryTab('all')">Tutti (122)</span>
+              <span class="table-chip" id="tab-chip-2" onclick="selectInventoryTab('stock')">Magazzino (24)</span>
+              <span class="table-chip" id="tab-chip-3" onclick="selectInventoryTab('preorder')">Pre-ordini (6)</span>
+              <span class="table-chip" id="tab-chip-4" onclick="selectInventoryTab('active')">Vendite Attive (8)</span>
             </div>
-            <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim); display:flex; align-items:center; gap:0.35rem;"><svg class="chip-icon-svg search-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/></svg><span id="table-search-hint">Cerca SKU, taglia, brand...</span></div>
+            <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim); display:flex; align-items:center; gap:0.35rem;"><svg class="chip-icon-svg search-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span id="table-search-hint">Cerca SKU, taglia, brand...</span></div>
           </div>
 
           <div class="inventory-split-deck">
             <div class="table-rows-list" id="p2-list">
-              <div class="table-row-item highlighted" id="p2-row-1">
+              <div class="table-row-item highlighted" id="p2-row-1" onclick="toggleBundleRow(1)" title="Clicca per aggiungere/rimuovere dal bundle">
                 <div>
                   <strong style="font-size:0.84rem; color:#fff;">Jordan 4 Retro SB Navy</strong>
                   <div class="item-sku-sub">
@@ -2036,7 +2037,7 @@
                 <span class="drawer-badge-status" id="p2-st-1"><svg class="chip-icon-svg check-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Nel Bundle</span>
               </div>
 
-              <div class="table-row-item" id="p2-row-2">
+              <div class="table-row-item" id="p2-row-2" onclick="toggleBundleRow(2)" title="Clicca per aggiungere/rimuovere dal bundle">
                 <div>
                   <strong style="font-size:0.84rem; color:#fff;">Pokémon Prismatic Evolutions ETB</strong>
                   <div class="item-sku-sub">
@@ -2046,7 +2047,7 @@
                 <span class="table-chip" id="p2-st-2" style="font-size:0.65rem;"><svg class="chip-icon-svg clock-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> In Magazzino</span>
               </div>
 
-              <div class="table-row-item" id="p2-row-3">
+              <div class="table-row-item" id="p2-row-3" onclick="toggleBundleRow(3)" title="Clicca per aggiungere/rimuovere dal bundle">
                 <div>
                   <strong style="font-size:0.84rem; color:#fff;">Nike SB Dunk Low Travis Scott</strong>
                   <div class="item-sku-sub">
@@ -2058,36 +2059,36 @@
             </div>
 
             <!-- Side-Drawer Mini Overlay (Dettagli Prodotto reali da web/index.html) -->
-            <div class="drawer-preview-card">
+            <div class="drawer-preview-card" id="p2-drawer-card">
               <div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
                   <span class="drawer-badge-status" id="drawer-badge-txt">In Magazzino</span>
-                  <span style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-dim);">ID #RSM-42</span>
+                  <span style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-dim);" id="drawer-item-id">ID #RSM-42</span>
                 </div>
-                <div style="font-size:0.82rem; font-weight:700; color:#fff;">Jordan 4 SB Navy</div>
-                <div style="font-size:0.68rem; color:var(--text-muted);">Nike • Sneaker DSWT</div>
+                <div style="font-size:0.82rem; font-weight:700; color:#fff;" id="drawer-item-title">Jordan 4 SB Navy</div>
+                <div style="font-size:0.68rem; color:var(--text-muted);" id="drawer-item-sub">Nike • Sneaker DSWT</div>
 
                 <div style="margin-top:0.6rem; display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; font-family:var(--font-mono); font-size:0.68rem;">
                   <div style="background:var(--bg-input); padding:0.3rem 0.45rem; border-radius:5px;">
                     <div style="color:var(--text-dim);" id="drawer-lbl-buy">Acquisto</div>
-                    <div style="font-weight:700; color:#fff;">€ 225,00</div>
+                    <div style="font-weight:700; color:#fff;" id="drawer-val-buy">€ 225,00</div>
                   </div>
                   <div style="background:var(--bg-input); padding:0.3rem 0.45rem; border-radius:5px;">
                     <div style="color:var(--text-dim);" id="drawer-lbl-sell">Stima Vendita</div>
-                    <div style="font-weight:700; color:var(--accent-emerald);">€ 440,00</div>
+                    <div style="font-weight:700; color:var(--accent-emerald);" id="drawer-val-sell">€ 440,00</div>
                   </div>
                 </div>
               </div>
 
               <div style="margin-top:0.6rem; display:flex; gap:0.35rem;">
-                <span class="table-chip" style="font-size:0.64rem; flex:1; text-align:center; display:flex; align-items:center; justify-content:center; gap:0.25rem;" id="drawer-btn-lookup"><svg class="chip-icon-svg search-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/></svg> <span id="drawer-btn-lookup-txt">Lookup eBay</span></span>
-                <span class="table-chip active" style="font-size:0.64rem; flex:1; text-align:center;" id="drawer-btn-mark">Segna Venduto</span>
+                <span class="table-chip" style="font-size:0.64rem; flex:1; text-align:center; display:flex; align-items:center; justify-content:center; gap:0.25rem; cursor:pointer;" id="drawer-btn-lookup" onclick="selectEbayPreset('military')"><svg class="chip-icon-svg search-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> <span id="drawer-btn-lookup-txt">Lookup eBay</span></span>
+                <span class="table-chip" style="font-size:0.64rem; flex:1; text-align:center; cursor:default; pointer-events:none; opacity:0.75;" id="drawer-btn-mark">Segna Venduto</span>
               </div>
             </div>
           </div>
 
           <!-- Slot Vendita Multipla / Bundle -->
-          <div class="bundle-tray-zone">
+          <div class="bundle-tray-zone" id="p2-tray-zone" style="cursor:pointer;" onclick="toggleBundleDemo()" title="Clicca per espandere il bundle">
             <div>
               <div style="font-family:var(--font-mono); font-size:0.68rem; color:#818cf8; font-weight:600; display:flex; align-items:center; gap:0.3rem;"><svg class="chip-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg> <span id="bundle-slot-title">SLOT VENDITA MULTIPLA (BUNDLE)</span></div>
               <div style="font-size:0.88rem; font-weight:650; margin-top:0.2rem; color:#fff;" id="p2-bundle-desc">Trascina gli articoli scorrendo...</div>
@@ -2098,11 +2099,6 @@
               <div style="font-size:1.35rem; font-weight:750; color:var(--accent-emerald);" class="num" id="p2-bundle-profit">+ € 215,00</div>
             </div>
           </div>
-        </div>
-
-        <div class="graphic-footer">
-          <span id="p2-footer-note">DRAG &amp; DROP BIDIREZIONALE TRA SCHEDE ATTIVO</span>
-          <div class="scroll-scrub"><div class="scroll-scrub-fill"></div></div>
         </div>
       </div>
     </section>
@@ -2289,7 +2285,7 @@
           <code>ebay_api.py</code> interroga le API ufficiali eBay passando dal proxy sicuro su <strong>Cloudflare Workers</strong> (chiave segreta protetta all'edge), calcolando prezzo minimo, medio, massimo e margine netto potenziale.
         </p>
         <div class="point-controls">
-          <button class="ui-btn ghost interactive-btn" type="button" id="p5-lookup-btn" onclick="runEbayLookup()"><svg class="btn-icon-svg search-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/></svg><span id="p5-ctrl-1">Lookup Prezzi eBay</span></button>
+          <button class="ui-btn ghost interactive-btn" type="button" id="p5-lookup-btn" onclick="runEbayLookup()"><svg class="btn-icon-svg search-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span id="p5-ctrl-1">Lookup Prezzi eBay</span></button>
           <div class="ui-select" style="pointer-events:none;"><span id="p5-ctrl-2">Proxy: rsm-proxy.workers.dev</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
         </div>
       </div>
@@ -2313,7 +2309,7 @@
         <!-- Barra di Ricerca Interattiva & Preset Sneakers -->
         <div class="ebay-search-row">
           <div class="ebay-input-wrap">
-            <svg class="search-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/></svg>
+            <svg class="search-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="text" id="ebay-search-query" class="ebay-input" value="Jordan 4 Retro Military Black" placeholder="Cerca sneaker o prodotto su eBay..." onkeydown="if(event.key==='Enter') runEbayLookup()">
             <button type="button" class="ebay-run-btn" id="ebay-search-submit" onclick="runEbayLookup()">Cerca</button>
           </div>
@@ -2383,8 +2379,8 @@
           Configurazione prioritaria in <code>config.json</code>, backup sicuro del database SQLite locale durante la compilazione, test unitari automatici e script <code>build.py</code> per generare il pacchetto standalone per Windows 10/11.
         </p>
         <div class="point-controls">
-          <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="ui-btn download-action" id="p6-ctrl-1-link" target="_blank" rel="noopener noreferrer" style="text-decoration:none; cursor:pointer;" onclick="triggerDownloadToast(event)"><svg class="btn-icon-svg rocket-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span id="p6-ctrl-1">Scarica dist/RSM/RSM.exe</span></a>
-          <div class="ui-select mock-ctrl" aria-disabled="true"><span id="p6-ctrl-2">CI: Pytest + Ruff</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+          <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="ui-btn download-action" id="p6-ctrl-1-link" target="_blank" rel="noopener noreferrer" style="text-decoration:none; cursor:pointer;"><svg class="btn-icon-svg rocket-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span id="p6-ctrl-1">Scarica dist/RSM/RSM.exe</span></a>
+          <button class="ui-btn ghost interactive-btn" type="button" id="p6-build-btn" onclick="runDevopsDemo()"><svg class="btn-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="p6-ctrl-2">Avvia Build CI</span></button>
         </div>
       </div>
 
@@ -2399,7 +2395,7 @@
           <div class="win-title">
             <span>build.py · PyInstaller Standalone Packaging</span>
           </div>
-          <div class="status-pill-live" style="background:rgba(16,185,129,0.12); border-color:rgba(16,185,129,0.3); color:var(--accent-emerald);">
+          <div class="status-pill-live" id="p6-status-pill" style="background:rgba(16,185,129,0.12); border-color:rgba(16,185,129,0.3); color:var(--accent-emerald); cursor:pointer;" onclick="runDevopsDemo()" title="Clicca per simulare la build CI/CD">
             <span id="p6-pct">BUILD 0%</span>
           </div>
         </div>
@@ -2423,7 +2419,7 @@
           </div>
         </div>
 
-        <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="artifact-binary-card download-action" id="p6-binary-card" target="_blank" rel="noopener noreferrer" title="Clicca per scaricare RSM.exe da GitHub Releases" onclick="triggerDownloadToast(event)">
+        <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="artifact-binary-card download-action" id="p6-binary-card" target="_blank" rel="noopener noreferrer" title="Clicca per scaricare RSM.exe da GitHub Releases">
           <div style="display:flex; align-items:center; gap:0.75rem;">
             <div style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:8px; background:rgba(16,185,129,0.12);">
               <svg class="ui-icon-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--accent-emerald)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
@@ -2797,7 +2793,8 @@
       document.getElementById('bundle-slot-title').textContent = t.bundleSlotTitle;
       document.getElementById('bundle-slot-sub').textContent = t.bundleSlotSub;
       document.getElementById('bundle-slot-net').textContent = t.bundleSlotNet;
-      document.getElementById('p2-footer-note').textContent = t.p2FooterNote;
+      const p2Footer = document.getElementById('p2-footer-note');
+      if (p2Footer) p2Footer.textContent = t.p2FooterNote;
 
       // Section 3
       document.getElementById('p3-eyebrow').textContent = t.p3Eyebrow;
@@ -2916,6 +2913,189 @@
     const p6S3 = document.getElementById('p6-s3');
     const p6S4 = document.getElementById('p6-s4');
 
+    // =========================================================================
+    // SEZIONE 01 — TIMEFRAME & CURVA KPI INTERATTIVA
+    // =========================================================================
+    const TIMEFRAME_DATA = {
+      1: {
+        invested: 14850, stock: 18420, profit: 4915, roi: '38,4',
+        path: 'M 18 112 C 90 102, 135 74, 195 78 C 255 82, 295 40, 360 30 C 395 26, 420 16, 442 10 L 442 120 L 18 120 Z',
+        stroke: 'M 18 112 C 90 102, 135 74, 195 78 C 255 82, 295 40, 360 30 C 395 26, 420 16, 442 10',
+        nodes: [112, 94, 78, 52, 30, 10],
+        monthsIt: 'MAG · GIU · LUG · AGO · SET · OTT 2026',
+        monthsEn: 'MAY · JUN · JUL · AUG · SEP · OCT 2026'
+      },
+      2: {
+        invested: 29400, stock: 38150, profit: 11280, roi: '42,1',
+        path: 'M 18 118 C 90 105, 135 88, 195 70 C 255 60, 295 38, 360 22 C 395 18, 420 12, 442 8 L 442 120 L 18 120 Z',
+        stroke: 'M 18 118 C 90 105, 135 88, 195 70 C 255 60, 295 38, 360 22 C 395 18, 420 12, 442 8',
+        nodes: [118, 105, 70, 48, 22, 8],
+        monthsIt: 'ULTIMI 6 MESI · MEDIA MENSILE € 1.880',
+        monthsEn: 'LAST 6 MONTHS · MONTHLY AVERAGE € 1,880'
+      },
+      3: {
+        invested: 58200, stock: 74900, profit: 26840, roi: '46,1',
+        path: 'M 18 124 C 90 110, 135 78, 195 62 C 255 45, 295 28, 360 16 C 395 14, 420 10, 442 6 L 442 120 L 18 120 Z',
+        stroke: 'M 18 124 C 90 110, 135 78, 195 62 C 255 45, 295 28, 360 16 C 395 14, 420 10, 442 6',
+        nodes: [124, 100, 62, 38, 16, 6],
+        monthsIt: 'STORICO COMPLETO 2025 - 2026 · 142 TRANSAZIONI',
+        monthsEn: 'FULL LIFETIME 2025 - 2026 · 142 TRANSACTIONS'
+      }
+    };
+    let activeTimeframe = 1;
+
+    function selectTimeframe(idx) {
+      activeTimeframe = idx;
+      document.querySelectorAll('.timeframe-pill').forEach((p, i) => {
+        p.classList.toggle('active', i + 1 === idx);
+      });
+      const data = TIMEFRAME_DATA[idx];
+      if (!data) return;
+      const isIt = currentLang === 'it';
+      const pathEl = document.getElementById('p1-path');
+      const areaEl = document.querySelector('.chart-container-card svg path:first-of-type');
+      if (pathEl) pathEl.setAttribute('d', data.stroke);
+      if (areaEl) areaEl.setAttribute('d', data.path);
+      p1Nodes.forEach((node, nIdx) => {
+        if (data.nodes[nIdx] !== undefined) {
+          node.setAttribute('cy', data.nodes[nIdx]);
+        }
+      });
+      const monthsEl = document.getElementById('p1-footer-months');
+      if (monthsEl) monthsEl.textContent = isIt ? data.monthsIt : data.monthsEn;
+
+      p1Invested.textContent = `€ ${data.invested.toLocaleString('it-IT')},00`;
+      p1Stock.textContent = `€ ${data.stock.toLocaleString('it-IT')},00`;
+      p1Profit.textContent = `+ € ${data.profit.toLocaleString('it-IT')},00`;
+      p1Roi.textContent = `+${data.roi}%`;
+    }
+
+    function cycleTimeframe() {
+      const next = (activeTimeframe % 3) + 1;
+      selectTimeframe(next);
+    }
+
+    // =========================================================================
+    // SEZIONE 02 — MAGAZZINO, BUNDLE & SIDE-DRAWER INTERATTIVO
+    // =========================================================================
+    let bundleCustomSelected = false;
+    let selectedBundleRows = { 1: true, 2: false, 3: false };
+
+    function renderBundleUI() {
+      const isIt = currentLang === 'it';
+      const t = I18N[currentLang];
+      const count = Object.values(selectedBundleRows).filter(Boolean).length;
+
+      if (p2Badge) {
+        p2Badge.textContent = `${count}/3 ${t.badgeInBundle || 'NEL BUNDLE'}`;
+      }
+
+      const is1 = !!selectedBundleRows[1];
+      const p2Row1 = document.getElementById('p2-row-1');
+      const p2St1 = document.getElementById('p2-st-1');
+      if (p2Row1) p2Row1.classList.toggle('highlighted', is1);
+      if (p2Row1) p2Row1.style.borderColor = is1 ? 'var(--accent-emerald)' : 'var(--border-color)';
+      if (p2St1) {
+        p2St1.innerHTML = is1
+          ? `${SVG_ICONS.check} ${t.stInBundle}`
+          : `${SVG_ICONS.clock} ${t.stInStock}`;
+        p2St1.style.color = is1 ? 'var(--accent-emerald)' : 'var(--text-muted)';
+      }
+
+      const is2 = !!selectedBundleRows[2];
+      if (p2Row2) p2Row2.classList.toggle('highlighted', is2);
+      if (p2Row2) p2Row2.style.borderColor = is2 ? 'var(--accent-emerald)' : 'var(--border-color)';
+      if (p2St2) {
+        p2St2.innerHTML = is2
+          ? `${SVG_ICONS.check} ${t.stInBundle}`
+          : `${SVG_ICONS.clock} ${t.stInStock}`;
+        p2St2.style.color = is2 ? 'var(--accent-emerald)' : 'var(--text-muted)';
+      }
+
+      const is3 = !!selectedBundleRows[3];
+      if (p2Row3) p2Row3.classList.toggle('highlighted', is3);
+      if (p2Row3) p2Row3.style.borderColor = is3 ? 'var(--accent-emerald)' : 'var(--border-color)';
+      if (p2St3) {
+        p2St3.innerHTML = is3
+          ? `${SVG_ICONS.check} ${t.stInBundle}`
+          : `${SVG_ICONS.clock} ${t.stPreorder}`;
+        p2St3.style.color = is3 ? 'var(--accent-emerald)' : 'var(--text-muted)';
+      }
+
+      if (p2Desc && p2Profit) {
+        if (count === 3) {
+          p2Desc.textContent = t.bundleDesc3;
+          p2Profit.textContent = '+ € 685,00';
+        } else if (count === 2) {
+          p2Desc.textContent = t.bundleDesc2;
+          p2Profit.textContent = '+ € 395,00';
+        } else if (count === 1) {
+          p2Desc.textContent = t.bundleDesc1;
+          p2Profit.textContent = '+ € 215,00';
+        } else {
+          p2Desc.textContent = isIt ? 'Nessun lotto selezionato per il bundle' : 'No items selected for bundle';
+          p2Profit.textContent = '€ 0,00';
+        }
+      }
+    }
+
+    function applyBundleSelection(count) {
+      if (count <= 1) {
+        selectedBundleRows = { 1: true, 2: false, 3: false };
+      } else if (count === 2) {
+        selectedBundleRows = { 1: true, 2: true, 3: false };
+      } else {
+        selectedBundleRows = { 1: true, 2: true, 3: true };
+      }
+      renderBundleUI();
+    }
+
+    function toggleBundleRow(id) {
+      bundleCustomSelected = true;
+      selectedBundleRows[id] = !selectedBundleRows[id];
+      renderBundleUI();
+    }
+
+    function toggleBundleDemo() {
+      bundleCustomSelected = true;
+      const count = Object.values(selectedBundleRows).filter(Boolean).length;
+      if (count < 3) {
+        applyBundleSelection(3);
+      } else {
+        applyBundleSelection(1);
+      }
+    }
+
+    function selectInventoryTab(tab) {
+      const chips = {
+        all: document.getElementById('tab-chip-1'),
+        stock: document.getElementById('tab-chip-2'),
+        preorder: document.getElementById('tab-chip-3'),
+        active: document.getElementById('tab-chip-4')
+      };
+      Object.keys(chips).forEach(k => {
+        if (chips[k]) chips[k].classList.toggle('active', k === tab);
+      });
+
+      const r1 = document.getElementById('p2-row-1');
+      const r2 = document.getElementById('p2-row-2');
+      const r3 = document.getElementById('p2-row-3');
+
+      if (tab === 'preorder') {
+        if (r1) r1.style.opacity = '0.35';
+        if (r2) r2.style.opacity = '0.35';
+        if (r3) r3.style.opacity = '1';
+      } else if (tab === 'stock') {
+        if (r1) r1.style.opacity = '1';
+        if (r2) r2.style.opacity = '1';
+        if (r3) r3.style.opacity = '0.35';
+      } else {
+        if (r1) r1.style.opacity = '1';
+        if (r2) r2.style.opacity = '1';
+        if (r3) r3.style.opacity = '1';
+      }
+    }
+
     function scrollToPoint1() {
       const p1 = document.querySelector('[data-point="1"]');
       if (p1) {
@@ -2949,14 +3129,15 @@
 
         // 1. Point 01: KPI e Curva Utili Mensili
         if (idx === 0) {
-          const invested = Math.round(p * 14850);
-          const stock = Math.round(p * 18420);
-          const profit = Math.round(p * 4915);
-          const roi = (p * 38.4).toFixed(1).replace('.', ',');
+          const tf = TIMEFRAME_DATA[activeTimeframe] || TIMEFRAME_DATA[1];
+          const invested = Math.round(p * tf.invested);
+          const stock = Math.round(p * tf.stock);
+          const profit = Math.round(p * tf.profit);
+          const roi = (p * parseFloat(tf.roi.replace(',', '.'))).toFixed(1).replace('.', ',');
           p1Invested.textContent = `€ ${invested.toLocaleString('it-IT')},00`;
           p1Stock.textContent = `€ ${stock.toLocaleString('it-IT')},00`;
           p1Profit.textContent = `+ € ${profit.toLocaleString('it-IT')},00`;
-          p1Roi.textContent = `+${roi}% ROI`;
+          p1Roi.textContent = `+${roi}%`;
           p1Nodes.forEach((n, nIdx) => {
             const threshold = nIdx / (p1Nodes.length - 1);
             n.style.opacity = p >= threshold - 0.05 ? '1' : '0.15';
@@ -2964,56 +3145,43 @@
         }
 
         // 2. Point 02: Magazzino, Bundle e Side-Drawer
-        if (idx === 1) {
+        if (idx === 1 && !bundleCustomSelected) {
           const selCount = p < 0.38 ? 1 : p < 0.72 ? 2 : 3;
-          p2Badge.textContent = `${selCount}/3 ${t.badgeInBundle}`;
-
-          p2St2.innerHTML = `${selCount >= 2 ? SVG_ICONS.check : SVG_ICONS.clock} ${selCount >= 2 ? t.stInBundle : t.stInStock}`;
-          p2St2.style.color = selCount >= 2 ? 'var(--accent-emerald)' : 'var(--text-muted)';
-          p2Row2.style.borderColor = selCount >= 2 ? 'var(--accent-emerald)' : 'var(--border-color)';
-
-          p2St3.innerHTML = `${selCount >= 3 ? SVG_ICONS.check : SVG_ICONS.clock} ${selCount >= 3 ? t.stInBundle : t.stPreorder}`;
-          p2St3.style.color = selCount >= 3 ? 'var(--accent-emerald)' : 'var(--text-muted)';
-          p2Row3.style.borderColor = selCount >= 3 ? 'var(--accent-emerald)' : 'var(--border-color)';
-
-          if (selCount === 1) {
-            p2Desc.textContent = t.bundleDesc1;
-            p2Profit.textContent = '+ € 215,00';
-          } else if (selCount === 2) {
-            p2Desc.textContent = t.bundleDesc2;
-            p2Profit.textContent = '+ € 395,00';
-          } else {
-            p2Desc.textContent = t.bundleDesc3;
-            p2Profit.textContent = '+ € 685,00 (ROI +128%)';
-          }
+          applyBundleSelection(selCount);
         }
 
         // 3. Point 03: Gmail IMAP & Laser Scanner Gemini
-        if (idx === 2 && !emailSyncActive) {
-          const vals = [
-            [p3El1, t.v1, 0.22, p3Line1],
-            [p3El2, t.v2, 0.44, p3Line2],
-            [p3El3, t.v3, 0.66, p3Line3],
-            [p3El4, t.v4, 0.84, p3Line4],
-          ];
-          vals.forEach(([valEl, text, threshold, lineEl]) => {
-            if (p >= threshold) {
-              valEl.textContent = text;
-              valEl.style.color = 'var(--accent-emerald)';
-              if (lineEl) {
-                lineEl.style.background = 'rgba(168, 85, 247, 0.15)';
-                lineEl.style.color = '#ffffff';
+        if (idx === 2) {
+          const card = document.getElementById('p3-scanner-card');
+          if (!emailSyncActive && card) {
+            card.style.removeProperty('--laser-p');
+          }
+          if (!emailSyncActive) {
+            const vals = [
+              [p3El1, t.v1, 0.22, p3Line1],
+              [p3El2, t.v2, 0.44, p3Line2],
+              [p3El3, t.v3, 0.66, p3Line3],
+              [p3El4, t.v4, 0.84, p3Line4],
+            ];
+            vals.forEach(([valEl, text, threshold, lineEl]) => {
+              if (p >= threshold) {
+                valEl.textContent = text;
+                valEl.style.color = 'var(--accent-emerald)';
+                if (lineEl) {
+                  lineEl.style.background = 'rgba(168, 85, 247, 0.15)';
+                  lineEl.style.color = '#ffffff';
+                }
+              } else {
+                valEl.textContent = t.p3ScanningWait;
+                valEl.style.color = 'var(--text-dim)';
+                if (lineEl) {
+                  lineEl.style.background = 'transparent';
+                  lineEl.style.color = 'var(--text-muted)';
+                }
               }
-            } else {
-              valEl.textContent = t.p3ScanningWait;
-              valEl.style.color = 'var(--text-dim)';
-              if (lineEl) {
-                lineEl.style.background = 'transparent';
-                lineEl.style.color = 'var(--text-muted)';
-              }
-            }
-          });
-          p3Status.innerHTML = p >= 0.85 ? `${SVG_ICONS.check} ${t.p3Done}` : t.p3Scanning;
+            });
+            p3Status.innerHTML = p >= 0.85 ? `${SVG_ICONS.check} ${t.p3Done}` : t.p3Scanning;
+          }
         }
 
         // 4. Point 04: Voce & Gemini 3.1 Flash Lite
@@ -3054,7 +3222,7 @@
         }
 
         // 6. Point 06: DevOps Pipeline & Standalone .EXE
-        if (idx === 5) {
+        if (idx === 5 && !devopsActive) {
           p6Pct.innerHTML = p >= 0.92 ? `${SVG_ICONS.check} ${t.p6Ready}` : `BUILD ${Math.round(p * 100)}%`;
           const steps = [
             [p6S1, p6St1, 0.20],
@@ -3092,16 +3260,6 @@
 
     window.addEventListener('scroll', requestScroll, { passive: true });
     window.addEventListener('resize', requestScroll);
-
-    function triggerDownloadToast(event) {
-      const toast = document.getElementById('download-toast');
-      if (!toast) return;
-      const isIt = currentLang === 'it';
-      toast.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-emerald, #10b981); flex-shrink:0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg><span>${isIt ? 'Download di RSM.exe (v1.5.0) avviato da GitHub Releases...' : 'Downloading RSM.exe (v1.5.0) from GitHub Releases...'}</span>`;
-      toast.classList.add('show');
-      clearTimeout(toast._timer);
-      toast._timer = setTimeout(() => toast.classList.remove('show'), 3800);
-    }
 
     // =========================================================================
     // SEZIONE 03 — SINCRONIZZAZIONE EMAIL IMAP & LASER SCANNER DEMO
@@ -3321,7 +3479,7 @@
             cancelAnimationFrame(laserAnimId);
             if (scannerCard) {
               scannerCard.classList.remove('scanning');
-              scannerCard.style.setProperty('--laser-p', '1');
+              scannerCard.style.removeProperty('--laser-p');
             }
             if (statusPill) {
               statusPill.style.background = 'rgba(16, 185, 129, 0.16)';
@@ -3335,14 +3493,6 @@
               syncBtnTxt.textContent = isIt ? 'Sincronizza di Nuovo' : 'Sync Again';
             }
             emailSyncActive = false;
-
-            const toast = document.getElementById('download-toast');
-            if (toast) {
-              toast.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-purple); flex-shrink:0;"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><span>${isIt ? data.toastIt : data.toastEn}</span>`;
-              toast.classList.add('show');
-              clearTimeout(toast._timer);
-              toast._timer = setTimeout(() => toast.classList.remove('show'), 3800);
-            }
           }
         }
         laserAnimId = requestAnimationFrame(stepLaser);
@@ -3467,14 +3617,6 @@
           }
           if (studioCard) studioCard.classList.remove('recording');
           voiceActive = false;
-
-          const toast = document.getElementById('download-toast');
-          if (toast) {
-            toast.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-cyan); flex-shrink:0;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>${isIt ? '✨ Gemini 3.1 Flash Lite: dati estratti ed inseriti nei Pre-ordini!' : '✨ Gemini 3.1 Flash Lite: extracted and saved to Pre-orders!'}</span>`;
-            toast.classList.add('show');
-            clearTimeout(toast._timer);
-            toast._timer = setTimeout(() => toast.classList.remove('show'), 3800);
-          }
         }
       }, 50);
     }
@@ -3614,15 +3756,78 @@
           const gaugePct = Math.min(100, Math.max(15, roi));
           gaugeFill.style.width = `${gaugePct}%`;
         }
-
-        const toast = document.getElementById('download-toast');
-        if (toast) {
-          toast.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-amber); flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/></svg><span>${isIt ? `eBay API: ${data.samples} vendite recenti analizzate via Cloudflare Edge!` : `eBay API: ${data.samples} recent sales analyzed via Cloudflare Edge!`}</span>`;
-          toast.classList.add('show');
-          clearTimeout(toast._timer);
-          toast._timer = setTimeout(() => toast.classList.remove('show'), 3800);
-        }
       }, 200);
+    }
+
+    // =========================================================================
+    // SEZIONE 06 — PIPELINE DEVOPS & BUILD STANDALONE .EXE DEMO
+    // =========================================================================
+    let devopsActive = false;
+
+    function runDevopsDemo() {
+      if (devopsActive) return;
+      devopsActive = true;
+      const isIt = currentLang === 'it';
+      const pctEl = document.getElementById('p6-pct');
+      const btnTxt = document.getElementById('p6-ctrl-2');
+      const s1 = document.getElementById('p6-s1');
+      const s2 = document.getElementById('p6-s2');
+      const s3 = document.getElementById('p6-s3');
+      const s4 = document.getElementById('p6-s4');
+      const st1 = document.getElementById('p6-st1');
+      const st2 = document.getElementById('p6-st2');
+      const st3 = document.getElementById('p6-st3');
+      const st4 = document.getElementById('p6-st4');
+
+      if (btnTxt) btnTxt.textContent = isIt ? 'Compilazione...' : 'Building...';
+
+      const steps = [[s1, st1], [s2, st2], [s3, st3], [s4, st4]];
+      steps.forEach(([row, st]) => {
+        if (row && st) {
+          row.style.borderColor = 'var(--border-color)';
+          st.innerHTML = `${SVG_ICONS.clock} ${isIt ? 'In attesa' : 'Pending'}`;
+          st.style.color = 'var(--text-dim)';
+          st.style.background = 'var(--bg-input)';
+          st.style.borderColor = 'var(--border-color)';
+        }
+      });
+      if (pctEl) {
+        pctEl.textContent = 'BUILD 0%';
+        pctEl.style.color = 'var(--accent-emerald)';
+      }
+
+      function markDone(row, st, text) {
+        if (!row || !st) return;
+        row.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+        st.innerHTML = `${SVG_ICONS.check} ${text}`;
+        st.style.color = 'var(--accent-emerald)';
+        st.style.background = 'rgba(16, 185, 129, 0.12)';
+        st.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+      }
+
+      setTimeout(() => {
+        markDone(s1, st1, isIt ? 'OK (Backup WAL)' : 'OK (WAL Backup)');
+        if (pctEl) pctEl.textContent = 'BUILD 25%';
+      }, 250);
+
+      setTimeout(() => {
+        markDone(s2, st2, isIt ? '30/30 OK (0.32s)' : '30/30 OK (0.32s)');
+        if (pctEl) pctEl.textContent = 'BUILD 50%';
+      }, 550);
+
+      setTimeout(() => {
+        markDone(s3, st3, isIt ? '0 Warning (Lint)' : '0 Warnings (Lint)');
+        if (pctEl) pctEl.textContent = 'BUILD 75%';
+      }, 850);
+
+      setTimeout(() => {
+        markDone(s4, st4, isIt ? 'Standalone .EXE' : 'Standalone .EXE');
+        if (pctEl) {
+          pctEl.innerHTML = `${SVG_ICONS.check} ${isIt ? 'RELEASE PRONTA (v1.5.0)' : 'RELEASE READY (v1.5.0)'}`;
+        }
+        if (btnTxt) btnTxt.textContent = isIt ? 'Riesegui Build CI' : 'Re-run CI Build';
+        devopsActive = false;
+      }, 1200);
     }
 
     try {
@@ -3634,6 +3839,5 @@
     setLanguage(currentLang);
     updateFrame();
   </script>
-  <div id="download-toast" class="download-toast" role="status" aria-live="polite"></div>
 </body>
 </html>

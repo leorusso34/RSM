@@ -25,7 +25,6 @@ if str(ROOT_DIR) not in sys.path:
 from src.config import (
     APP_NAME,
     APP_VERSION,
-    STATUS_COMPLETED,
     STATUS_PREORDER,
     STATUS_SOLD,
     STATUS_STOCK,
@@ -66,11 +65,11 @@ _transcription_status = {
 }
 
 def _start_voice_recording() -> tuple[bool, str]:
-    global _active_transcriber, _transcription_status
+    global _active_transcriber
     with _speech_lock:
         if _active_transcriber and getattr(_active_transcriber, "is_recording", False):
             return True, "already_recording"
-        
+
         _transcription_status["is_recording"] = True
         _transcription_status["is_processing"] = False
         _transcription_status["text"] = ""
@@ -106,20 +105,19 @@ def _start_voice_recording() -> tuple[bool, str]:
                 language="it-IT",
             )
             return True, "started"
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             _transcription_status["is_recording"] = False
             _transcription_status["is_processing"] = False
             _transcription_status["error"] = str(exc)
             return False, str(exc)
 
 def _stop_voice_recording() -> tuple[bool, str]:
-    global _active_transcriber, _transcription_status
     with _speech_lock:
         if not _active_transcriber or not getattr(_active_transcriber, "is_recording", False):
             if _transcription_status["text"]:
                 return True, _transcription_status["text"]
             return False, "Nessuna registrazione attiva."
-        
+
         _transcription_status["is_recording"] = False
         _transcription_status["is_processing"] = True
         _active_transcriber.stop()
@@ -176,7 +174,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         body = self.rfile.read(content_length).decode("utf-8")
         try:
             return json.loads(body)
-        except Exception:
+        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
             return {}
 
     # --------------------------------------------------------------------------
@@ -246,7 +244,6 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 formatted.append({
                     "id": p.get("id"),
                     "name": p.get("name") or "",
-                    "brand": "Brand",  # Estratto o fallback
                     "size": p.get("size") or "-",
                     "quantity": qty,
                     "purchasedPrice": cost,
@@ -334,7 +331,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 from src.ebay_api import fetch_market_prices
                 ebay_res = fetch_market_prices(name, size)
                 self._send_json({"success": True, "data": ebay_res})
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._send_error(f"eBay lookup: {e}")
             return
 
@@ -397,7 +394,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 from src.ai_agent import parse_product_with_ai
                 parsed = parse_product_with_ai(prompt)
                 self._send_json({"success": True, "data": parsed})
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._send_error(f"Errore analisi AI: {e}")
             return
 
@@ -409,7 +406,11 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self._send_error("Configura prima l'indirizzo Gmail e l'App Password nelle impostazioni.")
                 return
             try:
-                from src.email_sync import fetch_unread_order_emails, mark_emails_as_read, parse_order_email_with_gemini
+                from src.email_sync import (
+                    fetch_unread_order_emails,
+                    mark_emails_as_read,
+                    parse_order_email_with_gemini,
+                )
                 emails = fetch_unread_order_emails(email_addr, app_pwd, max_emails=10)
                 imported = []
                 read_uids = []
@@ -431,7 +432,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 if read_uids:
                     mark_emails_as_read(email_addr, app_pwd, read_uids)
                 self._send_json({"success": True, "imported_count": len(imported), "products": imported})
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._send_error(f"Sincronizzazione fallita: {e}")
             return
 
@@ -446,7 +447,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 from src.email_sync import test_gmail_connection
                 ok, msg = test_gmail_connection(email_addr, app_pwd)
                 self._send_json({"success": ok, "message": msg})
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._send_error(f"Errore connessione: {e}")
             return
 
@@ -458,7 +459,10 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self._send_error("Configura prima l'indirizzo Gmail e la Password per le App.")
                 return
             try:
-                from src.email_sync import fetch_unread_order_emails, parse_order_email_with_gemini
+                from src.email_sync import (
+                    fetch_unread_order_emails,
+                    parse_order_email_with_gemini,
+                )
                 emails = fetch_unread_order_emails(email_addr, app_pwd, max_emails=15)
                 extracted_items = []
                 for em in emails:
@@ -474,14 +478,14 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                                 "date": prod.get("release_date") or em.get("date", ""),
                                 "uid": em.get("uid"),
                             })
-                    except Exception as err:
+                    except Exception as err:  # noqa: BLE001
                         print(f"Errore parsing email UID {em.get('uid')}: {err}")
                 self._send_json({
                     "success": True,
                     "emails_scanned": len(emails),
                     "items": extracted_items
                 })
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._send_error(f"Scansione fallita: {e}")
             return
 
@@ -507,7 +511,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 try:
                     from src.email_sync import mark_emails_as_read
                     mark_emails_as_read(email_addr, app_pwd, uids)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     print(f"Errore marcatura email lette: {e}")
             self._send_json({"success": True, "saved_count": saved_count})
             return
@@ -554,16 +558,24 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             else:
                 db_status = STATUS_STOCK
 
+            purchased_raw = body.get("purchasedPrice", 0)
+            purchased_price = Decimal(str(purchased_raw or 0))
+            sale_price_raw = body.get("salePrice")
+            selling_price = Decimal(str(sale_price_raw)) if (sale_price_raw is not None and sale_price_raw != "") else None
+            sold_price = selling_price if (is_completed or status_input == "active-sale") else None
+            fees_raw = body.get("fees", 0)
+            fees = Decimal(str(fees_raw or 0))
+
             db_payload = {
                 "name": name,
                 "size": body.get("size", ""),
                 "quantity": max(1, int(body.get("quantity", 1))),
-                "purchased_price": Decimal(str(body.get("purchasedPrice", 0))),
+                "purchased_price": purchased_price,
                 "purchased_place": body.get("purchasedPlace", ""),
                 "selling_place": body.get("sellingPlace", ""),
-                "selling_price": Decimal(str(body.get("salePrice", 0))) if body.get("salePrice") else None,
-                "sold_price": Decimal(str(body.get("salePrice", 0))) if (is_completed or status_input == "active-sale") else None,
-                "fees": Decimal(str(body.get("fees", 0))),
+                "selling_price": selling_price,
+                "sold_price": sold_price,
+                "fees": fees,
                 "status": db_status,
                 "notes": body.get("notes", ""),
                 "sold_date": body.get("date", "") if (is_completed or status_input == "active-sale") else "",
@@ -573,7 +585,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             try:
                 new_id = self.db.save(db_payload)
                 self._send_json({"success": True, "id": new_id, "message": "Prodotto salvato con successo!"})
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._send_error(f"Errore durante il salvataggio: {e}")
             return
 
@@ -592,6 +604,10 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self._send_error(f"Prodotto #{prod_id} non trovato.", status=HTTPStatus.NOT_FOUND)
                 return
 
+            if existing.get("is_completed") == 1:
+                self._send_error("Le vendite completate non possono essere modificate.", status=HTTPStatus.FORBIDDEN)
+                return
+
             body = self._read_body_json()
             name = body.get("name", existing.get("name", "")).strip()
             if not name:
@@ -607,16 +623,40 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             else:
                 db_status = STATUS_STOCK
 
+            purchased_raw = body.get("purchasedPrice")
+            if purchased_raw is None:
+                purchased_price = existing.get("purchased_price") or Decimal("0.00")
+            else:
+                purchased_price = Decimal(str(purchased_raw or 0))
+
+            selling_price_raw = body.get("salePrice")
+            if selling_price_raw is None:
+                selling_price = existing.get("selling_price")
+            else:
+                selling_price = Decimal(str(selling_price_raw)) if selling_price_raw != "" else None
+
+            sold_price_raw = body.get("soldPrice", body.get("salePrice"))
+            if sold_price_raw is None:
+                sold_price = existing.get("sold_price") if (is_completed or status_input == "active-sale") else None
+            else:
+                sold_price = Decimal(str(sold_price_raw)) if (sold_price_raw != "" and (is_completed or status_input == "active-sale")) else None
+
+            fees_raw = body.get("fees")
+            if fees_raw is None:
+                fees = existing.get("fees") or Decimal("0.00")
+            else:
+                fees = Decimal(str(fees_raw or 0))
+
             db_payload = {
                 "name": name,
                 "size": body.get("size", existing.get("size", "")),
                 "quantity": max(1, int(body.get("quantity", existing.get("quantity", 1)))),
-                "purchased_price": Decimal(str(body.get("purchasedPrice", existing.get("purchased_price", 0)))),
+                "purchased_price": purchased_price,
                 "purchased_place": body.get("purchasedPlace", existing.get("purchased_place", "")),
                 "selling_place": body.get("sellingPlace", existing.get("selling_place", "")),
-                "selling_price": Decimal(str(body.get("salePrice", existing.get("selling_price", 0)))) if body.get("salePrice") is not None else None,
-                "sold_price": Decimal(str(body.get("soldPrice", body.get("salePrice", existing.get("sold_price", 0))))) if (is_completed or status_input == "active-sale") else None,
-                "fees": Decimal(str(body.get("fees", existing.get("fees", 0)))),
+                "selling_price": selling_price,
+                "sold_price": sold_price,
+                "fees": fees,
                 "status": db_status,
                 "notes": body.get("notes", existing.get("notes", "")),
                 "sold_date": body.get("date", existing.get("sold_date", "")),
@@ -627,7 +667,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             try:
                 self.db.save(db_payload, product_id=prod_id)
                 self._send_json({"success": True, "id": prod_id, "message": "Prodotto aggiornato con successo!"})
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._send_error(f"Errore durante l'aggiornamento: {e}")
             return
 
@@ -644,7 +684,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             try:
                 self.db.delete(prod_id)
                 self._send_json({"success": True, "message": f"Prodotto #{prod_id} eliminato con successo."})
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._send_error(f"Errore eliminazione: {e}")
             return
 
@@ -652,7 +692,6 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format: str, *args: Any) -> None:
         """Silenzia i log HTTP standard della console per mantenere zero overhead."""
-        pass
 
 
 def run_bridge_server() -> None:
@@ -660,7 +699,7 @@ def run_bridge_server() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         try:
             sys.stdout.reconfigure(encoding="utf-8")
-        except Exception:
+        except (AttributeError, ValueError, OSError):
             pass
     server = ThreadingHTTPServer((HOST, PORT), RSMBridgeHandler)
     print(f"[RSM] Bridge Server attivo su http://{HOST}:{PORT}")
