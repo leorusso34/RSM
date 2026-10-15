@@ -1,0 +1,3640 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RSM v1.5.0 — Russo Stock Manager | Interactive Showcase (Windows 11 Fluent Style)</title>
+  <meta name="description" content="RSM v1.5.0 — Scrollytelling interattivo in stile Windows 11 Fluent Design / CustomTkinter. Mappatura 1:1 con il codice reale: SQLite WAL, Cloudflare Worker, Gemini AI e build PyInstaller." />
+  <link rel="icon" type="image/png" href="assets/icon.png" />
+  <style>
+    /* ==========================================================================
+       RSM SHOWCASE (WINDOWS 11 FLUENT / MICA STYLE) — DESIGN SYSTEM & TOKENS
+       Mappato con il tema desktop Windows e CustomTkinter (src/config.py):
+       - Palette: #0e131f (Mica Dark Base), #151b2b (Fluent Card), #1d2538 (Input), #0078d4 / #2563eb (Windows Accent)
+       - Titoli finestre Windows 11 con pulsanti Riduci, Ingrandisci e Chiudi (rosso #e81123 all'hover)
+       - Tipografia: Segoe UI Variable Display
+       ========================================================================== */
+
+    :root {
+      color-scheme: dark;
+      --win-bg: #0c101b;
+      --win-card: #141b2a;
+      --win-card-inner: #101623;
+      --win-input: #1a2234;
+      --win-border: #212c42;
+      --win-border-light: #2d3b56;
+      --win-accent: #0078d4;
+      --win-accent-hover: #1084d8;
+      --win-emerald: #10b981;
+      --win-amber: #f59e0b;
+      --win-purple: #8b5cf6;
+      --win-red: #e81123;
+
+      --text-main: #f3f6fa;
+      --text-muted: #95a3b8;
+      --text-dim: #627188;
+
+      --font-win: 'Segoe UI Variable Display', 'Segoe UI', -apple-system, system-ui, sans-serif;
+      --font-mono: 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
+
+      scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+      scrollbar-width: thin;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    html, body {
+      background-color: var(--win-bg);
+      color: var(--text-main);
+      font-family: var(--font-win);
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    /* Sfondo Windows 11 Mica a micro-punti con accento radiale */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(850px circle at 75% 45%, oklch(58% 0.18 var(--ambient-hue, 230) / 0.10), transparent 75%);
+      pointer-events: none;
+      z-index: 0;
+      transition: background 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    h1, h2, h3 {
+      text-wrap: balance;
+      letter-spacing: -0.025em;
+      font-weight: 650;
+      line-height: 1.15;
+      color: #ffffff;
+    }
+
+    p {
+      text-wrap: pretty;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    .num, .tabular {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+    }
+
+    .mock-ctrl,
+    .ui-select,
+    .ui-pill {
+      pointer-events: none !important;
+      user-select: none !important;
+      cursor: default !important;
+    }
+
+    /* ==========================================================================
+       PROGRESS BAR & HEADER WINDOWS 11 FLUENT
+       ========================================================================== */
+    #progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--win-accent), var(--win-purple), var(--win-emerald));
+      transform-origin: 0 50%;
+      transform: scaleX(var(--global-p, 0));
+      z-index: 9999;
+      box-shadow: 0 0 16px var(--win-accent), 0 0 6px var(--win-emerald);
+    }
+
+    .fluent-header {
+      position: fixed;
+      top: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.42rem 0.65rem 0.42rem 1rem;
+      border-radius: 8px; /* Stile Windows 11 Fluent */
+      background: rgba(20, 27, 42, 0.92);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid var(--win-border-light);
+      box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      white-space: nowrap;
+    }
+
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 0.88rem;
+      font-weight: 750;
+      letter-spacing: -0.01em;
+    }
+
+    /* Cerchio verde che si illumina nello sfondo richiesto dall'utente */
+    .brand-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--win-emerald);
+      box-shadow: 0 0 12px var(--win-emerald), 0 0 4px #ffffff;
+      animation: pulseBrandDot 2s infinite ease-in-out;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulseBrandDot {
+      0%, 100% {
+        box-shadow: 0 0 12px var(--win-emerald), 0 0 4px #ffffff;
+        transform: scale(1);
+      }
+      50% {
+        box-shadow: 0 0 20px 4px var(--win-emerald), 0 0 8px #ffffff;
+        transform: scale(1.15);
+      }
+    }
+
+    .divider {
+      width: 1px;
+      height: 14px;
+      background: var(--win-border);
+    }
+
+    .ui-select {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.28rem 0.68rem;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--win-border);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .ui-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.9rem;
+      border-radius: 6px;
+      background: var(--win-accent);
+      color: #ffffff;
+      font-size: 0.74rem;
+      font-weight: 650;
+      border: none;
+      box-shadow: 0 2px 10px rgba(0, 120, 212, 0.4);
+    }
+
+    .ui-btn.ghost {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px solid var(--win-border);
+      box-shadow: none;
+    }
+
+    /* Selettore Lingua Bilingue IT / EN */
+    .lang-switcher-wrap {
+      display: flex;
+      align-items: center;
+      background: var(--win-input);
+      border: 1px solid var(--win-border);
+      border-radius: 6px;
+      padding: 2px;
+    }
+
+    .lang-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.69rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      transition: all 0.15s ease;
+    }
+
+    .lang-btn:hover {
+      color: #fff;
+    }
+
+    .lang-btn.active {
+      background: var(--win-accent);
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(0, 120, 212, 0.5);
+    }
+
+    /* ==========================================================================
+       OS SWITCHER CAPSULE (PULSANTE CAMBIO OS CON MICRO-INTERAZIONE & GLOW)
+       ========================================================================== */
+    .os-switch-capsule {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 3px 4px;
+      border-radius: 6px; /* Fluent Windows 11 Radius */
+      background: rgba(14, 20, 32, 0.95);
+      border: 1px solid var(--win-border-light);
+      text-decoration: none;
+      font-family: var(--font-sans);
+      font-size: 0.70rem;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+      color: var(--text-muted);
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      user-select: none;
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 14px -3px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+    }
+
+    /* Sweep di luce olografica al passaggio del mouse */
+    .os-switch-capsule::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -130%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transform: skewX(-20deg);
+      transition: left 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+
+    .os-switch-capsule:hover::before {
+      left: 130%;
+    }
+
+    .os-switch-capsule:hover {
+      border-color: rgba(99, 102, 241, 0.45);
+      box-shadow: 0 6px 20px -2px rgba(99, 102, 241, 0.4), 0 0 0 1px rgba(129, 140, 248, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .os-switch-capsule:active {
+      transform: translateY(0) scale(0.96);
+    }
+
+    /* Chip OS Target (macOS su index-windows.html) */
+    .os-chip-target {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.32rem;
+      padding: 0.2rem 0.52rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .os-icon-svg {
+      display: inline-block;
+      vertical-align: -1.5px;
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+      shape-rendering: geometricPrecision;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .os-switch-capsule:hover .os-chip-target {
+      background: rgba(99, 102, 241, 0.25);
+      color: #a5b4fc;
+      border-color: rgba(129, 140, 248, 0.5);
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.45);
+    }
+
+    .os-switch-capsule:hover .os-chip-target .os-icon-svg {
+      transform: scale(1.22) rotate(5deg);
+    }
+
+    /* Icona Centrale di Swap con rotazione elastica a 180° */
+    .os-switch-mid {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      color: var(--text-dim);
+      transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.25s ease;
+    }
+
+    .os-switch-capsule:hover .os-switch-mid {
+      transform: rotate(180deg) scale(1.18);
+      color: #a5b4fc;
+    }
+
+    /* Chip OS Attivo (Windows 11 su index-windows.html) */
+    .os-chip-active {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.32rem;
+      padding: 0.2rem 0.52rem;
+      border-radius: 4px;
+      background: rgba(0, 120, 212, 0.22);
+      color: #60cdff;
+      font-weight: 700;
+      border: 1px solid rgba(0, 120, 212, 0.45);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 6px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .os-live-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--win-emerald);
+      box-shadow: 0 0 8px var(--win-emerald), 0 0 2px #ffffff;
+      animation: pulseBrandDot 2s infinite ease-in-out;
+    }
+
+    /* ==========================================================================
+       MODERN LINE TECH SVG ICONS & MICRO-INTERACTIONS
+       ========================================================================== */
+    .ui-icon-svg {
+      display: inline-block;
+      vertical-align: middle;
+      shape-rendering: geometricPrecision;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-icon-svg {
+      display: inline-block;
+      vertical-align: -2px;
+      margin-right: 0.35rem;
+      shape-rendering: geometricPrecision;
+      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+    }
+
+    .chip-icon-svg {
+      display: inline-block;
+      vertical-align: -1.5px;
+      margin-right: 0.25rem;
+      shape-rendering: geometricPrecision;
+    }
+
+    .chevron-icon-svg {
+      display: inline-block;
+      vertical-align: -1px;
+      margin-left: 0.35rem;
+      shape-rendering: geometricPrecision;
+      transition: transform 0.2s ease;
+      opacity: 0.75;
+    }
+
+    /* Micro-interazioni su hover dei controlli */
+    .ui-btn:hover .rocket-icon-svg {
+      transform: translateY(-2px) rotate(-12deg);
+    }
+
+    .ui-btn:hover .mic-icon-svg {
+      animation: micPulse 0.8s infinite alternate ease-in-out;
+    }
+
+    @keyframes micPulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.22); }
+    }
+
+    .ui-btn:hover .search-icon-svg,
+    .table-chip:hover .search-icon-svg {
+      transform: scale(1.18) rotate(12deg);
+    }
+
+    .ui-btn:hover .btn-icon-svg:not(.rocket-icon-svg):not(.mic-icon-svg):not(.search-icon-svg) {
+      transform: scale(1.15);
+    }
+
+    .ui-select:hover .chevron-icon-svg {
+      transform: translateY(1.5px);
+      opacity: 1;
+    }
+
+    .kpi-icon-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--win-border);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+    }
+
+    .flat-card-inner:hover .kpi-icon-badge,
+    .fluent-card-inner:hover .kpi-icon-badge {
+      transform: scale(1.12) translateY(-1px);
+    }
+
+    /* ==========================================================================
+       CONTAINER PRINCIPALE & SEZIONI
+       ========================================================================== */
+    .page-wrap {
+      max-width: 1260px;
+      margin: 0 auto;
+      padding: 5.5rem 2rem 6.5rem;
+      position: relative;
+    }
+
+    /* ==========================================================================
+       HERO INTRO SECTION — WINDOWS 11 FLUENT MICA AMBIENT FLOATING LOGO
+       ========================================================================== */
+    .hero-section {
+      min-height: calc(100vh - 7rem);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 3.5rem 1rem 4.5rem;
+      margin-bottom: 3rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      text-align: center;
+      --hero-p: 0;
+    }
+
+    .hero-ambient-glow {
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 520px;
+      height: 380px;
+      background: radial-gradient(circle, rgba(0, 103, 192, 0.18) 0%, rgba(16, 185, 129, 0.12) 45%, transparent 70%);
+      filter: blur(60px);
+      pointer-events: none;
+      z-index: 0;
+      animation: heroGlowPulse 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes heroGlowPulse {
+      0% { transform: translate(-50%, -50%) scale(0.92); opacity: 0.65; }
+      100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.95; }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 840px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.35rem;
+      transform: translateY(calc(var(--hero-p, 0) * -35px));
+      opacity: calc(1 - var(--hero-p, 0) * 1.45);
+      transition: opacity 0.05s linear;
+    }
+
+    .hero-logo-wrapper {
+      position: relative;
+      margin-bottom: 0.4rem;
+      transform-origin: center center;
+      transform: translateY(calc(var(--hero-p, 0) * -125px)) scale(calc(1 - var(--hero-p, 0) * 0.72));
+      transition: transform 0.05s linear;
+    }
+
+    .hero-logo-ring {
+      width: 138px;
+      height: 138px;
+      border-radius: 20px;
+      background: rgba(32, 32, 32, 0.88);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid var(--fluent-border);
+      box-shadow:
+        0 24px 55px -12px rgba(0, 0, 0, 0.85),
+        0 0 40px rgba(0, 103, 192, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.15rem;
+      position: relative;
+      animation: heroLogoFloat 5s ease-in-out infinite;
+    }
+
+    @keyframes heroLogoFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-7px); }
+    }
+
+    .hero-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 16px rgba(0, 103, 192, 0.25));
+      image-rendering: auto;
+      image-rendering: high-quality;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      transform: translateZ(0);
+    }
+
+    .hero-status-pill {
+      position: absolute;
+      bottom: -11px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      background: rgba(24, 24, 24, 0.95);
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6), 0 0 10px rgba(16, 185, 129, 0.2);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--accent-emerald);
+      white-space: nowrap;
+    }
+
+    .hero-live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
+      animation: heroDotPulse 2s infinite ease-in-out;
+    }
+
+    @keyframes heroDotPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.6; }
+    }
+
+    .hero-badge-capsule {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.9rem;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--fluent-border);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    .hero-title {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: #ffffff;
+      margin: 0;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 680px;
+      margin: 0;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+      margin-top: 0.6rem;
+    }
+
+    .hero-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.65rem 1.45rem;
+      border-radius: 4px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #05140d;
+      font-weight: 700;
+      font-size: 0.88rem;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      box-shadow: 0 8px 20px -4px rgba(16, 185, 129, 0.4);
+      transition: background 0.18s, transform 0.18s, box-shadow 0.18s;
+    }
+
+    .hero-btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 25px -4px rgba(16, 185, 129, 0.55);
+    }
+
+    .hero-btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.65rem 1.45rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 0.88rem;
+      border: 1px solid var(--fluent-border);
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.5);
+      transition: background 0.18s, border-color 0.18s, transform 0.18s;
+    }
+
+    .hero-btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .hero-scroll-indicator {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 1.8rem;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      letter-spacing: 0.02em;
+      transition: color 0.2s;
+    }
+
+    .hero-scroll-indicator:hover {
+      color: var(--text-muted);
+    }
+
+    .hero-chevron-bounce {
+      animation: chevronBounce 1.8s infinite ease-in-out;
+    }
+
+    @keyframes chevronBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(6px); }
+    }
+
+    .point-section {
+      min-height: 94vh;
+      display: grid;
+      grid-template-columns: 1fr;
+      align-items: center;
+      gap: 2.8rem;
+      padding: 4.8rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      --p: 0;
+    }
+
+    @media (min-width: 960px) {
+      .point-section {
+        grid-template-columns: 0.85fr 1.15fr;
+        gap: 4.5rem;
+      }
+    }
+
+    .point-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 1.15rem;
+      transform: translateY(calc((0.5 - var(--p)) * 20px));
+      transition: transform 0.1s ease-out;
+    }
+
+    .point-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--win-accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 650;
+    }
+
+    .point-copy h2 {
+      font-size: clamp(2.1rem, 3.4vw, 3rem);
+      letter-spacing: -0.03em;
+    }
+
+    .point-copy p {
+      font-size: 1.02rem;
+      max-width: 44ch;
+      line-height: 1.68;
+    }
+
+    .point-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.55rem;
+      margin-top: 0.4rem;
+    }
+
+    /* ==========================================================================
+       SCHEDA GRAFICA WINDOWS 11 FLUENT (CAPTION CONTROLS: —, ▢, ✕)
+       ========================================================================== */
+    .graphic-card {
+      background: var(--win-card);
+      backdrop-filter: blur(32px) saturate(180%);
+      -webkit-backdrop-filter: blur(32px) saturate(180%);
+      border: 1px solid var(--win-border);
+      border-radius: 10px; /* Windows 11 Window Radius */
+      padding: 1.5rem;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 24px 60px -15px rgba(0, 0, 0, 0.9),
+        0 45px 95px -25px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      position: relative;
+      overflow: hidden;
+      transform:
+        perspective(1200px)
+        rotateX(calc((0.5 - var(--p)) * 14deg))
+        rotateY(calc((0.5 - var(--p)) * -8deg))
+        scale(calc(0.96 + sin(var(--p) * 3.14159) * 0.04));
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .graphic-card:hover {
+      border-color: var(--win-border-light);
+    }
+
+    /* Windows 11 Native Titlebar Header */
+    .win-titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 0.85rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--win-border);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .win-title-left {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      color: #d1d7e5;
+      font-weight: 600;
+    }
+
+    .win-app-icon {
+      width: 14px;
+      height: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--win-accent);
+      flex-shrink: 0;
+      shape-rendering: geometricPrecision;
+    }
+
+    /* Controlli Finestra Windows 11 (Minimize, Maximize, Close) */
+    .win-caption-controls {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .win-cap-btn {
+      width: 28px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      transition: all 0.12s ease;
+      background: transparent;
+      border: none;
+    }
+
+    .win-cap-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+    }
+
+    .win-cap-btn.close:hover {
+      background: var(--win-red) !important;
+      color: #ffffff !important;
+    }
+
+    .status-pill-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--win-emerald);
+      font-size: 0.67rem;
+      font-weight: 650;
+      letter-spacing: 0.03em;
+    }
+
+    .pulsing-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--win-emerald);
+      box-shadow: 0 0 8px var(--win-emerald);
+      animation: pulseGlow 1.8s infinite ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.75); }
+    }
+
+    .graphic-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 1rem;
+      margin-top: 1.25rem;
+      border-top: 1px solid var(--win-border);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    .scroll-scrub {
+      width: 100px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .scroll-scrub-fill {
+      height: 100%;
+      width: calc(var(--p) * 100%);
+      background: linear-gradient(90deg, var(--win-accent), var(--win-emerald));
+      box-shadow: 0 0 8px var(--win-emerald);
+    }
+
+    /* --------------------------------------------------------------------------
+       CARD 01: DASHBOARD CON 3 KPI & GRAFICO UTILE MENSILE FLUENT
+       -------------------------------------------------------------------------- */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .fluent-card-inner {
+      background: var(--win-card-inner);
+      border: 1px solid var(--win-border);
+      border-radius: 6px;
+      padding: 0.95rem;
+      position: relative;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .kpi-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.35rem;
+    }
+
+    .kpi-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .kpi-value {
+      font-size: 1.35rem;
+      font-weight: 750;
+      color: #fff;
+      margin-bottom: 0.25rem;
+      line-height: 1.1;
+      font-family: var(--font-mono);
+    }
+
+    .kpi-footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.68rem;
+    }
+
+    .kpi-trend {
+      font-family: var(--font-mono);
+      font-size: 0.64rem;
+      font-weight: 600;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+    }
+    .kpi-trend.positive {
+      color: var(--win-emerald);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .kpi-trend.neutral {
+      color: var(--win-accent);
+      background: rgba(0, 120, 212, 0.12);
+      border: 1px solid rgba(0, 120, 212, 0.25);
+    }
+
+    .chart-container-card {
+      background: var(--win-card-inner);
+      border: 1px solid var(--win-border);
+      border-radius: 6px;
+      padding: 1.1rem 1.1rem 0.8rem;
+      position: relative;
+    }
+
+    .chart-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.85rem;
+    }
+
+    .timeframe-pills {
+      display: flex;
+      gap: 3px;
+      background: var(--win-input);
+      padding: 2px;
+      border-radius: 4px;
+      border: 1px solid var(--win-border);
+    }
+
+    .timeframe-pill {
+      padding: 2px 7px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 3px;
+    }
+    .timeframe-pill.active {
+      background: var(--win-border);
+      color: #fff;
+    }
+
+    /* --------------------------------------------------------------------------
+       CARD 02: MAGAZZINO, TABELLA FLUENT, DRAG & DROP BUNDLE E SIDE-DRAWER
+       -------------------------------------------------------------------------- */
+    .table-layout-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .table-toolbar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--win-border);
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .table-tab-chips {
+      display: flex;
+      gap: 4px;
+    }
+
+    .table-chip {
+      padding: 0.25rem 0.65rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      border-radius: 4px;
+      background: var(--win-card-inner);
+      color: var(--text-muted);
+      border: 1px solid var(--win-border);
+    }
+    .table-chip.active {
+      background: var(--win-accent);
+      border-color: var(--win-accent);
+      color: #fff;
+    }
+
+    .inventory-split-deck {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 0.85rem;
+    }
+
+    .table-rows-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .table-row-item {
+      background: var(--win-card-inner);
+      border: 1px solid var(--win-border);
+      border-radius: 6px;
+      padding: 0.65rem 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+
+    .table-row-item.highlighted {
+      border-color: var(--win-emerald);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+    }
+
+    .item-sku-sub {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 0.1rem;
+    }
+
+    .drawer-preview-card {
+      background: var(--win-card-inner);
+      border: 1px solid var(--win-border);
+      border-radius: 6px;
+      padding: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .drawer-badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.66rem;
+      font-weight: 650;
+      padding: 0.15rem 0.5rem;
+      border-radius: 3px;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--win-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .bundle-tray-zone {
+      padding: 0.85rem 1.05rem;
+      border-radius: 6px;
+      background: rgba(0, 120, 212, 0.05);
+      border: 1px dashed rgba(0, 120, 212, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* --------------------------------------------------------------------------
+       CARD 03: GMAIL IMAP + GEMINI AI LASER SCANNER HD
+       -------------------------------------------------------------------------- */
+    .email-scanner-card {
+      background: var(--win-card-inner);
+      border: 1px solid var(--win-border);
+      border-radius: 6px;
+      padding: 1.15rem;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 1.1rem;
+    }
+
+    .scan-laser-beam {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(var(--laser-p, var(--p)) * 100%);
+      height: 2px;
+      background: linear-gradient(90deg, transparent 5%, var(--win-accent) 25%, #fff 50%, var(--win-purple) 75%, transparent 95%);
+      box-shadow: 0 0 20px 4px rgba(0, 120, 212, 0.4), 0 0 6px 1px #fff;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .email-sender-profile {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 0.75rem;
+      margin-bottom: 0.85rem;
+      border-bottom: 1px solid var(--win-border);
+    }
+
+    .sender-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      background: #000;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .email-receipt-lines {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+
+    .extracted-fields-deck {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.65rem;
+    }
+
+    .extracted-node {
+      background: var(--win-card-inner);
+      border: 1px solid var(--win-border);
+      border-radius: 6px;
+      padding: 0.7rem 0.9rem;
+      font-family: var(--font-mono);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    /* --------------------------------------------------------------------------
+       CARD 04: STUDIO AUDIO VOCALE & STREAMING GEMINI
+       -------------------------------------------------------------------------- */
+    .audio-studio-card {
+      background: var(--win-card-inner);
+      border: 1px solid var(--win-border);
+      border-radius: 6px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .bars-visualizer-deck {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      padding: 0 0.5rem;
+      background: var(--win-input);
+      border-radius: 4px;
+      border: 1px solid var(--win-border);
+    }
+
+    .spec-bar {
+      flex: 1;
+      height: 12%;
+      border-radius: 2px;
+      background: linear-gradient(to top, var(--win-accent), var(--win-purple), #38bdf8);
+      box-shadow: 0 0 6px rgba(0, 120, 212, 0.35);
+      transition: height 0.05s ease-out;
+    }
+
+    .speech-transcript-box {
+      padding: 0.85rem 1.05rem;
+      border-radius: 6px;
+      background: var(--win-input);
+      border: 1px solid var(--win-border);
+      font-size: 0.88rem;
+      min-height: 3.4rem;
+      display: flex;
+      align-items: center;
+      line-height: 1.5;
+    }
+
+    .ai-cursor {
+      display: inline-block;
+      width: 7px;
+      height: 14px;
+      background: var(--win-accent);
+      margin-left: 3px;
+      vertical-align: middle;
+      animation: blinkCursor 0.8s infinite;
+    }
+
+    @keyframes blinkCursor {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* --------------------------------------------------------------------------
+       CARD 05: PROFONDITÀ DI MERCATO EBAY & GAUGE MARGINE HD
+       -------------------------------------------------------------------------- */
+    .ebay-market-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 0.95rem;
+    }
+
+    .market-box-panel {
+      background: var(--win-card-inner);
+      border: 1px solid var(--win-border);
+      border-radius: 6px;
+      padding: 1.1rem;
+    }
+
+    .hist-container {
+      height: 112px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 7px;
+      padding-top: 1.1rem;
+      border-bottom: 1px solid var(--win-border);
+      position: relative;
+    }
+
+    .hist-bar-col {
+      flex: 1;
+      border-radius: 2px 2px 0 0;
+      background: rgba(255, 255, 255, 0.12);
+      transition: height 0.08s ease-out;
+      position: relative;
+    }
+
+    .hist-bar-col.accent {
+      background: linear-gradient(to top, var(--win-amber), var(--win-emerald));
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+    }
+
+    .hist-col-count {
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--text-dim);
+    }
+
+    .gauge-progress-bar {
+      height: 8px;
+      background: var(--win-input);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+      border: 1px solid var(--win-border);
+    }
+
+    .gauge-fill {
+      height: 100%;
+      width: calc(var(--p) * 100%);
+      background: linear-gradient(90deg, var(--win-amber), var(--win-emerald));
+      box-shadow: 0 0 8px var(--win-emerald);
+    }
+
+    /* --------------------------------------------------------------------------
+       CARD 06: PIPELINE DEVOPS & STANDALONE .EXE ARTIFACT
+       -------------------------------------------------------------------------- */
+    .devops-steps-deck {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .step-console-row {
+      background: var(--win-card-inner);
+      border: 1px solid var(--win-border);
+      border-radius: 6px;
+      padding: 0.85rem 1.05rem;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+
+    .artifact-binary-card {
+      margin-top: 1rem;
+      padding: 1.05rem 1.25rem;
+      border-radius: 6px;
+      background: rgba(16, 185, 129, 0.05);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 8px 24px -6px rgba(16, 185, 129, 0.12);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .artifact-binary-card:hover {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.55);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px -4px rgba(16, 185, 129, 0.24);
+    }
+
+    .download-action {
+      cursor: pointer !important;
+      text-decoration: none !important;
+    }
+
+    /* Floating Download Toast Feedback (Windows 11 Fluent) */
+    .download-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 0.65rem 1.15rem;
+      background: rgba(20, 27, 42, 0.96);
+      border: 1px solid var(--win-emerald, #10b981);
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 0.76rem;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 16px rgba(16, 185, 129, 0.22);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(14px) scale(0.96);
+      pointer-events: none;
+      transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .download-toast.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    /* Interactive Controls & Live Demo States (Windows 11 Fluent) */
+    .interactive-btn {
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      user-select: auto !important;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .interactive-btn:hover {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border-color: var(--text-main) !important;
+      transform: translateY(-1px);
+    }
+    .interactive-btn:active {
+      transform: translateY(0);
+    }
+    .interactive-btn.recording {
+      background: rgba(244, 63, 94, 0.2) !important;
+      border-color: rgba(244, 63, 94, 0.6) !important;
+      color: #fda4af !important;
+    }
+
+    /* Live Audio Studio Demo Styling */
+    .audio-studio-card {
+      cursor: pointer;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .audio-studio-card:hover {
+      border-color: rgba(0, 120, 212, 0.55);
+    }
+    .audio-studio-card.recording {
+      border-color: rgba(244, 63, 94, 0.55);
+      box-shadow: 0 0 24px -4px rgba(244, 63, 94, 0.3);
+    }
+    .spec-bar {
+      transition: height 0.08s ease, background 0.2s;
+    }
+
+    /* Email IMAP & Laser Scanner Interactive Styling (Windows 11 Fluent) */
+    .email-scanner-card {
+      cursor: pointer;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .email-scanner-card:hover {
+      border-color: rgba(168, 85, 247, 0.55);
+    }
+    .email-scanner-card.scanning {
+      border-color: rgba(168, 85, 247, 0.75);
+      box-shadow: 0 0 24px -4px rgba(168, 85, 247, 0.35);
+    }
+    .email-receipt-lines div {
+      padding: 0.12rem 0.35rem;
+      border-radius: 3px;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .email-presets-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 0.75rem;
+    }
+    .email-preset-chip {
+      cursor: pointer;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      background: var(--win-input, #1a2234);
+      border: 1px solid var(--win-border, #212c42);
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+    .email-preset-chip:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--win-purple);
+      color: #ffffff;
+    }
+    .email-preset-chip.active {
+      background: rgba(168, 85, 247, 0.16);
+      border-color: var(--win-purple);
+      color: #d8b4fe;
+      font-weight: 600;
+    }
+
+    /* eBay Interactive Search & Preset Chips (Windows 11 Fluent) */
+    .ebay-search-row {
+      margin-bottom: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+    .ebay-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--win-input, #1a2234);
+      border: 1px solid var(--win-border, #212c42);
+      border-radius: 6px;
+      padding: 0.35rem 0.65rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .ebay-input-wrap:focus-within {
+      border-color: var(--win-amber, #f59e0b);
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+    }
+    .ebay-input-wrap svg {
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .ebay-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      width: 100%;
+    }
+    .ebay-input::placeholder {
+      color: var(--text-dim);
+    }
+    .ebay-run-btn {
+      background: var(--win-amber, #f59e0b);
+      color: #0c101b;
+      border: none;
+      border-radius: 4px;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font-win);
+      transition: opacity 0.15s, transform 0.15s;
+      flex-shrink: 0;
+    }
+    .ebay-run-btn:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+    .ebay-run-btn:active {
+      transform: translateY(0);
+    }
+    .ebay-presets-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .ebay-preset-chip {
+      font-family: var(--font-mono);
+      font-size: 0.67rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--win-border, #212c42);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .ebay-preset-chip:hover {
+      color: #ffffff;
+      border-color: var(--win-amber, #f59e0b);
+      background: rgba(245, 158, 11, 0.08);
+    }
+    .ebay-preset-chip.active {
+      color: var(--win-amber, #f59e0b);
+      border-color: var(--win-amber, #f59e0b);
+      background: rgba(245, 158, 11, 0.14);
+      font-weight: 650;
+    }
+    .hist-bar-col {
+      transition: height 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s;
+    }
+
+    footer {
+      text-align: center;
+      padding: 3.5rem 2rem;
+      border-top: 1px solid var(--win-border);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--text-dim);
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    /* ==========================================================================
+       RESPONSIVE MOBILE HEADER & VIEWPORT ADAPTATION (< 860px / < 380px)
+       ========================================================================== */
+    @media (max-width: 860px) {
+      .fluent-header {
+        top: 0.65rem;
+        width: calc(100% - 1.25rem);
+        max-width: 440px;
+        padding: 0.35rem 0.5rem 0.35rem 0.75rem;
+        gap: 0.45rem;
+        justify-content: space-between;
+        border-radius: 10px;
+      }
+
+      .fluent-header .divider,
+      .fluent-header .ui-select {
+        display: none !important;
+      }
+
+      .fluent-header .brand-mark {
+        gap: 0.35rem;
+        font-size: 0.82rem;
+        flex-shrink: 0;
+      }
+
+      .fluent-header .ui-btn {
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .fluent-header .ui-btn #hdr-download-btn {
+        display: none !important;
+      }
+
+      .fluent-header .ui-btn .rocket-icon-svg {
+        margin: 0;
+        width: 14px;
+        height: 14px;
+      }
+
+      .os-switch-capsule {
+        padding: 2px 3px;
+        gap: 2px;
+        flex-shrink: 0;
+      }
+
+      .os-chip-active, 
+      .os-chip-target {
+        padding: 2px 6px;
+        font-size: 0.66rem;
+        gap: 3px;
+      }
+
+      .os-switch-mid {
+        display: none;
+      }
+
+      .page-wrap {
+        padding: 4.5rem 1rem 5rem;
+      }
+
+      .hero-title {
+        font-size: 2.1rem !important;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .fluent-header {
+        width: calc(100% - 0.75rem);
+        padding: 0.3rem 0.4rem 0.3rem 0.55rem;
+        gap: 0.3rem;
+      }
+
+      .brand-mark .brand-ver {
+        display: none;
+      }
+
+      .lang-btn {
+        padding: 2px 5px;
+        font-size: 0.65rem;
+      }
+
+      .os-chip-active,
+      .os-chip-target {
+        padding: 2px 4px;
+        font-size: 0.62rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Scroll Progress Indicator -->
+  <div id="progress" aria-hidden="true"></div>
+
+  <!-- Header Windows 11 Fluent con Cerchio Verde, Selettore Lingua & Link Stile macOS -->
+  <header class="fluent-header">
+    <div class="brand-mark">
+      <span class="brand-dot" title="Database Locale Online"></span>
+      <span>RSM</span>
+      <span class="brand-ver" style="color:var(--text-dim); font-family:var(--font-mono); font-size:0.72rem;">v1.5.0</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="ui-select mock-ctrl" aria-disabled="true"><span>CustomTkinter · Windows 11</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+    <div class="ui-select mock-ctrl" aria-disabled="true"><span>leorusso34/RSM</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+
+    <div class="divider"></div>
+
+    <!-- Selettore Lingua Bilingue IT / EN -->
+    <div class="lang-switcher-wrap">
+      <button type="button" class="lang-btn active" id="btn-lang-it" onclick="setLanguage('it')">IT</button>
+      <button type="button" class="lang-btn" id="btn-lang-en" onclick="setLanguage('en')">EN</button>
+    </div>
+
+    <!-- Pulsante Switcher OS Interattivo (Windows 11 -> macOS) -->
+    <a href="index.html" class="os-switch-capsule" id="os-switcher-link" title="Passa allo stile macOS Retina per confrontare">
+      <span class="os-chip-target">
+        <svg class="os-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.93c.58-.7 1.01-1.68 1.01-2.66 0-.13-.01-.26-.04-.38-1.02.04-2.25.68-2.98 1.49-.53.58-.99 1.57-.99 2.56 0 .14.02.28.04.41.13.01.27.02.4.02.97 0 2.05-.62 2.56-1.42z"/>
+        </svg>
+        <span>macOS</span>
+      </span>
+      <span class="os-switch-mid" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m16 3 4 4-4 4"/>
+          <path d="M20 7H4"/>
+          <path d="m8 21-4-4 4-4"/>
+          <path d="M4 17h16"/>
+        </svg>
+      </span>
+      <span class="os-chip-active">
+        <span class="os-live-dot" aria-hidden="true"></span>
+        <svg class="os-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
+          <rect x="2" y="2" width="9.2" height="9.2" rx="0.75"/>
+          <rect x="12.8" y="2" width="9.2" height="9.2" rx="0.75"/>
+          <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+          <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+        </svg>
+        <span>Win 11</span>
+      </span>
+    </a>
+
+    <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="ui-btn download-action" id="hdr-download-link" title="Scarica RSM.exe (v1.5.0) da GitHub Releases" target="_blank" rel="noopener noreferrer" onclick="triggerDownloadToast(event)"><svg class="btn-icon-svg rocket-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span id="hdr-download-btn">Scarica RSM.exe (v1.5.0)</span></a>
+  </header>
+
+  <main class="page-wrap">
+
+    <!-- ======================================================================
+         HERO INTRO SECTION — WINDOWS 11 FLUENT MICA AMBIENT FLOATING LOGO
+         ====================================================================== -->
+    <section class="hero-section" id="hero">
+      <div class="hero-ambient-glow" aria-hidden="true"></div>
+      
+      <div class="hero-content">
+        <!-- Floating Logo Stage with Glass Ring & Ambient Aura -->
+        <div class="hero-logo-wrapper" id="hero-logo-box">
+          <div class="hero-logo-ring">
+            <img src="assets/icon.png" srcset="assets/icon.png 1x, assets/icon_2048.png 2x" alt="RSM Master Logo" class="hero-logo-img" id="hero-logo-img" width="1024" height="1024" decoding="async">
+            <div class="hero-status-pill">
+              <span class="hero-live-dot" aria-hidden="true"></span>
+              <span id="hero-version-txt">v1.5.0 Standalone Ready</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Badges & Hero Copy -->
+        <div class="hero-eyebrow">
+          <span class="hero-badge-capsule" id="hero-badge-txt">⚡ Resell &amp; Inventory Cockpit · Gemini AI Powered</span>
+        </div>
+
+        <h1 class="hero-title" id="hero-title">
+          Controlla il tuo impero di rivendita.
+        </h1>
+
+        <p class="hero-subtitle" id="hero-subtitle">
+          Tracciamento giacenze multi-piattaforma, parsing intelligente fatture con Gemini 3.1 Flash e calcolo ROI in tempo reale. 100% offline su database SQLite.
+        </p>
+
+        <!-- Call to Action Buttons -->
+        <div class="hero-actions">
+          <button type="button" class="hero-btn-primary" id="hero-explore-btn" onclick="scrollToPoint1()">
+            <svg class="btn-icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m7 10 5 5 5-5"/>
+              <path d="M12 3v12"/>
+            </svg>
+            <span id="hero-explore-btn-txt">Esplora Funzionalità</span>
+          </button>
+          <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="hero-btn-secondary download-action" id="hero-download-btn" target="_blank" rel="noopener noreferrer" onclick="triggerDownloadToast(event)">
+            <svg class="btn-icon-svg rocket-icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+              <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+              <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+              <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+            </svg>
+            <span id="hero-download-btn-txt">Scarica RSM.exe (v1.5.0)</span>
+          </a>
+        </div>
+
+        <!-- Scroll down prompt indicator -->
+        <div class="hero-scroll-indicator" onclick="scrollToPoint1()">
+          <span id="hero-scroll-hint">Scrolla per scoprire le 6 innovazioni</span>
+          <svg class="hero-chevron-bounce" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         PUNTO 01 — DASHBOARD & KPI STATISTICI IN TEMPO REALE
+         ====================================================================== -->
+    <section class="point-section" data-point="1">
+      <div class="point-copy">
+        <div class="point-eyebrow">
+          <span id="p1-eyebrow">01 / 06 — DASHBOARD &amp; KPI STATISTICI</span>
+        </div>
+        <h2 id="p1-title">Ogni vendita disegna il tuo bilancio in tempo reale.</h2>
+        <p id="p1-desc">
+          Il modulo <code>dashboard_view.py</code> e l'engine statistico calcolano istantaneamente capitale investito, valore reale di magazzino, utile netto generato e ROI effettivo, tracciando l’andamento mensile e la ripartizione per piattaforma di vendita.
+        </p>
+        <div class="point-controls">
+          <button class="ui-btn mock-ctrl" type="button" tabindex="-1" aria-disabled="true"><svg class="btn-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg><span id="p1-ctrl-1">Vista KPI Attiva</span></button>
+          <div class="ui-select mock-ctrl" aria-disabled="true"><span id="p1-ctrl-2">Canali: ["StockX", "Vinted", "eBay"]</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="ui-select mock-ctrl" aria-disabled="true"><span id="p1-ctrl-3">Anno: 2026</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+      </div>
+
+      <!-- GRAFICA 01: Finestra Windows 11 Fluent con Controlli Finestra —, ▢, ✕ -->
+      <div class="graphic-card">
+        <div class="win-titlebar">
+          <div class="win-title-left">
+            <svg class="win-app-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+              <rect x="2" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+            </svg>
+            <span id="p1-topbar-title">RSM — Dashboard Finanziaria (CustomTkinter)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <div class="status-pill-live">
+              <span class="pulsing-dot"></span>
+              <span>LIVE SYNC</span>
+            </div>
+            <!-- Controlli Finestra Windows 11 -->
+            <div class="win-caption-controls">
+              <button class="win-cap-btn" title="Riduci a icona">—</button>
+              <button class="win-cap-btn" title="Ingrandisci">▢</button>
+              <button class="win-cap-btn close" title="Chiudi">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="fluent-card-inner">
+            <div class="kpi-card-header">
+              <span class="kpi-title" id="kpi-lbl-invested">Capitale Investito</span>
+              <div class="kpi-icon-badge" style="color:var(--win-accent);">
+                <svg class="ui-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/><line x1="6" x2="10" y1="15" y2="15"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value num" id="p1-invested">€ 0,00</div>
+            <div class="kpi-footer-row">
+              <span class="kpi-trend neutral">+12.4%</span>
+              <span style="color:var(--text-dim);" id="kpi-sub-invested">Spesa ultimo mese</span>
+            </div>
+          </div>
+
+          <div class="fluent-card-inner">
+            <div class="kpi-card-header">
+              <span class="kpi-title" id="kpi-lbl-stock">Valore Magazzino</span>
+              <div class="kpi-icon-badge" style="color:var(--win-emerald);">
+                <svg class="ui-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value num" id="p1-stock" style="color:var(--win-emerald);">€ 0,00</div>
+            <div class="kpi-footer-row">
+              <span class="kpi-trend positive">+8.6%</span>
+              <span style="color:var(--text-dim);" id="kpi-sub-stock">Stima realizzo</span>
+            </div>
+          </div>
+
+          <div class="fluent-card-inner">
+            <div class="kpi-card-header">
+              <span class="kpi-title" id="kpi-lbl-profit">Profitto Netto</span>
+              <div class="kpi-icon-badge" style="color:var(--win-purple);">
+                <svg class="ui-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              </div>
+            </div>
+            <div class="kpi-value num" id="p1-profit" style="color:var(--win-emerald);">+ € 0</div>
+            <div class="kpi-footer-row">
+              <span class="kpi-trend positive" id="p1-roi">+0% ROI</span>
+              <span style="color:var(--text-dim);" id="kpi-sub-profit">Netto commissioni</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-container-card">
+          <div class="chart-header-row">
+            <div>
+              <div style="font-size:0.82rem; font-weight:700; color:#fff;" id="chart-lbl-title">Andamento Profitto Mensile (€)</div>
+              <div style="font-size:0.7rem; color:var(--text-dim);" id="chart-lbl-sub">Utili netti per ciascun mese di vendita</div>
+            </div>
+            <div class="timeframe-pills">
+              <span class="timeframe-pill active" id="pill-time-1">Anno 2026</span>
+              <span class="timeframe-pill" id="pill-time-2">6 Mesi</span>
+              <span class="timeframe-pill" id="pill-time-3">Tutto</span>
+            </div>
+          </div>
+
+          <svg viewBox="0 0 460 135" width="100%" height="135" style="overflow:visible;" shape-rendering="geometricPrecision">
+            <defs>
+              <linearGradient id="p1GradWin" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#0078d4" />
+                <stop offset="50%" stop-color="#8b5cf6" />
+                <stop offset="100%" stop-color="#10b981" />
+              </linearGradient>
+              <linearGradient id="p1AreaWin" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#10b981" stop-opacity="0.25" />
+                <stop offset="60%" stop-color="#0078d4" stop-opacity="0.06" />
+                <stop offset="100%" stop-color="#10b981" stop-opacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            <line x1="15" y1="20" x2="445" y2="20" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 3" />
+            <line x1="15" y1="60" x2="445" y2="60" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 3" />
+            <line x1="15" y1="100" x2="445" y2="100" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 3" />
+            <line x1="15" y1="120" x2="445" y2="120" stroke="rgba(255,255,255,0.08)" />
+
+            <path
+              d="M 18 112 C 90 102, 135 74, 195 78 C 255 82, 295 40, 360 30 C 395 26, 420 16, 442 10 L 442 120 L 18 120 Z"
+              fill="url(#p1AreaWin)"
+              style="opacity: var(--p);"
+            />
+
+            <path
+              id="p1-path"
+              d="M 18 112 C 90 102, 135 74, 195 78 C 255 82, 295 40, 360 30 C 395 26, 420 16, 442 10"
+              fill="none"
+              stroke="url(#p1GradWin)"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-dasharray="500"
+              style="stroke-dashoffset: calc(500 - var(--p) * 500);"
+            />
+
+            <circle class="p1-node" cx="18" cy="112" r="4" fill="#0078d4" stroke="#fff" stroke-width="1.5" />
+            <circle class="p1-node" cx="106" cy="94" r="4" fill="#0078d4" stroke="#fff" stroke-width="1.5" />
+            <circle class="p1-node" cx="195" cy="78" r="4" fill="#8b5cf6" stroke="#fff" stroke-width="1.5" />
+            <circle class="p1-node" cx="280" cy="52" r="4" fill="#10b981" stroke="#fff" stroke-width="1.5" />
+            <circle class="p1-node" cx="360" cy="30" r="4" fill="#10b981" stroke="#fff" stroke-width="1.5" />
+            <circle class="p1-node" cx="442" cy="10" r="5" fill="#10b981" stroke="#fff" stroke-width="1.5" />
+          </svg>
+        </div>
+
+        <div class="graphic-footer">
+          <span id="p1-footer-months">MAG · GIU · LUG · AGO · SET · OTT 2026</span>
+          <div class="scroll-scrub"><div class="scroll-scrub-fill"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         PUNTO 02 — MAGAZZINO, TABELLA FLUENT, DRAG & DROP BUNDLE E SIDE-DRAWER
+         ====================================================================== -->
+    <section class="point-section" data-point="2">
+      <div class="point-copy">
+        <div class="point-eyebrow">
+          <span id="p2-eyebrow">02 / 06 — MAGAZZINO &amp; VENDITE MULTIPLE</span>
+        </div>
+        <h2 id="p2-title">Dal pre-ordine alla vendita multipla con un trascinamento.</h2>
+        <p id="p2-desc">
+          I 5 stati del database (<code>In Stock</code>, <code>Pre-ordine</code>, <code>Venduto</code>, <code>Completato</code>) convivono in una tabella unificata con ricerca globale. Trascina più lotti nello slot <strong>Bundle</strong> per aggregare commissioni e calcolare l'utile netto, oppure consulta la scheda logistica nel <strong>Side-Drawer</strong> laterale.
+        </p>
+        <div class="point-controls">
+          <button class="ui-btn ghost mock-ctrl" type="button" tabindex="-1" aria-disabled="true"><svg class="btn-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg><span id="p2-ctrl-1">Crea Bundle</span></button>
+          <div class="ui-select mock-ctrl" aria-disabled="true"><span id="p2-ctrl-2">Filtri: In Magazzino (24)</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="ui-select mock-ctrl" aria-disabled="true"><span id="p2-ctrl-3">Drawer: Cronistoria Attiva</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+      </div>
+
+      <!-- GRAFICA 02: Finestra Windows 11 Fluent con Split View -->
+      <div class="graphic-card">
+        <div class="win-titlebar">
+          <div class="win-title-left">
+            <svg class="win-app-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+              <rect x="2" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+            </svg>
+            <span id="p2-topbar-title">RSM — Gestione Magazzino &amp; Bundle</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <div class="status-pill-live" style="background:rgba(0,120,212,0.12); border-color:rgba(0,120,212,0.3); color:var(--win-accent);">
+              <span id="p2-badge">1/3 NEL BUNDLE</span>
+            </div>
+            <div class="win-caption-controls">
+              <button class="win-cap-btn">—</button>
+              <button class="win-cap-btn">▢</button>
+              <button class="win-cap-btn close">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-layout-wrap">
+          <div class="table-toolbar-head">
+            <div class="table-tab-chips">
+              <span class="table-chip active" id="tab-chip-1">Tutti (122)</span>
+              <span class="table-chip" id="tab-chip-2">Magazzino (24)</span>
+              <span class="table-chip" id="tab-chip-3">Pre-ordini (6)</span>
+              <span class="table-chip" id="tab-chip-4">Vendite Attive (8)</span>
+            </div>
+            <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim); display:flex; align-items:center; gap:0.35rem;"><svg class="chip-icon-svg search-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/></svg><span id="table-search-hint">Cerca SKU, taglia, brand...</span></div>
+          </div>
+
+          <div class="inventory-split-deck">
+            <div class="table-rows-list" id="p2-list">
+              <div class="table-row-item highlighted" id="p2-row-1">
+                <div>
+                  <strong style="font-size:0.84rem; color:#fff;">Jordan 4 Retro SB Navy</strong>
+                  <div class="item-sku-sub">
+                    <span>EU 42.5</span> • <span>SNKRS Pass</span> • <span class="num">Costo € 225</span>
+                  </div>
+                </div>
+                <span class="drawer-badge-status" id="p2-st-1"><svg class="chip-icon-svg check-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Nel Bundle</span>
+              </div>
+
+              <div class="table-row-item" id="p2-row-2">
+                <div>
+                  <strong style="font-size:0.84rem; color:#fff;">Pokémon Prismatic Evolutions ETB</strong>
+                  <div class="item-sku-sub">
+                    <span>Box Sigillato (×3)</span> • <span>GameStop</span> • <span class="num">Costo € 150</span>
+                  </div>
+                </div>
+                <span class="table-chip" id="p2-st-2" style="font-size:0.65rem;"><svg class="chip-icon-svg clock-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> In Magazzino</span>
+              </div>
+
+              <div class="table-row-item" id="p2-row-3">
+                <div>
+                  <strong style="font-size:0.84rem; color:#fff;">Nike SB Dunk Low Travis Scott</strong>
+                  <div class="item-sku-sub">
+                    <span>EU 43.0</span> • <span>Slam Jam</span> • <span class="num">Costo € 160</span>
+                  </div>
+                </div>
+                <span class="table-chip" id="p2-st-3" style="font-size:0.65rem;"><svg class="chip-icon-svg clock-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Pre-ordine</span>
+              </div>
+            </div>
+
+            <!-- Side-Drawer Mini Overlay -->
+            <div class="drawer-preview-card">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                  <span class="drawer-badge-status" id="drawer-badge-txt">In Magazzino</span>
+                  <span style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-dim);">ID #RSM-42</span>
+                </div>
+                <div style="font-size:0.82rem; font-weight:700; color:#fff;">Jordan 4 SB Navy</div>
+                <div style="font-size:0.68rem; color:var(--text-muted);">Nike • Sneaker DSWT</div>
+
+                <div style="margin-top:0.6rem; display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; font-family:var(--font-mono); font-size:0.68rem;">
+                  <div style="background:var(--win-input); padding:0.3rem 0.45rem; border-radius:4px;">
+                    <div style="color:var(--text-dim);" id="drawer-lbl-buy">Acquisto</div>
+                    <div style="font-weight:700; color:#fff;">€ 225,00</div>
+                  </div>
+                  <div style="background:var(--win-input); padding:0.3rem 0.45rem; border-radius:4px;">
+                    <div style="color:var(--text-dim);" id="drawer-lbl-sell">Stima Vendita</div>
+                    <div style="font-weight:700; color:var(--win-emerald);">€ 440,00</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:0.6rem; display:flex; gap:0.35rem;">
+                <span class="table-chip" style="font-size:0.64rem; flex:1; text-align:center; display:flex; align-items:center; justify-content:center; gap:0.25rem;" id="drawer-btn-lookup"><svg class="chip-icon-svg search-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/></svg> <span id="drawer-btn-lookup-txt">Lookup eBay</span></span>
+                <span class="table-chip active" style="font-size:0.64rem; flex:1; text-align:center;" id="drawer-btn-mark">Segna Venduto</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bundle-tray-zone">
+            <div>
+              <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--win-accent); font-weight:600; display:flex; align-items:center; gap:0.3rem;"><svg class="chip-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg> <span id="bundle-slot-title">SLOT VENDITA MULTIPLA (BUNDLE)</span></div>
+              <div style="font-size:0.88rem; font-weight:650; margin-top:0.2rem; color:#fff;" id="p2-bundle-desc">Trascina gli articoli scorrendo...</div>
+              <div style="font-size:0.68rem; color:var(--text-dim); font-family:var(--font-mono); margin-top:0.1rem;" id="bundle-slot-sub">Spedizione combinata • Commissione piattaforma 9.5%</div>
+            </div>
+            <div style="text-align:right; font-family:var(--font-mono);">
+              <div style="font-size:0.68rem; color:var(--text-muted);" id="bundle-slot-net">UTILE NETTO BUNDLE</div>
+              <div style="font-size:1.35rem; font-weight:750; color:var(--win-emerald);" class="num" id="p2-bundle-profit">+ € 215,00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="graphic-footer">
+          <span id="p2-footer-note">DRAG &amp; DROP BIDIREZIONALE TRA SCHEDE ATTIVO</span>
+          <div class="scroll-scrub"><div class="scroll-scrub-fill"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         PUNTO 03 — SINCRONIZZAZIONE EMAIL ORDINI (GMAIL IMAP + GEMINI AI)
+         ====================================================================== -->
+    <section class="point-section" data-point="3">
+      <div class="point-copy">
+        <div class="point-eyebrow">
+          <span id="p3-eyebrow">03 / 06 — GMAIL IMAP + GEMINI AI</span>
+        </div>
+        <h2 id="p3-title">Il laser AI legge le tue email di conferma ordine.</h2>
+        <p id="p3-desc">
+          Configurato in <code>config.json</code> con la tua password per le app a 16 caratteri, <code>email_sync.py</code> si collega via SSL IMAP a Gmail, legge le ricevute in arrivo e usa <strong>Google Gemini</strong> per popolare automaticamente i Pre-ordini in SQLite.
+        </p>
+        <div class="point-controls">
+          <button class="ui-btn ghost interactive-btn" type="button" id="p3-sync-btn" onclick="runEmailSyncDemo()"><svg class="btn-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><span id="p3-ctrl-1">Sincronizza Email IMAP</span></button>
+          <div class="ui-select" style="pointer-events:none;"><span id="p3-ctrl-2">config.json: email_sync_address</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+      </div>
+
+      <div class="graphic-card">
+        <div class="win-titlebar">
+          <div class="win-title-left">
+            <svg class="win-app-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+              <rect x="2" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+            </svg>
+            <span>email_sync.py · IMAP SSL + Gemini Parser</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <div class="status-pill-live" id="p3-status-pill" style="background:rgba(139,92,246,0.12); border-color:rgba(139,92,246,0.3); color:var(--win-purple); cursor:pointer;" onclick="runEmailSyncDemo()" title="Clicca per testare la sincronizzazione IMAP">
+              <span id="p3-status">SCANSIONE AI...</span>
+            </div>
+            <div class="win-caption-controls">
+              <button class="win-cap-btn">—</button>
+              <button class="win-cap-btn">▢</button>
+              <button class="win-cap-btn close">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selettore Ricevute / Ordini Email (Windows 11 Fluent) -->
+        <div class="email-presets-row">
+          <span class="email-preset-chip active" id="chip-email-snkrs" onclick="selectEmailPreset('snkrs')">Nike SNKRS</span>
+          <span class="email-preset-chip" id="chip-email-confirmed" onclick="selectEmailPreset('confirmed')">Adidas Confirmed</span>
+          <span class="email-preset-chip" id="chip-email-supreme" onclick="selectEmailPreset('supreme')">Supreme NY</span>
+        </div>
+
+        <div class="email-scanner-card" id="p3-scanner-card" onclick="runEmailSyncDemo()" title="Clicca per avviare la scansione laser AI">
+          <div class="scan-laser-beam" id="p3-laser-beam"></div>
+
+          <div class="email-sender-profile">
+            <div style="display:flex; align-items:center; gap:0.65rem;">
+              <div class="sender-avatar" id="p3-sender-avatar">N</div>
+              <div>
+                <strong style="font-size:0.82rem; color:#fff;" id="p3-sender-name">Nike SNKRS</strong>
+                <span style="color:var(--win-accent); font-size:0.7rem; display:inline-flex; align-items:center; gap:0.25rem;"><svg class="chip-icon-svg check-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> <span id="email-verified-badge">Verificato</span></span>
+                <div style="font-size:0.68rem; color:var(--text-dim); font-family:var(--font-mono);" id="p3-sender-email">&lt;orders@nike.com&gt;</div>
+              </div>
+            </div>
+            <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim);" id="email-date-badge">Oggi, 10:14 · Ordine #IT-90412</div>
+          </div>
+
+          <div class="email-receipt-lines">
+            <div id="p3-line-1">Articolo Confermato: <strong>Jordan 4 Retro SB Navy (2026)</strong></div>
+            <div id="p3-line-2">Taglia Selezionata: <strong>EU 42.5</strong> — Quantità: <strong>2 paia</strong></div>
+            <div id="p3-line-3">Totale Addebitato: <strong>€ 450,00 (€ 225,00 cad.)</strong></div>
+            <div id="p3-line-4">Data Rilascio / Consegna: <strong>18 Ottobre 2026</strong></div>
+          </div>
+        </div>
+
+        <div class="extracted-fields-deck">
+          <div class="extracted-node" id="p3-f1">
+            <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim);">
+              <span id="schema-lbl-1">PRODOTTO RILEVATO</span>
+              <span style="color:var(--win-emerald);">99.8% AI</span>
+            </div>
+            <div style="font-size:0.78rem; font-weight:650; color:var(--text-main);" id="p3-v1">—</div>
+          </div>
+          <div class="extracted-node" id="p3-f2">
+            <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim);">
+              <span id="schema-lbl-2">TAGLIA &amp; QUANTITÀ</span>
+              <span style="color:var(--win-emerald);">99.4% AI</span>
+            </div>
+            <div style="font-size:0.78rem; font-weight:650; color:var(--text-main);" id="p3-v2">—</div>
+          </div>
+          <div class="extracted-node" id="p3-f3">
+            <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim);">
+              <span id="schema-lbl-3">COSTO UNITARIO</span>
+              <span style="color:var(--win-emerald);">100% AI</span>
+            </div>
+            <div style="font-size:0.78rem; font-weight:650; color:var(--text-main);" id="p3-v3">—</div>
+          </div>
+          <div class="extracted-node" id="p3-f4">
+            <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim);">
+              <span id="schema-lbl-4">DATA RILASCIO</span>
+              <span style="color:var(--win-emerald);">99.1% AI</span>
+            </div>
+            <div style="font-size:0.78rem; font-weight:650; color:var(--text-main);" id="p3-v4">—</div>
+          </div>
+        </div>
+
+        <div class="graphic-footer">
+          <span id="p3-footer-note">INSERIMENTO DIRETTO NEI PRE-ORDINI DI SQLITE</span>
+          <div class="scroll-scrub"><div class="scroll-scrub-fill"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         PUNTO 04 — ASSISTENTE VOCALE & GEMINI 3.1 FLASH LITE
+         ====================================================================== -->
+    <section class="point-section" data-point="4">
+      <div class="point-copy">
+        <div class="point-eyebrow">
+          <span id="p4-eyebrow">04 / 06 — VOCE IT &amp; GEMINI 3.1 FLASH LITE</span>
+        </div>
+        <h2 id="p4-title">Detta a voce in italiano. Gemini compila tutto.</h2>
+        <p id="p4-desc">
+          In <code>ai_dialog.py</code> e <code>speech_helper.py</code> premi l'icona microfono a 48kHz o scrivi una nota veloce: scorri per vedere lo spettrogramma vocale trascrivere la frase e popolare i campi con l'AI di Google Gemini.
+        </p>
+        <div class="point-controls">
+          <button class="ui-btn ghost interactive-btn" type="button" id="p4-mic-btn" onclick="toggleVoiceDemo()"><svg class="btn-icon-svg mic-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg><span id="p4-ctrl-1">Microfono 48kHz HD</span></button>
+          <div class="ui-select" style="pointer-events:none;"><span id="p4-ctrl-2">Modello: Gemini 3.1 Flash Lite</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+      </div>
+
+      <div class="graphic-card">
+        <div class="win-titlebar">
+          <div class="win-title-left">
+            <svg class="win-app-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+              <rect x="2" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+            </svg>
+            <span id="p4-topbar-title">src/ui/ai_dialog.py · Inserimento Rapido AI</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <div class="status-pill-live" id="p4-live-pill" onclick="toggleVoiceDemo()" style="background:rgba(0,120,212,0.12); border-color:rgba(0,120,212,0.3); color:var(--win-accent); cursor:pointer;" title="Clicca per avviare o fermare la simulazione vocale">
+              <span id="p4-topbar-stream" style="display:inline-flex; align-items:center; gap:0.35rem;"><svg class="chip-icon-svg mic-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg> <span id="p4-topbar-stream-txt">IT-IT 48kHz HD STREAM</span></span>
+            </div>
+            <div class="win-caption-controls">
+              <button class="win-cap-btn">—</button>
+              <button class="win-cap-btn">▢</button>
+              <button class="win-cap-btn close">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="audio-studio-card" id="p4-studio-card" onclick="toggleVoiceDemo()" title="Clicca per testare la trascrizione vocale AI">
+          <div class="bars-visualizer-deck" id="p4-bars">
+            <span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span>
+            <span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span>
+            <span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span>
+            <span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span>
+            <span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span>
+            <span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span>
+            <span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span>
+            <span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span>
+            <span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span><span class="spec-bar"></span>
+          </div>
+
+          <div class="speech-transcript-box">
+            <span style="color:#fff; font-weight:500;" id="p4-transcript">"Aggiungi..."</span>
+            <span class="ai-cursor" id="p4-cursor"></span>
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:0.5rem; font-family:var(--font-mono); font-size:0.72rem;" id="p4-tags">
+            <span class="table-chip" id="p4-t1"><svg class="chip-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg> Prodotto: ...</span>
+            <span class="table-chip" id="p4-t2"><svg class="chip-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.3 8.7 8.7 21.3c-1 1-2.5 1-3.4 0l-2.6-2.6c-1-1-1-2.5 0-3.4L15.3 2.7c1-1 2.5-1 3.4 0l2.6 2.6c1 1 1 2.5 0 3.4Z"/><path d="m7.5 10.5 2 2"/><path d="m10.5 7.5 2 2"/><path d="m13.5 4.5 2 2"/></svg> Taglia: ...</span>
+            <span class="table-chip" id="p4-t3"><svg class="chip-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12"/><path d="M4 14h9"/><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12a7.9 7.9 0 0 0 7.8 8 7.7 7.7 0 0 0 5.2-2"/></svg> Costo: ...</span>
+            <span class="table-chip" id="p4-t4"><svg class="chip-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg> Store: ...</span>
+          </div>
+        </div>
+
+        <div class="graphic-footer">
+          <span id="p4-footer-note">PARSING STRUTTURATO JSON &amp; VAD IN TEMPO REALE</span>
+          <div class="scroll-scrub"><div class="scroll-scrub-fill"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         PUNTO 05 — STIMA PREZZI DI MERCATO EBAY VIA CLOUDFLARE WORKER
+         ====================================================================== -->
+    <section class="point-section" data-point="5">
+      <div class="point-copy">
+        <div class="point-eyebrow">
+          <span id="p5-eyebrow">05 / 06 — EBAY API × CLOUDFLARE WORKER</span>
+        </div>
+        <h2 id="p5-title">Confronta il tuo costo con le vendite reali su eBay.</h2>
+        <p id="p5-desc">
+          <code>ebay_api.py</code> interroga le API ufficiali eBay passando dal proxy sicuro su <strong>Cloudflare Workers</strong> (chiave segreta protetta all'edge), calcolando prezzo minimo, medio, massimo e margine netto potenziale.
+        </p>
+        <div class="point-controls">
+          <button class="ui-btn ghost interactive-btn" type="button" id="p5-lookup-btn" onclick="runEbayLookup()"><svg class="btn-icon-svg search-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/></svg><span id="p5-ctrl-1">Lookup Prezzi eBay</span></button>
+          <div class="ui-select" style="pointer-events:none;"><span id="p5-ctrl-2">Proxy: rsm-proxy.workers.dev</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+      </div>
+
+      <div class="graphic-card">
+        <div class="win-titlebar">
+          <div class="win-title-left">
+            <svg class="win-app-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+              <rect x="2" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+            </svg>
+            <span>src/ui/ebay_price_dialog.py · Cloudflare Edge Proxy</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <div class="status-pill-live" id="p5-worker-pill" style="background:rgba(245,158,11,0.12); border-color:rgba(245,158,11,0.3); color:var(--win-amber); cursor:pointer;" onclick="runEbayLookup()" title="Interroga l'edge Cloudflare">
+              <span id="p5-worker-txt" style="display:inline-flex; align-items:center; gap:0.35rem;"><svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> WORKER PROXY · 12ms</span>
+            </div>
+            <div class="win-caption-controls">
+              <button class="win-cap-btn">—</button>
+              <button class="win-cap-btn">▢</button>
+              <button class="win-cap-btn close">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra di Ricerca Interattiva & Preset Sneakers (Windows 11 Fluent) -->
+        <div class="ebay-search-row">
+          <div class="ebay-input-wrap">
+            <svg class="search-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/></svg>
+            <input type="text" id="ebay-search-query" class="ebay-input" value="Jordan 4 Retro Military Black" placeholder="Cerca sneaker o prodotto su eBay..." onkeydown="if(event.key==='Enter') runEbayLookup()">
+            <button type="button" class="ebay-run-btn" id="ebay-search-submit" onclick="runEbayLookup()">Cerca</button>
+          </div>
+          <div class="ebay-presets-row">
+            <span class="ebay-preset-chip active" id="chip-preset-military" onclick="selectEbayPreset('military')">Jordan 4 Military Black</span>
+            <span class="ebay-preset-chip" id="chip-preset-canary" onclick="selectEbayPreset('canary')">Travis Scott Canary</span>
+            <span class="ebay-preset-chip" id="chip-preset-panda" onclick="selectEbayPreset('panda')">Dunk Low Panda</span>
+          </div>
+        </div>
+
+        <div class="ebay-market-grid">
+          <div class="market-box-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:0.69rem;">
+              <span style="color:var(--text-muted); font-weight:600;" id="ebay-box-dist-title">DISTRIBUZIONE PREZZI VENDUTI</span>
+              <span id="p5-samples" style="color:var(--win-emerald);">0 annunci</span>
+            </div>
+
+            <div class="hist-container" id="p5-hist">
+              <div class="hist-bar-col" data-h="34"><span class="hist-col-count">1</span></div>
+              <div class="hist-bar-col" data-h="50"><span class="hist-col-count">3</span></div>
+              <div class="hist-bar-col" data-h="72"><span class="hist-col-count">5</span></div>
+              <div class="hist-bar-col accent" data-h="98"><span class="hist-col-count">8</span></div>
+              <div class="hist-bar-col accent" data-h="88"><span class="hist-col-count">7</span></div>
+              <div class="hist-bar-col" data-h="58"><span class="hist-col-count">4</span></div>
+              <div class="hist-bar-col" data-h="38"><span class="hist-col-count">2</span></div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:0.67rem; color:var(--text-dim); margin-top:0.55rem;">
+              <span>Min €390</span>
+              <span style="color:var(--win-amber); font-weight:650;" id="ebay-hist-median">Mediana €440</span>
+              <span>Max €485</span>
+            </div>
+          </div>
+
+          <div class="market-box-panel" style="display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-dim); letter-spacing:0.04em;" id="ebay-avg-label">PREZZO MEDIO STIMATO</div>
+              <div style="font-family:var(--font-mono); font-size:1.85rem; font-weight:750; color:var(--win-amber); margin-top:0.25rem;" class="num" id="p5-avg">€ 225,00</div>
+            </div>
+
+            <div>
+              <div style="font-family:var(--font-mono); font-size:0.75rem; color:var(--win-emerald); font-weight:650;" class="num" id="p5-spread">Margine: + € 0,00 (0%)</div>
+              <div class="gauge-progress-bar">
+                <div class="gauge-fill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="graphic-footer">
+          <span id="p5-footer-note">ZERO TOKEN LEAK: AUTENTICAZIONE GESTITA ALL'EDGE</span>
+          <div class="scroll-scrub"><div class="scroll-scrub-fill"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         PUNTO 06 — CONFIG.JSON, PYTEST / RUFF CI & BUILD STANDALONE .EXE
+         ====================================================================== -->
+    <section class="point-section" data-point="6">
+      <div class="point-copy">
+        <div class="point-eyebrow">
+          <span id="p6-eyebrow">06 / 06 — QUALITÀ, CONFIG &amp; BUILD .EXE</span>
+        </div>
+        <h2 id="p6-title">Testato con Pytest e Ruff. Compilato in un unico `.exe`.</h2>
+        <p id="p6-desc">
+          Configurazione prioritaria in <code>config.json</code>, backup sicuro del database SQLite locale durante la compilazione, test unitari automatici e script <code>build.py</code> per generare il pacchetto standalone per Windows 10/11.
+        </p>
+        <div class="point-controls">
+          <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="ui-btn download-action" id="p6-ctrl-1-link" target="_blank" rel="noopener noreferrer" style="text-decoration:none; cursor:pointer;" onclick="triggerDownloadToast(event)"><svg class="btn-icon-svg rocket-icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span id="p6-ctrl-1">Scarica dist/RSM/RSM.exe</span></a>
+          <div class="ui-select mock-ctrl" aria-disabled="true"><span id="p6-ctrl-2">CI: Pytest + Ruff</span> <svg class="chevron-icon-svg" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+      </div>
+
+      <div class="graphic-card">
+        <div class="win-titlebar">
+          <div class="win-title-left">
+            <svg class="win-app-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+              <rect x="2" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="2" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+              <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
+            </svg>
+            <span>build.py · PyInstaller Standalone Packaging</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <div class="status-pill-live" style="background:rgba(16,185,129,0.12); border-color:rgba(16,185,129,0.3); color:var(--win-emerald);">
+              <span id="p6-pct">BUILD 0%</span>
+            </div>
+            <div class="win-caption-controls">
+              <button class="win-cap-btn">—</button>
+              <button class="win-cap-btn">▢</button>
+              <button class="win-cap-btn close">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="devops-steps-deck">
+          <div class="step-console-row" id="p6-s1">
+            <span id="p6-step-t1">1. Parsing <strong>config.json</strong> &amp; Backup WAL SQLite</span>
+            <span class="table-chip" id="p6-st1"><svg class="chip-icon-svg clock-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> In attesa</span>
+          </div>
+          <div class="step-console-row" id="p6-s2">
+            <span id="p6-step-t2">2. Test Suite <strong>pytest -v tests/</strong> (28 passed in 0.38s)</span>
+            <span class="table-chip" id="p6-st2"><svg class="chip-icon-svg clock-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> In attesa</span>
+          </div>
+          <div class="step-console-row" id="p6-s3">
+            <span id="p6-step-t3">3. Linter Statica <strong>ruff check .</strong> (Zero Warning)</span>
+            <span class="table-chip" id="p6-st3"><svg class="chip-icon-svg clock-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> In attesa</span>
+          </div>
+          <div class="step-console-row" id="p6-s4">
+            <span id="p6-step-t4">4. Packaging <strong>python build.py</strong> &rarr; dist/RSM/</span>
+            <span class="table-chip" id="p6-st4"><svg class="chip-icon-svg clock-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> In attesa</span>
+          </div>
+        </div>
+
+        <a href="https://github.com/leorusso34/RSM/releases/latest/download/RSM.exe" class="artifact-binary-card download-action" id="p6-binary-card" target="_blank" rel="noopener noreferrer" title="Clicca per scaricare RSM.exe da GitHub Releases" onclick="triggerDownloadToast(event)">
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <div style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:rgba(0,120,212,0.12);">
+              <svg class="ui-icon-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--win-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            </div>
+            <div>
+              <strong style="font-size:0.88rem; color:#fff; font-family:var(--font-mono);">dist/RSM/RSM.exe</strong>
+              <div style="font-size:0.7rem; color:var(--text-dim); font-family:var(--font-mono);" id="p6-binary-meta">48.2 MB · Standalone Windows 10/11 · Auto-Updater GitHub</div>
+            </div>
+          </div>
+          <div style="font-family:var(--font-mono); font-size:0.74rem; color:var(--win-emerald); font-weight:700; display:inline-flex; align-items:center; gap:0.3rem;">
+            <svg class="chip-icon-svg check-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            <span id="p6-binary-status">SCARICA ORA</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span id="footer-text">RSM v1.5.0 · Russo Stock Manager · github.com/leorusso34/RSM</span>
+  </footer>
+
+  <script>
+    // =========================================================================
+    // MODERN LINE TECH SVG ICONS ENGINE
+    // =========================================================================
+    const SVG_ICONS = {
+      check: `<svg class="chip-icon-svg check-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`,
+      clock: `<svg class="chip-icon-svg clock-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+      tag: `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>`,
+      ruler: `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.3 8.7 8.7 21.3c-1 1-2.5 1-3.4 0l-2.6-2.6c-1-1-1-2.5 0-3.4L15.3 2.7c1-1 2.5-1 3.4 0l2.6 2.6c1 1 1 2.5 0 3.4Z"/><path d="m7.5 10.5 2 2"/><path d="m10.5 7.5 2 2"/><path d="m13.5 4.5 2 2"/></svg>`,
+      euro: `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12"/><path d="M4 14h9"/><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12a7.9 7.9 0 0 0 7.8 8 7.7 7.7 0 0 0 5.2-2"/></svg>`,
+      store: `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>`
+    };
+
+    let currentLang = 'it';
+
+    const I18N = {
+      it: {
+        hdrDownload: 'Scarica RSM.exe (v1.5.0)',
+        heroBadge: '⚡ Resell & Inventory Cockpit · Gemini AI Powered',
+        heroVersion: 'v1.5.0 Standalone Ready',
+        heroTitle: 'Controlla il tuo impero di rivendita.',
+        heroSubtitle: 'Tracciamento giacenze multi-piattaforma, parsing intelligente fatture con Gemini 3.1 Flash e calcolo ROI in tempo reale. 100% offline su database SQLite.',
+        heroExploreBtn: 'Esplora Funzionalità',
+        heroDownloadBtn: 'Scarica RSM.exe (v1.5.0)',
+        heroScrollHint: 'Scrolla per scoprire le 6 innovazioni',
+        p1Eyebrow: '01 / 06 — DASHBOARD & KPI STATISTICI',
+        p1Title: 'Ogni vendita disegna il tuo bilancio in tempo reale.',
+        p1Desc: "Il modulo <code>dashboard_view.py</code> e l'engine statistico calcolano istantaneamente capitale investito, valore reale di magazzino, utile netto generato e ROI effettivo, tracciando l’andamento mensile e la ripartizione per piattaforma di vendita.",
+        p1Ctrl1: 'Vista KPI Attiva',
+        p1Ctrl2: 'Canali: ["StockX", "Vinted", "eBay"]',
+        p1Ctrl3: 'Anno: 2026',
+        p1Topbar: 'RSM — Dashboard Finanziaria (CustomTkinter)',
+        kpiInvested: 'Capitale Investito',
+        kpiSubInvested: 'Spesa ultimo mese',
+        kpiStock: 'Valore Magazzino',
+        kpiSubStock: 'Stima realizzo',
+        kpiProfit: 'Profitto Netto',
+        kpiSubProfit: 'Netto commissioni',
+        chartTitle: 'Andamento Profitto Mensile (€)',
+        chartSub: 'Utili netti per ciascun mese di vendita',
+        pillTime1: 'Anno 2026',
+        pillTime2: '6 Mesi',
+        pillTime3: 'Tutto',
+        p1Months: 'MAG · GIU · LUG · AGO · SET · OTT 2026',
+
+        p2Eyebrow: '02 / 06 — MAGAZZINO & VENDITE MULTIPLE',
+        p2Title: 'Dal pre-ordine alla vendita multipla con un trascinamento.',
+        p2Desc: "I 5 stati del database (<code>In Stock</code>, <code>Pre-ordine</code>, <code>Venduto</code>, <code>Completato</code>) convivono in una tabella unificata con ricerca globale. Trascina più lotti nello slot <strong>Bundle</strong> per aggregare commissioni e calcolare l'utile netto, oppure consulta la scheda logistica nel <strong>Side-Drawer</strong> laterale.",
+        p2Ctrl1: 'Crea Bundle',
+        p2Ctrl2: 'Filtri: In Magazzino (24)',
+        p2Ctrl3: 'Drawer: Cronistoria Attiva',
+        p2Topbar: 'RSM — Gestione Magazzino & Bundle',
+        tabChip1: 'Tutti (122)',
+        tabChip2: 'Magazzino (24)',
+        tabChip3: 'Pre-ordini (6)',
+        tabChip4: 'Vendite Attive (8)',
+        tableSearchHint: 'Cerca SKU, taglia, brand...',
+        drawerBadge: 'In Magazzino',
+        drawerBuy: 'Acquisto',
+        drawerSell: 'Stima Vendita',
+        drawerLookup: 'Lookup eBay',
+        drawerMark: 'Segna Venduto',
+        bundleSlotTitle: 'SLOT VENDITA MULTIPLA (BUNDLE)',
+        bundleSlotSub: 'Spedizione combinata • Commissione piattaforma 9.5%',
+        bundleSlotNet: 'UTILE NETTO BUNDLE',
+        p2FooterNote: 'DRAG & DROP BIDIREZIONALE TRA SCHEDE ATTIVO',
+        badgeInBundle: 'NEL BUNDLE',
+        stInStock: 'In Magazzino',
+        stPreorder: 'Pre-ordine',
+        stInBundle: 'Nel Bundle',
+        bundleDesc1: '1 articolo · Jordan 4 SB Navy',
+        bundleDesc2: '2 lotti · J4 SB Navy + Pokémon ETB (×3)',
+        bundleDesc3: 'Bundle Completo (3 lotti · 5 unità sigillate)',
+
+        p3Eyebrow: '03 / 06 — GMAIL IMAP + GEMINI AI',
+        p3Title: 'Il laser AI legge le tue email di conferma ordine.',
+        p3Desc: "Configurato in <code>config.json</code> con la tua password per le app a 16 caratteri, <code>email_sync.py</code> si collega via SSL IMAP a Gmail, legge le ricevute in arrivo e usa <strong>Google Gemini</strong> per popolare automaticamente i Pre-ordini in SQLite.",
+        p3Ctrl1: 'Sincronizza Email IMAP',
+        p3Ctrl2: 'config.json: email_sync_address',
+        emailVerified: 'Verificato',
+        emailDate: 'Oggi, 10:14 · Ordine #IT-90412',
+        emailL1: 'Articolo Confermato: <strong>Jordan 4 Retro SB Navy (2026)</strong>',
+        emailL2: 'Taglia Selezionata: <strong>EU 42.5</strong> — Quantità: <strong>2 paia</strong>',
+        emailL3: 'Totale Addebitato: <strong>€ 450,00 (€ 225,00 cad.)</strong>',
+        emailL4: 'Data Rilascio / Consegna: <strong>18 Ottobre 2026</strong>',
+        schema1: 'PRODOTTO RILEVATO',
+        schema2: 'TAGLIA & QUANTITÀ',
+        schema3: 'COSTO UNITARIO',
+        schema4: 'DATA RILASCIO',
+        p3FooterNote: 'INSERIMENTO DIRETTO NEI PRE-ORDINI DI SQLITE',
+        p3Scanning: 'SCANSIONE AI...',
+        p3Done: 'RICEVUTA ACQUISITA',
+        p3ScanningWait: 'In scansione...',
+        v1: 'Jordan 4 Retro SB Navy',
+        v2: 'EU 42.5 (×2 paia)',
+        v3: '€ 225,00 / cad.',
+        v4: '18 Ottobre 2026',
+
+        p4Eyebrow: '04 / 06 — VOCE IT & GEMINI 3.1 FLASH LITE',
+        p4Title: 'Detta a voce in italiano. Gemini compila tutto.',
+        p4Desc: "In <code>ai_dialog.py</code> e <code>speech_helper.py</code> premi l'icona microfono a 48kHz o scrivi una nota veloce: scorri per vedere lo spettrogramma vocale trascrivere la frase e popolare i campi con l'AI di Google Gemini.",
+        p4Ctrl1: 'Microfono 48kHz HD',
+        p4Ctrl2: 'Modello: Gemini 3.1 Flash Lite',
+        p4TopbarTitle: 'src/ui/ai_dialog.py · Inserimento Rapido AI',
+        p4TopbarStream: 'IT-IT 48kHz HD STREAM',
+        p4Phrase: '"Aggiungi 2 paia di Jordan 4 SB Navy taglia 42.5 pagate 225€ su SNKRS"',
+        p4T1: 'Prodotto: Jordan 4 SB Navy',
+        p4T1Wait: 'Prodotto: ...',
+        p4T2: 'Taglia: EU 42.5 (×2)',
+        p4T2Wait: 'Taglia: ...',
+        p4T3: 'Costo: € 225,00',
+        p4T3Wait: 'Costo: ...',
+        p4T4: 'Store: SNKRS',
+        p4T4Wait: 'Store: ...',
+        p4FooterNote: 'PARSING STRUTTURATO JSON & VAD IN TEMPO REALE',
+
+        p5Eyebrow: '05 / 06 — EBAY API × CLOUDFLARE WORKER',
+        p5Title: 'Confronta il tuo costo con le vendite reali su eBay.',
+        p5Desc: "<code>ebay_api.py</code> interroga le API ufficiali eBay passando dal proxy sicuro su <strong>Cloudflare Workers</strong> (chiave segreta protetta all'edge), calcolando prezzo minimo, medio, massimo e margine netto potenziale.",
+        p5Ctrl1: 'Lookup Prezzi eBay',
+        p5Ctrl2: 'Proxy: rsm-proxy.workers.dev',
+        ebayDistTitle: 'DISTRIBUZIONE PREZZI VENDUTI',
+        ebayMedian: 'Mediana €440',
+        ebayAvgLabel: 'PREZZO MEDIO STIMATO',
+        p5FooterNote: 'ZERO TOKEN LEAK: AUTENTICAZIONE GESTITA ALL\'EDGE',
+        p5SamplesSuffix: 'inserzioni concluse',
+
+        p6Eyebrow: '06 / 06 — QUALITÀ, CONFIG & BUILD .EXE',
+        p6Title: 'Testato con Pytest e Ruff. Compilato in un unico `.exe`.',
+        p6Desc: 'Configurazione prioritaria in <code>config.json</code>, backup sicuro del database SQLite locale durante la compilazione, test unitari automatici e script <code>build.py</code> per generare il pacchetto standalone per Windows 10/11.',
+        p6Ctrl1: 'Scarica dist/RSM/RSM.exe',
+        p6Ctrl2: 'CI: Pytest + Ruff',
+        p6T1: '1. Parsing <strong>config.json</strong> & Backup WAL SQLite',
+        p6T2: '2. Test Suite <strong>pytest -v tests/</strong> (28 passed in 0.38s)',
+        p6T3: '3. Linter Statica <strong>ruff check .</strong> (Zero Warning)',
+        p6T4: '4. Packaging <strong>python build.py</strong> → dist/RSM/',
+        p6Meta: '48.2 MB · Standalone Windows 10/11 · Auto-Updater GitHub',
+        p6Status: 'SCARICA ORA',
+        p6Done: 'COMPLETATO',
+        p6Pending: 'In attesa',
+        p6Ready: 'RSM.EXE PRONTO',
+
+        footer: 'RSM v1.5.0 · Russo Stock Manager · github.com/leorusso34/RSM'
+      },
+      en: {
+        hdrDownload: 'Download RSM.exe (v1.5.0)',
+        heroBadge: '⚡ Resell & Inventory Cockpit · Gemini AI Powered',
+        heroVersion: 'v1.5.0 Standalone Ready',
+        heroTitle: 'Master your reselling empire.',
+        heroSubtitle: 'Multi-platform inventory tracking, intelligent invoice parsing with Gemini 3.1 Flash, and real-time ROI calculation. 100% offline on SQLite database.',
+        heroExploreBtn: 'Explore Features',
+        heroDownloadBtn: 'Download RSM.exe (v1.5.0)',
+        heroScrollHint: 'Scroll to discover the 6 innovations',
+        p1Eyebrow: '01 / 06 — STATISTICAL DASHBOARD & KPIS',
+        p1Title: 'Every sale shapes your financial balance in real time.',
+        p1Desc: 'The <code>dashboard_view.py</code> module and statistical engine instantly compute invested capital, live inventory value, net profit generated, and real ROI, charting monthly trends and sales platform breakdowns.',
+        p1Ctrl1: 'Active KPI View',
+        p1Ctrl2: 'Channels: ["StockX", "Vinted", "eBay"]',
+        p1Ctrl3: 'Year: 2026',
+        p1Topbar: 'RSM — Financial Dashboard (CustomTkinter)',
+        kpiInvested: 'Invested Capital',
+        kpiSubInvested: 'Last month spending',
+        kpiStock: 'Inventory Value',
+        kpiSubStock: 'Market realization',
+        kpiProfit: 'Net Profit',
+        kpiSubProfit: 'Net of fees',
+        chartTitle: 'Monthly Profit Trend (€)',
+        chartSub: 'Net profit for each sales month',
+        pillTime1: 'Year 2026',
+        pillTime2: '6 Months',
+        pillTime3: 'All',
+        p1Months: 'MAY · JUN · JUL · AUG · SEP · OCT 2026',
+
+        p2Eyebrow: '02 / 06 — INVENTORY & BUNDLE SALES',
+        p2Title: 'From pre-orders to bundle sales with a simple drag.',
+        p2Desc: 'The 5 database states (<code>In Stock</code>, <code>Pre-order</code>, <code>Active Sale</code>, <code>Completed</code>) live in a unified table with global search. Drag multiple lots into the <strong>Bundle</strong> slot to aggregate fees and compute net profit, or inspect logistical details in the <strong>Side-Drawer</strong>.',
+        p2Ctrl1: 'Create Bundle',
+        p2Ctrl2: 'Filters: In Stock (24)',
+        p2Ctrl3: 'Drawer: Timeline Active',
+        p2Topbar: 'RSM — Inventory & Lot Management',
+        tabChip1: 'All (122)',
+        tabChip2: 'In Stock (24)',
+        tabChip3: 'Pre-orders (6)',
+        tabChip4: 'Active Sales (8)',
+        tableSearchHint: 'Search SKU, size, brand...',
+        drawerBadge: 'In Stock',
+        drawerBuy: 'Purchase',
+        drawerSell: 'Est. Sale',
+        drawerLookup: 'Lookup eBay',
+        drawerMark: 'Mark as Sold',
+        bundleSlotTitle: 'MULTI-ITEM BUNDLE SLOT',
+        bundleSlotSub: 'Combined shipping • 9.5% platform fee',
+        bundleSlotNet: 'BUNDLE NET PROFIT',
+        p2FooterNote: 'BIDIRECTIONAL DRAG & DROP BETWEEN TABS ACTIVE',
+        badgeInBundle: 'IN BUNDLE',
+        stInStock: 'In Stock',
+        stPreorder: 'Pre-order',
+        stInBundle: 'In Bundle',
+        bundleDesc1: '1 item · Jordan 4 SB Navy',
+        bundleDesc2: '2 lots · J4 SB Navy + Pokémon ETB (×3)',
+        bundleDesc3: 'Full Bundle (3 lots · 5 sealed units)',
+
+        p3Eyebrow: '03 / 06 — GMAIL IMAP + GEMINI AI',
+        p3Title: 'The AI laser reads your order confirmation emails.',
+        p3Desc: 'Configured in <code>config.json</code> with your 16-character app password, <code>email_sync.py</code> connects via SSL IMAP to Gmail, parses incoming receipts and uses <strong>Google Gemini</strong> to automatically populate Pre-orders in SQLite.',
+        p3Ctrl1: 'Sync Orders from Email',
+        p3Ctrl2: 'config.json: email_sync_address',
+        emailVerified: 'Verified',
+        emailDate: 'Today, 10:14 · Order #IT-90412',
+        emailL1: 'Confirmed Item: <strong>Jordan 4 Retro SB Navy (2026)</strong>',
+        emailL2: 'Selected Size: <strong>EU 42.5</strong> — Quantity: <strong>2 pairs</strong>',
+        emailL3: 'Charged Total: <strong>€ 450.00 (€ 225.00 each)</strong>',
+        emailL4: 'Release / Delivery Date: <strong>October 18, 2026</strong>',
+        schema1: 'DETECTED PRODUCT',
+        schema2: 'SIZE & QUANTITY',
+        schema3: 'UNIT COST',
+        schema4: 'RELEASE DATE',
+        p3FooterNote: 'DIRECT INSERTION INTO SQLITE PRE-ORDERS',
+        p3Scanning: 'AI SCANNING...',
+        p3Done: 'RECEIPT PARSED',
+        p3ScanningWait: 'Scanning...',
+        v1: 'Jordan 4 Retro SB Navy',
+        v2: 'EU 42.5 (×2 pairs)',
+        v3: '€ 225.00 / each',
+        v4: 'October 18, 2026',
+
+        p4Eyebrow: '04 / 06 — VOICE STREAM & GEMINI 3.1 FLASH LITE',
+        p4Title: 'Dictate with your voice. Gemini parses everything.',
+        p4Desc: 'In <code>ai_dialog.py</code> and <code>speech_helper.py</code>, click the 48kHz microphone icon or write a quick note: scroll to watch the voice spectrogram transcribe the sentence and populate fields with Google Gemini AI.',
+        p4Ctrl1: '48kHz HD Microphone',
+        p4Ctrl2: 'Model: Gemini 3.1 Flash Lite',
+        p4TopbarTitle: 'src/ui/ai_dialog.py · Quick AI Input',
+        p4TopbarStream: 'EN/IT 48kHz HD STREAM',
+        p4Phrase: '"Add 2 pairs of Jordan 4 SB Navy size 42.5 paid 225€ on SNKRS"',
+        p4T1: 'Product: Jordan 4 SB Navy',
+        p4T1Wait: 'Product: ...',
+        p4T2: 'Size: EU 42.5 (×2)',
+        p4T2Wait: 'Size: ...',
+        p4T3: 'Cost: € 225.00',
+        p4T3Wait: 'Cost: ...',
+        p4T4: 'Store: SNKRS',
+        p4T4Wait: 'Store: ...',
+        p4FooterNote: 'STRUCTURED JSON PARSING & VAD IN REAL TIME',
+
+        p5Eyebrow: '05 / 06 — EBAY API × CLOUDFLARE WORKER',
+        p5Title: 'Compare your cost with real sales on eBay.',
+        p5Desc: '<code>ebay_api.py</code> queries the official eBay APIs through the secure proxy on <strong>Cloudflare Workers</strong> (secret key protected at the edge), computing min, average, max prices and potential net margin.',
+        p5Ctrl1: 'Lookup eBay Prices',
+        p5Ctrl2: 'Proxy: rsm-proxy.workers.dev',
+        ebayDistTitle: 'SOLD PRICE DISTRIBUTION',
+        ebayMedian: 'Median €440',
+        ebayAvgLabel: 'ESTIMATED AVERAGE PRICE',
+        p5FooterNote: 'ZERO TOKEN LEAK: EDGE-MANAGED AUTHENTICATION',
+        p5SamplesSuffix: 'completed listings',
+
+        p6Eyebrow: '06 / 06 — QUALITY, CONFIG & .EXE BUILD',
+        p6Title: 'Tested with Pytest and Ruff. Compiled into a standalone `.exe`.',
+        p6Desc: 'Priority configuration in <code>config.json</code>, secure SQLite database backup during compilation, automated unit tests, and <code>build.py</code> script to generate the standalone Windows 10/11 package.',
+        p6Ctrl1: 'Download dist/RSM/RSM.exe',
+        p6Ctrl2: 'CI: Pytest + Ruff',
+        p6T1: '1. Parse <strong>config.json</strong> & SQLite WAL Backup',
+        p6T2: '2. Test Suite <strong>pytest -v tests/</strong> (28 passed in 0.38s)',
+        p6T3: '3. Static Linter <strong>ruff check .</strong> (Zero Warnings)',
+        p6T4: '4. Packaging <strong>python build.py</strong> → dist/RSM/',
+        p6Meta: '48.2 MB · Standalone Windows 10/11 · GitHub Auto-Updater',
+        p6Status: 'DOWNLOAD NOW',
+        p6Done: 'COMPLETED',
+        p6Pending: 'Pending',
+        p6Ready: 'RSM.EXE READY',
+
+        footer: 'RSM v1.5.0 · Russo Stock Manager · github.com/leorusso34/RSM'
+      }
+    };
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      try { localStorage.setItem('rsm_lang', lang); } catch (e) {}
+      document.getElementById('btn-lang-it').classList.toggle('active', lang === 'it');
+      document.getElementById('btn-lang-en').classList.toggle('active', lang === 'en');
+      document.documentElement.lang = lang;
+
+      const t = I18N[lang];
+      document.getElementById('hdr-download-btn').textContent = t.hdrDownload;
+      const osLink = document.getElementById('os-switcher-link');
+      if (osLink) {
+        osLink.setAttribute('title', lang === 'it' ? 'Passa allo stile macOS Retina per confrontare' : 'Switch to macOS Retina style for side-by-side comparison');
+      }
+
+      // Hero Section
+      const hBadge = document.getElementById('hero-badge-txt');
+      if (hBadge) hBadge.textContent = t.heroBadge;
+      const hVer = document.getElementById('hero-version-txt');
+      if (hVer) hVer.textContent = t.heroVersion;
+      const hTitle = document.getElementById('hero-title');
+      if (hTitle) hTitle.textContent = t.heroTitle;
+      const hSub = document.getElementById('hero-subtitle');
+      if (hSub) hSub.textContent = t.heroSubtitle;
+      const hExp = document.getElementById('hero-explore-btn-txt');
+      if (hExp) hExp.textContent = t.heroExploreBtn;
+      const hDown = document.getElementById('hero-download-btn-txt');
+      if (hDown) hDown.textContent = t.heroDownloadBtn;
+      const hHint = document.getElementById('hero-scroll-hint');
+      if (hHint) hHint.textContent = t.heroScrollHint;
+
+      // Section 1
+      document.getElementById('p1-eyebrow').textContent = t.p1Eyebrow;
+      document.getElementById('p1-title').textContent = t.p1Title;
+      document.getElementById('p1-desc').innerHTML = t.p1Desc;
+      document.getElementById('p1-ctrl-1').textContent = t.p1Ctrl1;
+      document.getElementById('p1-ctrl-2').textContent = t.p1Ctrl2;
+      document.getElementById('p1-ctrl-3').textContent = t.p1Ctrl3;
+      document.getElementById('p1-topbar-title').textContent = t.p1Topbar;
+      document.getElementById('kpi-lbl-invested').textContent = t.kpiInvested;
+      document.getElementById('kpi-sub-invested').textContent = t.kpiSubInvested;
+      document.getElementById('kpi-lbl-stock').textContent = t.kpiStock;
+      document.getElementById('kpi-sub-stock').textContent = t.kpiSubStock;
+      document.getElementById('kpi-lbl-profit').textContent = t.kpiProfit;
+      document.getElementById('kpi-sub-profit').textContent = t.kpiSubProfit;
+      document.getElementById('chart-lbl-title').textContent = t.chartTitle;
+      document.getElementById('chart-lbl-sub').textContent = t.chartSub;
+      document.getElementById('pill-time-1').textContent = t.pillTime1;
+      document.getElementById('pill-time-2').textContent = t.pillTime2;
+      document.getElementById('pill-time-3').textContent = t.pillTime3;
+      document.getElementById('p1-footer-months').textContent = t.p1Months;
+
+      // Section 2
+      document.getElementById('p2-eyebrow').textContent = t.p2Eyebrow;
+      document.getElementById('p2-title').textContent = t.p2Title;
+      document.getElementById('p2-desc').innerHTML = t.p2Desc;
+      document.getElementById('p2-ctrl-1').textContent = t.p2Ctrl1;
+      document.getElementById('p2-ctrl-2').textContent = t.p2Ctrl2;
+      document.getElementById('p2-ctrl-3').textContent = t.p2Ctrl3;
+      document.getElementById('p2-topbar-title').textContent = t.p2Topbar;
+      document.getElementById('tab-chip-1').textContent = t.tabChip1;
+      document.getElementById('tab-chip-2').textContent = t.tabChip2;
+      document.getElementById('tab-chip-3').textContent = t.tabChip3;
+      document.getElementById('tab-chip-4').textContent = t.tabChip4;
+      document.getElementById('table-search-hint').textContent = t.tableSearchHint;
+      document.getElementById('drawer-badge-txt').textContent = t.drawerBadge;
+      document.getElementById('drawer-lbl-buy').textContent = t.drawerBuy;
+      document.getElementById('drawer-lbl-sell').textContent = t.drawerSell;
+      const drawerLookupTxt = document.getElementById('drawer-btn-lookup-txt');
+      if (drawerLookupTxt) drawerLookupTxt.textContent = t.drawerLookup;
+      document.getElementById('drawer-btn-mark').textContent = t.drawerMark;
+      document.getElementById('bundle-slot-title').textContent = t.bundleSlotTitle;
+      document.getElementById('bundle-slot-sub').textContent = t.bundleSlotSub;
+      document.getElementById('bundle-slot-net').textContent = t.bundleSlotNet;
+      document.getElementById('p2-footer-note').textContent = t.p2FooterNote;
+
+      // Section 3
+      document.getElementById('p3-eyebrow').textContent = t.p3Eyebrow;
+      document.getElementById('p3-title').textContent = t.p3Title;
+      document.getElementById('p3-desc').innerHTML = t.p3Desc;
+      document.getElementById('p3-ctrl-1').textContent = t.p3Ctrl1;
+      document.getElementById('p3-ctrl-2').textContent = t.p3Ctrl2;
+      document.getElementById('email-verified-badge').textContent = t.emailVerified;
+      document.getElementById('email-date-badge').textContent = t.emailDate;
+      document.getElementById('p3-line-1').innerHTML = t.emailL1;
+      document.getElementById('p3-line-2').innerHTML = t.emailL2;
+      document.getElementById('p3-line-3').innerHTML = t.emailL3;
+      document.getElementById('p3-line-4').innerHTML = t.emailL4;
+      document.getElementById('schema-lbl-1').textContent = t.schema1;
+      document.getElementById('schema-lbl-2').textContent = t.schema2;
+      document.getElementById('schema-lbl-3').textContent = t.schema3;
+      document.getElementById('schema-lbl-4').textContent = t.schema4;
+      document.getElementById('p3-footer-note').textContent = t.p3FooterNote;
+
+      // Section 4
+      document.getElementById('p4-eyebrow').textContent = t.p4Eyebrow;
+      document.getElementById('p4-title').textContent = t.p4Title;
+      document.getElementById('p4-desc').innerHTML = t.p4Desc;
+      document.getElementById('p4-ctrl-1').textContent = t.p4Ctrl1;
+      document.getElementById('p4-ctrl-2').textContent = t.p4Ctrl2;
+      document.getElementById('p4-topbar-title').textContent = t.p4TopbarTitle;
+      const p4StreamTxt = document.getElementById('p4-topbar-stream-txt');
+      if (p4StreamTxt) p4StreamTxt.textContent = t.p4TopbarStream;
+      document.getElementById('p4-footer-note').textContent = t.p4FooterNote;
+
+      // Section 5
+      document.getElementById('p5-eyebrow').textContent = t.p5Eyebrow;
+      document.getElementById('p5-title').textContent = t.p5Title;
+      document.getElementById('p5-desc').innerHTML = t.p5Desc;
+      document.getElementById('p5-ctrl-1').textContent = t.p5Ctrl1;
+      document.getElementById('p5-ctrl-2').textContent = t.p5Ctrl2;
+      document.getElementById('ebay-box-dist-title').textContent = t.ebayDistTitle;
+      document.getElementById('ebay-hist-median').textContent = t.ebayMedian;
+      document.getElementById('ebay-avg-label').textContent = t.ebayAvgLabel;
+      document.getElementById('p5-footer-note').textContent = t.p5FooterNote;
+
+      // Section 6
+      document.getElementById('p6-eyebrow').textContent = t.p6Eyebrow;
+      document.getElementById('p6-title').textContent = t.p6Title;
+      document.getElementById('p6-desc').innerHTML = t.p6Desc;
+      document.getElementById('p6-ctrl-1').textContent = t.p6Ctrl1;
+      document.getElementById('p6-ctrl-2').textContent = t.p6Ctrl2;
+      document.getElementById('p6-step-t1').innerHTML = t.p6T1;
+      document.getElementById('p6-step-t2').innerHTML = t.p6T2;
+      document.getElementById('p6-step-t3').innerHTML = t.p6T3;
+      document.getElementById('p6-step-t4').innerHTML = t.p6T4;
+      document.getElementById('p6-binary-meta').textContent = t.p6Meta;
+      document.getElementById('p6-binary-status').textContent = t.p6Status;
+
+      document.getElementById('footer-text').textContent = t.footer;
+
+      updateFrame();
+    }
+
+    // =========================================================================
+    // MOTORE SCROLLYTELLING FRAME A 60/120fps CON requestAnimationFrame
+    // =========================================================================
+    const sections = Array.from(document.querySelectorAll('.point-section'));
+    const root = document.documentElement;
+    const clamp = (v, min = 0, max = 1) => Math.min(max, Math.max(min, v));
+
+    // Riferimenti elementi Point 1
+    const p1Invested = document.getElementById('p1-invested');
+    const p1Stock = document.getElementById('p1-stock');
+    const p1Profit = document.getElementById('p1-profit');
+    const p1Roi = document.getElementById('p1-roi');
+    const p1Nodes = Array.from(document.querySelectorAll('.p1-node'));
+
+    // Riferimenti elementi Point 2
+    const p2Badge = document.getElementById('p2-badge');
+    const p2St2 = document.getElementById('p2-st-2');
+    const p2St3 = document.getElementById('p2-st-3');
+    const p2Row2 = document.getElementById('p2-row-2');
+    const p2Row3 = document.getElementById('p2-row-3');
+    const p2Desc = document.getElementById('p2-bundle-desc');
+    const p2Profit = document.getElementById('p2-bundle-profit');
+
+    // Riferimenti elementi Point 3
+    const p3Status = document.getElementById('p3-status');
+    const p3El1 = document.getElementById('p3-v1');
+    const p3El2 = document.getElementById('p3-v2');
+    const p3El3 = document.getElementById('p3-v3');
+    const p3El4 = document.getElementById('p3-v4');
+    const p3Line1 = document.getElementById('p3-line-1');
+    const p3Line2 = document.getElementById('p3-line-2');
+    const p3Line3 = document.getElementById('p3-line-3');
+    const p3Line4 = document.getElementById('p3-line-4');
+
+    // Riferimenti elementi Point 4
+    const p4Bars = Array.from(document.querySelectorAll('#p4-bars .spec-bar'));
+    const p4Transcript = document.getElementById('p4-transcript');
+    const p4T1 = document.getElementById('p4-t1');
+    const p4T2 = document.getElementById('p4-t2');
+    const p4T3 = document.getElementById('p4-t3');
+    const p4T4 = document.getElementById('p4-t4');
+
+    // Riferimenti elementi Point 5
+    const p5Cols = Array.from(document.querySelectorAll('#p5-hist .hist-bar-col'));
+    const p5Avg = document.getElementById('p5-avg');
+    const p5Spread = document.getElementById('p5-spread');
+    const p5Samples = document.getElementById('p5-samples');
+
+    // Riferimenti elementi Point 6
+    const p6Pct = document.getElementById('p6-pct');
+    const p6St1 = document.getElementById('p6-st1');
+    const p6St2 = document.getElementById('p6-st2');
+    const p6St3 = document.getElementById('p6-st3');
+    const p6St4 = document.getElementById('p6-st4');
+    const p6S1 = document.getElementById('p6-s1');
+    const p6S2 = document.getElementById('p6-s2');
+    const p6S3 = document.getElementById('p6-s3');
+    const p6S4 = document.getElementById('p6-s4');
+
+    function scrollToPoint1() {
+      const p1 = document.querySelector('[data-point="1"]');
+      if (p1) {
+        p1.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    let ticking = false;
+
+    function updateFrame() {
+      const vh = window.innerHeight || 1;
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - vh);
+      const globalP = clamp(window.scrollY / maxScroll);
+      root.style.setProperty('--global-p', globalP.toFixed(4));
+      root.style.setProperty('--ambient-hue', Math.round(230 - globalP * 70));
+
+      // Hero docking & fade calculation
+      const heroSec = document.getElementById('hero');
+      if (heroSec) {
+        const heroP = clamp(window.scrollY / (vh * 0.65), 0, 1);
+        heroSec.style.setProperty('--hero-p', heroP.toFixed(3));
+      }
+
+      const t = I18N[currentLang];
+
+      sections.forEach((sec, idx) => {
+        const rect = sec.getBoundingClientRect();
+        const rawP = (vh * 0.78 - rect.top) / (vh * 0.68);
+        const p = clamp(rawP, 0, 1);
+        sec.style.setProperty('--p', p.toFixed(3));
+
+        // 1. Point 01: KPI e Curva Utili Mensili
+        if (idx === 0) {
+          const invested = Math.round(p * 14850);
+          const stock = Math.round(p * 18420);
+          const profit = Math.round(p * 4915);
+          const roi = (p * 38.4).toFixed(1).replace('.', ',');
+          p1Invested.textContent = `€ ${invested.toLocaleString('it-IT')},00`;
+          p1Stock.textContent = `€ ${stock.toLocaleString('it-IT')},00`;
+          p1Profit.textContent = `+ € ${profit.toLocaleString('it-IT')},00`;
+          p1Roi.textContent = `+${roi}% ROI`;
+          p1Nodes.forEach((n, nIdx) => {
+            const threshold = nIdx / (p1Nodes.length - 1);
+            n.style.opacity = p >= threshold - 0.05 ? '1' : '0.15';
+          });
+        }
+
+        // 2. Point 02: Magazzino, Bundle e Side-Drawer
+        if (idx === 1) {
+          const selCount = p < 0.38 ? 1 : p < 0.72 ? 2 : 3;
+          p2Badge.textContent = `${selCount}/3 ${t.badgeInBundle}`;
+
+          p2St2.innerHTML = `${selCount >= 2 ? SVG_ICONS.check : SVG_ICONS.clock} ${selCount >= 2 ? t.stInBundle : t.stInStock}`;
+          p2St2.style.color = selCount >= 2 ? 'var(--win-emerald)' : 'var(--text-muted)';
+          p2Row2.style.borderColor = selCount >= 2 ? 'var(--win-emerald)' : 'var(--win-border)';
+
+          p2St3.innerHTML = `${selCount >= 3 ? SVG_ICONS.check : SVG_ICONS.clock} ${selCount >= 3 ? t.stInBundle : t.stPreorder}`;
+          p2St3.style.color = selCount >= 3 ? 'var(--win-emerald)' : 'var(--text-muted)';
+          p2Row3.style.borderColor = selCount >= 3 ? 'var(--win-emerald)' : 'var(--win-border)';
+
+          if (selCount === 1) {
+            p2Desc.textContent = t.bundleDesc1;
+            p2Profit.textContent = '+ € 215,00';
+          } else if (selCount === 2) {
+            p2Desc.textContent = t.bundleDesc2;
+            p2Profit.textContent = '+ € 395,00';
+          } else {
+            p2Desc.textContent = t.bundleDesc3;
+            p2Profit.textContent = '+ € 685,00 (ROI +128%)';
+          }
+        }
+
+        // 3. Point 03: Gmail IMAP & Laser Scanner Gemini
+        if (idx === 2 && !emailSyncActive) {
+          const vals = [
+            [p3El1, t.v1, 0.22, p3Line1],
+            [p3El2, t.v2, 0.44, p3Line2],
+            [p3El3, t.v3, 0.66, p3Line3],
+            [p3El4, t.v4, 0.84, p3Line4],
+          ];
+          vals.forEach(([valEl, text, threshold, lineEl]) => {
+            if (p >= threshold) {
+              valEl.textContent = text;
+              valEl.style.color = 'var(--win-emerald)';
+              if (lineEl) {
+                lineEl.style.background = 'rgba(0, 120, 212, 0.15)';
+                lineEl.style.color = '#ffffff';
+              }
+            } else {
+              valEl.textContent = t.p3ScanningWait;
+              valEl.style.color = 'var(--text-dim)';
+              if (lineEl) {
+                lineEl.style.background = 'transparent';
+                lineEl.style.color = 'var(--text-muted)';
+              }
+            }
+          });
+          p3Status.innerHTML = p >= 0.85 ? `${SVG_ICONS.check} ${t.p3Done}` : t.p3Scanning;
+        }
+
+        // 4. Point 04: Voce & Gemini 3.1 Flash Lite
+        if (idx === 3 && !voiceActive) {
+          p4Bars.forEach((bar, bIdx) => {
+            const wave = Math.abs(Math.sin(p * 16 + bIdx * 0.55));
+            const h = 12 + wave * 88 * Math.sin(p * Math.PI);
+            bar.style.height = `${Math.max(10, Math.min(100, h)).toFixed(0)}%`;
+          });
+
+          const chars = Math.max(1, Math.floor(p * t.p4Phrase.length));
+          p4Transcript.textContent = t.p4Phrase.slice(0, chars);
+
+          p4T1.innerHTML = p > 0.25 ? `${SVG_ICONS.check} ${t.p4T1}` : `${SVG_ICONS.tag} ${t.p4T1Wait}`;
+          p4T1.style.color = p > 0.25 ? 'var(--win-emerald)' : 'var(--text-dim)';
+          p4T2.innerHTML = p > 0.50 ? `${SVG_ICONS.check} ${t.p4T2}` : `${SVG_ICONS.ruler} ${t.p4T2Wait}`;
+          p4T2.style.color = p > 0.50 ? 'var(--win-accent)' : 'var(--text-dim)';
+          p4T3.innerHTML = p > 0.72 ? `${SVG_ICONS.check} ${t.p4T3}` : `${SVG_ICONS.euro} ${t.p4T3Wait}`;
+          p4T3.style.color = p > 0.72 ? 'var(--win-amber)' : 'var(--text-dim)';
+          p4T4.innerHTML = p > 0.88 ? `${SVG_ICONS.check} ${t.p4T4}` : `${SVG_ICONS.store} ${t.p4T4Wait}`;
+          p4T4.style.color = p > 0.88 ? 'var(--win-purple)' : 'var(--text-dim)';
+        }
+
+        // 5. Point 05: Istogramma eBay & Cloudflare Edge Gauge
+        if (idx === 4 && !ebayLookupActive) {
+          p5Cols.forEach((col) => {
+            const targetH = parseFloat(col.dataset.h || '50');
+            col.style.height = `${(targetH * p).toFixed(1)}%`;
+          });
+          const avgPrice = Math.round(225 + p * 215);
+          const diff = avgPrice - 225;
+          const pct = Math.round((diff / 225) * 100);
+          p5Avg.textContent = `€ ${avgPrice},00`;
+          p5Spread.textContent = currentLang === 'it'
+            ? `Margine: + € ${diff},00 (+${pct}% ROI)`
+            : `Margin: + € ${diff}.00 (+${pct}% ROI)`;
+          p5Samples.textContent = `${Math.round(p * 24)} ${t.p5SamplesSuffix}`;
+        }
+
+        // 6. Point 06: DevOps Pipeline & Standalone .EXE
+        if (idx === 5) {
+          p6Pct.innerHTML = p >= 0.92 ? `${SVG_ICONS.check} ${t.p6Ready}` : `BUILD ${Math.round(p * 100)}%`;
+          const steps = [
+            [p6S1, p6St1, 0.20],
+            [p6S2, p6St2, 0.45],
+            [p6S3, p6St3, 0.70],
+            [p6S4, p6St4, 0.90],
+          ];
+          steps.forEach(([rowEl, stEl, threshold]) => {
+            if (p >= threshold) {
+              stEl.innerHTML = `${SVG_ICONS.check} ${t.p6Done}`;
+              stEl.style.color = 'var(--win-emerald)';
+              stEl.style.background = 'rgba(16, 185, 129, 0.12)';
+              stEl.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+              rowEl.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+            } else {
+              stEl.innerHTML = `${SVG_ICONS.clock} ${t.p6Pending}`;
+              stEl.style.color = 'var(--text-dim)';
+              stEl.style.background = 'var(--win-input)';
+              stEl.style.borderColor = 'var(--win-border)';
+              rowEl.style.borderColor = 'var(--win-border)';
+            }
+          });
+        }
+      });
+
+      ticking = false;
+    }
+
+    function requestScroll() {
+      if (!ticking) {
+        requestAnimationFrame(updateFrame);
+        ticking = true;
+      }
+    }
+
+    window.addEventListener('scroll', requestScroll, { passive: true });
+    window.addEventListener('resize', requestScroll);
+
+    function triggerDownloadToast(event) {
+      const toast = document.getElementById('download-toast');
+      if (!toast) return;
+      const isIt = currentLang === 'it';
+      toast.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--win-emerald, #10b981); flex-shrink:0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg><span>${isIt ? 'Download di RSM.exe (v1.5.0) avviato da GitHub Releases...' : 'Downloading RSM.exe (v1.5.0) from GitHub Releases...'}</span>`;
+      toast.classList.add('show');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => toast.classList.remove('show'), 3800);
+    }
+
+    // =========================================================================
+    // SEZIONE 03 — SINCRONIZZAZIONE EMAIL IMAP & LASER SCANNER DEMO (WIN)
+    // =========================================================================
+    const EMAIL_PRESETS = {
+      snkrs: {
+        sender: 'Nike SNKRS',
+        avatar: 'N',
+        email: '<orders@nike.com>',
+        dateIt: 'Oggi, 10:14 · Ordine #IT-90412',
+        dateEn: 'Today, 10:14 AM · Order #IT-90412',
+        line1It: 'Articolo Confermato: <strong>Jordan 4 Retro SB Navy (2026)</strong>',
+        line2It: 'Taglia Selezionata: <strong>EU 42.5</strong> — Quantità: <strong>2 paia</strong>',
+        line3It: 'Totale Addebitato: <strong>€ 450,00 (€ 225,00 cad.)</strong>',
+        line4It: 'Data Rilascio / Consegna: <strong>18 Ottobre 2026</strong>',
+        line1En: 'Confirmed Item: <strong>Jordan 4 Retro SB Navy (2026)</strong>',
+        line2En: 'Selected Size: <strong>EU 42.5</strong> — Quantity: <strong>2 pairs</strong>',
+        line3En: 'Total Charged: <strong>€ 450.00 (€ 225.00 each)</strong>',
+        line4En: 'Release / Delivery: <strong>October 18, 2026</strong>',
+        f1It: 'Jordan 4 Retro SB Navy',
+        f2It: 'EU 42.5 (×2 paia)',
+        f3It: '€ 225,00 / cad.',
+        f4It: '18 Ottobre 2026',
+        f1En: 'Jordan 4 Retro SB Navy',
+        f2En: 'EU 42.5 (×2 pairs)',
+        f3En: '€ 225.00 / ea.',
+        f4En: 'October 18, 2026',
+        toastIt: '📬 Gmail IMAP: Ricevuta Nike SNKRS scansionata con Gemini e inserita nei Pre-ordini!',
+        toastEn: '📬 Gmail IMAP: Nike SNKRS receipt parsed with Gemini and saved to Pre-orders!'
+      },
+      confirmed: {
+        sender: 'Adidas Confirmed',
+        avatar: 'A',
+        email: '<confirmed@adidas.com>',
+        dateIt: 'Oggi, 09:30 · Ordine #ADI-88419',
+        dateEn: 'Today, 09:30 AM · Order #ADI-88419',
+        line1It: 'Articolo Confermato: <strong>Yeezy Foam Runner Onyx</strong>',
+        line2It: 'Taglia Selezionata: <strong>EU 43</strong> — Quantità: <strong>1 paio</strong>',
+        line3It: 'Totale Addebitato: <strong>€ 90,00</strong>',
+        line4It: 'Data Spedizione Prevista: <strong>20 Ottobre 2026</strong>',
+        line1En: 'Confirmed Item: <strong>Yeezy Foam Runner Onyx</strong>',
+        line2En: 'Selected Size: <strong>EU 43</strong> — Quantity: <strong>1 pair</strong>',
+        line3En: 'Total Charged: <strong>€ 90.00</strong>',
+        line4En: 'Expected Dispatch: <strong>October 20, 2026</strong>',
+        f1It: 'Yeezy Foam Runner Onyx',
+        f2It: 'EU 43 (×1 paio)',
+        f3It: '€ 90,00',
+        f4It: '20 Ottobre 2026',
+        f1En: 'Yeezy Foam Runner Onyx',
+        f2En: 'EU 43 (×1 pair)',
+        f3En: '€ 90.00',
+        f4En: 'October 20, 2026',
+        toastIt: '📬 Gmail IMAP: Ricevuta Adidas Confirmed estratta con Gemini AI!',
+        toastEn: '📬 Gmail IMAP: Adidas Confirmed receipt extracted with Gemini AI!'
+      },
+      supreme: {
+        sender: 'Supreme New York',
+        avatar: 'S',
+        email: '<shipping@supremenewyork.com>',
+        dateIt: 'Ieri, 17:02 · Ordine #SUP-11204',
+        dateEn: 'Yesterday, 5:02 PM · Order #SUP-11204',
+        line1It: 'Articolo Confermato: <strong>Box Logo Hooded Sweatshirt Black</strong>',
+        line2It: 'Taglia Selezionata: <strong>Large</strong> — Quantità: <strong>1 pezzo</strong>',
+        line3It: 'Totale Addebitato: <strong>€ 168,00</strong>',
+        line4It: 'Spedizione UPS Express: <strong>In preparazione</strong>',
+        line1En: 'Confirmed Item: <strong>Box Logo Hooded Sweatshirt Black</strong>',
+        line2En: 'Selected Size: <strong>Large</strong> — Quantity: <strong>1 pc</strong>',
+        line3En: 'Total Charged: <strong>€ 168.00</strong>',
+        line4En: 'UPS Express Shipping: <strong>Processing</strong>',
+        f1It: 'Supreme Box Logo Hoodie',
+        f2It: 'Size Large (×1)',
+        f3It: '€ 168,00',
+        f4It: 'Spedizione Express',
+        f1En: 'Supreme Box Logo Hoodie',
+        f2En: 'Size Large (×1)',
+        f3En: '€ 168.00',
+        f4En: 'Express Shipping',
+        toastIt: '📬 Gmail IMAP: Ordine Supreme New York importato con successo in SQLite!',
+        toastEn: '📬 Gmail IMAP: Supreme New York order successfully imported to SQLite!'
+      }
+    };
+
+    let activeEmailPreset = 'snkrs';
+    let emailSyncActive = false;
+    let laserAnimId = null;
+
+    function selectEmailPreset(key) {
+      activeEmailPreset = key;
+      document.querySelectorAll('.email-preset-chip').forEach(c => c.classList.remove('active'));
+      const activeChip = document.getElementById(`chip-email-${key}`);
+      if (activeChip) activeChip.classList.add('active');
+
+      const data = EMAIL_PRESETS[key];
+      const isIt = currentLang === 'it';
+      if (!data) return;
+
+      const avatarEl = document.getElementById('p3-sender-avatar');
+      const nameEl = document.getElementById('p3-sender-name');
+      const emailEl = document.getElementById('p3-sender-email');
+      const dateEl = document.getElementById('email-date-badge');
+      const l1 = document.getElementById('p3-line-1');
+      const l2 = document.getElementById('p3-line-2');
+      const l3 = document.getElementById('p3-line-3');
+      const l4 = document.getElementById('p3-line-4');
+
+      if (avatarEl) avatarEl.textContent = data.avatar;
+      if (nameEl) nameEl.textContent = data.sender;
+      if (emailEl) emailEl.textContent = data.email;
+      if (dateEl) dateEl.textContent = isIt ? data.dateIt : data.dateEn;
+      if (l1) l1.innerHTML = isIt ? data.line1It : data.line1En;
+      if (l2) l2.innerHTML = isIt ? data.line2It : data.line2En;
+      if (l3) l3.innerHTML = isIt ? data.line3It : data.line3En;
+      if (l4) l4.innerHTML = isIt ? data.line4It : data.line4En;
+
+      runEmailSyncDemo();
+    }
+
+    function runEmailSyncDemo() {
+      if (emailSyncActive) return;
+      emailSyncActive = true;
+
+      const isIt = currentLang === 'it';
+      const key = activeEmailPreset in EMAIL_PRESETS ? activeEmailPreset : 'snkrs';
+      const data = EMAIL_PRESETS[key];
+
+      const syncBtnTxt = document.getElementById('p3-ctrl-1');
+      const statusPill = document.getElementById('p3-status-pill');
+      const statusTxt = document.getElementById('p3-status');
+      const scannerCard = document.getElementById('p3-scanner-card');
+      const f1 = document.getElementById('p3-v1');
+      const f2 = document.getElementById('p3-v2');
+      const f3 = document.getElementById('p3-v3');
+      const f4 = document.getElementById('p3-v4');
+      const l1 = document.getElementById('p3-line-1');
+      const l2 = document.getElementById('p3-line-2');
+      const l3 = document.getElementById('p3-line-3');
+      const l4 = document.getElementById('p3-line-4');
+
+      if (syncBtnTxt) syncBtnTxt.textContent = isIt ? 'Sincronizzazione in corso...' : 'Syncing IMAP...';
+      if (scannerCard) {
+        scannerCard.classList.add('scanning');
+      }
+
+      // Reset lines e nodi estratti
+      [l1, l2, l3, l4].forEach(l => {
+        if (l) {
+          l.style.background = 'transparent';
+          l.style.color = 'var(--text-muted)';
+        }
+      });
+      [f1, f2, f3, f4].forEach(f => {
+        if (f) {
+          f.textContent = isIt ? 'In scansione...' : 'Scanning...';
+          f.style.color = 'var(--text-dim)';
+        }
+      });
+
+      // Fase 1: Connessione SSL IMAP
+      if (statusPill) {
+        statusPill.style.background = 'rgba(245, 158, 11, 0.16)';
+        statusPill.style.borderColor = 'rgba(245, 158, 11, 0.45)';
+        statusPill.style.color = 'var(--win-amber)';
+      }
+      if (statusTxt) {
+        statusTxt.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> SSL IMAP: imap.gmail.com:993...`;
+      }
+
+      setTimeout(() => {
+        // Fase 2: Fascio Laser Scanner in discesa
+        if (statusPill) {
+          statusPill.style.background = 'rgba(168, 85, 247, 0.18)';
+          statusPill.style.borderColor = 'rgba(168, 85, 247, 0.45)';
+          statusPill.style.color = '#c084fc';
+        }
+        if (statusTxt) {
+          statusTxt.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> GEMINI LASER PARSER...`;
+        }
+
+        let laserP = 0;
+        cancelAnimationFrame(laserAnimId);
+
+        function stepLaser() {
+          laserP += 0.022;
+          if (scannerCard) {
+            scannerCard.style.setProperty('--laser-p', laserP.toFixed(3));
+          }
+
+          if (laserP >= 0.22 && l1 && f1 && f1.textContent !== (isIt ? data.f1It : data.f1En)) {
+            l1.style.background = 'rgba(0, 120, 212, 0.22)';
+            l1.style.color = '#ffffff';
+            f1.textContent = isIt ? data.f1It : data.f1En;
+            f1.style.color = 'var(--win-emerald)';
+          }
+          if (laserP >= 0.44 && l2 && f2 && f2.textContent !== (isIt ? data.f2It : data.f2En)) {
+            l2.style.background = 'rgba(0, 120, 212, 0.22)';
+            l2.style.color = '#ffffff';
+            f2.textContent = isIt ? data.f2It : data.f2En;
+            f2.style.color = 'var(--win-emerald)';
+          }
+          if (laserP >= 0.66 && l3 && f3 && f3.textContent !== (isIt ? data.f3It : data.f3En)) {
+            l3.style.background = 'rgba(0, 120, 212, 0.22)';
+            l3.style.color = '#ffffff';
+            f3.textContent = isIt ? data.f3It : data.f3En;
+            f3.style.color = 'var(--win-emerald)';
+          }
+          if (laserP >= 0.86 && l4 && f4 && f4.textContent !== (isIt ? data.f4It : data.f4En)) {
+            l4.style.background = 'rgba(0, 120, 212, 0.22)';
+            l4.style.color = '#ffffff';
+            f4.textContent = isIt ? data.f4It : data.f4En;
+            f4.style.color = 'var(--win-emerald)';
+          }
+
+          if (laserP < 1.02) {
+            laserAnimId = requestAnimationFrame(stepLaser);
+          } else {
+            // Fase 3: Completato
+            cancelAnimationFrame(laserAnimId);
+            if (scannerCard) {
+              scannerCard.classList.remove('scanning');
+              scannerCard.style.setProperty('--laser-p', '1');
+            }
+            if (statusPill) {
+              statusPill.style.background = 'rgba(16, 185, 129, 0.16)';
+              statusPill.style.borderColor = 'rgba(16, 185, 129, 0.45)';
+              statusPill.style.color = 'var(--win-emerald)';
+            }
+            if (statusTxt) {
+              statusTxt.innerHTML = `${SVG_ICONS.check} ${isIt ? '1 RICEVUTA SALVATA IN SQLITE' : '1 RECEIPT SAVED IN SQLITE'}`;
+            }
+            if (syncBtnTxt) {
+              syncBtnTxt.textContent = isIt ? 'Sincronizza di Nuovo' : 'Sync Again';
+            }
+            emailSyncActive = false;
+
+            const toast = document.getElementById('download-toast');
+            if (toast) {
+              toast.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--win-purple); flex-shrink:0;"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><span>${isIt ? data.toastIt : data.toastEn}</span>`;
+              toast.classList.add('show');
+              clearTimeout(toast._timer);
+              toast._timer = setTimeout(() => toast.classList.remove('show'), 3800);
+            }
+          }
+        }
+        laserAnimId = requestAnimationFrame(stepLaser);
+      }, 350);
+    }
+
+    // =========================================================================
+    // SEZIONE 04 — ASSISTENTE VOCALE & GEMINI 3.1 FLASH LITE INTERACTIVE DEMO (WIN)
+    // =========================================================================
+    let voiceActive = false;
+    let voiceTimer = null;
+    let voiceAnimId = null;
+
+    function toggleVoiceDemo() {
+      if (voiceActive) {
+        stopVoiceDemo();
+      } else {
+        startVoiceDemo();
+      }
+    }
+
+    function startVoiceDemo() {
+      voiceActive = true;
+      const isIt = currentLang === 'it';
+      const micBtn = document.getElementById('p4-mic-btn');
+      const studioCard = document.getElementById('p4-studio-card');
+      const livePill = document.getElementById('p4-live-pill');
+      const streamTxt = document.getElementById('p4-topbar-stream-txt');
+      const transcript = document.getElementById('p4-transcript');
+      const t1 = document.getElementById('p4-t1');
+      const t2 = document.getElementById('p4-t2');
+      const t3 = document.getElementById('p4-t3');
+      const t4 = document.getElementById('p4-t4');
+      const p4Ctrl = document.getElementById('p4-ctrl-1');
+
+      if (micBtn) {
+        micBtn.classList.add('recording');
+        if (p4Ctrl) p4Ctrl.textContent = isIt ? 'In Ascolto... (Ferma)' : 'Listening... (Stop)';
+      }
+      if (studioCard) studioCard.classList.add('recording');
+      if (livePill) {
+        livePill.style.background = 'rgba(244, 63, 94, 0.16)';
+        livePill.style.borderColor = 'rgba(244, 63, 94, 0.45)';
+        livePill.style.color = '#fb7185';
+      }
+      if (streamTxt) {
+        streamTxt.textContent = isIt ? 'REGISTRAZIONE AUDIO ATTIVA (48kHz)' : 'AUDIO RECORDING ACTIVE (48kHz)';
+      }
+
+      [t1, t2, t3, t4].forEach(t => {
+        if (!t) return;
+        t.style.color = 'var(--text-dim)';
+        t.style.borderColor = 'var(--win-border)';
+      });
+
+      const fullPhrase = isIt
+        ? 'Aggiungi pre-ordine Travis Scott Jordan 1 Low Canary taglia 43 pagata 150 euro da SNKRS'
+        : 'Add pre-order Travis Scott Jordan 1 Low Canary size 43 cost 150 euros from SNKRS';
+
+      let charIdx = 0;
+      if (transcript) transcript.textContent = '""';
+
+      let phase = 0;
+      function animateBars() {
+        if (!voiceActive) return;
+        phase += 0.28;
+        p4Bars.forEach((bar, bIdx) => {
+          const wave = Math.abs(Math.sin(phase + bIdx * 0.45));
+          const h = 20 + wave * 75 + Math.random() * 8;
+          bar.style.height = `${Math.min(100, Math.max(14, h))}%`;
+          bar.style.background = bIdx % 2 === 0 ? 'var(--win-accent)' : 'var(--win-emerald)';
+        });
+        voiceAnimId = requestAnimationFrame(animateBars);
+      }
+      animateBars();
+
+      clearInterval(voiceTimer);
+      voiceTimer = setInterval(() => {
+        if (!voiceActive) return;
+        charIdx += 2;
+        if (transcript) {
+          transcript.textContent = `"${fullPhrase.slice(0, charIdx)}"`;
+        }
+
+        const progress = charIdx / fullPhrase.length;
+        if (progress > 0.25 && t1) {
+          t1.innerHTML = `${SVG_ICONS.check} ${isIt ? 'Prodotto: Jordan 1 Low Canary' : 'Product: Jordan 1 Low Canary'}`;
+          t1.style.color = 'var(--win-emerald)';
+          t1.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        }
+        if (progress > 0.50 && t2) {
+          t2.innerHTML = `${SVG_ICONS.check} ${isIt ? 'Taglia: EU 43' : 'Size: EU 43'}`;
+          t2.style.color = 'var(--win-accent)';
+          t2.style.borderColor = 'rgba(0, 120, 212, 0.4)';
+        }
+        if (progress > 0.72 && t3) {
+          t3.innerHTML = `${SVG_ICONS.check} ${isIt ? 'Costo: € 150,00' : 'Cost: € 150.00'}`;
+          t3.style.color = 'var(--win-amber)';
+          t3.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+        }
+        if (progress > 0.88 && t4) {
+          t4.innerHTML = `${SVG_ICONS.check} ${isIt ? 'Store: SNKRS (Nike)' : 'Store: SNKRS (Nike)'}`;
+          t4.style.color = 'var(--win-purple)';
+          t4.style.borderColor = 'rgba(168, 85, 247, 0.4)';
+        }
+
+        if (charIdx >= fullPhrase.length) {
+          clearInterval(voiceTimer);
+          cancelAnimationFrame(voiceAnimId);
+          p4Bars.forEach((b) => b.style.height = '24%');
+          if (livePill) {
+            livePill.style.background = 'rgba(16, 185, 129, 0.15)';
+            livePill.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            livePill.style.color = 'var(--win-emerald)';
+          }
+          if (streamTxt) {
+            streamTxt.textContent = isIt ? '✓ GEMINI AI: PARSING 100% COMPLETATO' : '✓ GEMINI AI: 100% PARSING COMPLETE';
+          }
+          if (micBtn) {
+            micBtn.classList.remove('recording');
+            if (p4Ctrl) p4Ctrl.textContent = isIt ? 'Ripeti Dettatura' : 'Retry Dictation';
+          }
+          if (studioCard) studioCard.classList.remove('recording');
+          voiceActive = false;
+
+          const toast = document.getElementById('download-toast');
+          if (toast) {
+            toast.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--win-accent); flex-shrink:0;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>${isIt ? '✨ Gemini 3.1 Flash Lite: dati estratti ed inseriti nei Pre-ordini!' : '✨ Gemini 3.1 Flash Lite: extracted and saved to Pre-orders!'}</span>`;
+            toast.classList.add('show');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.classList.remove('show'), 3800);
+          }
+        }
+      }, 50);
+    }
+
+    function stopVoiceDemo() {
+      voiceActive = false;
+      clearInterval(voiceTimer);
+      cancelAnimationFrame(voiceAnimId);
+      const isIt = currentLang === 'it';
+      const micBtn = document.getElementById('p4-mic-btn');
+      const studioCard = document.getElementById('p4-studio-card');
+      const livePill = document.getElementById('p4-live-pill');
+      const streamTxt = document.getElementById('p4-topbar-stream-txt');
+      const p4Ctrl = document.getElementById('p4-ctrl-1');
+
+      if (micBtn) {
+        micBtn.classList.remove('recording');
+        if (p4Ctrl) p4Ctrl.textContent = isIt ? 'Microfono 48kHz HD' : '48kHz HD Microphone';
+      }
+      if (studioCard) studioCard.classList.remove('recording');
+      if (livePill) {
+        livePill.style.background = 'rgba(0, 120, 212, 0.12)';
+        livePill.style.borderColor = 'rgba(0, 120, 212, 0.3)';
+        livePill.style.color = 'var(--win-accent)';
+      }
+      if (streamTxt) {
+        streamTxt.textContent = isIt ? 'IT-IT 48kHz HD STREAM' : 'EN-US 48kHz HD STREAM';
+      }
+      p4Bars.forEach((b) => b.style.height = '30%');
+    }
+
+    // =========================================================================
+    // SEZIONE 05 — LOOKUP PREZZI EBAY × CLOUDFLARE WORKER DEMO (WIN)
+    // =========================================================================
+    const EBAY_DATA = {
+      military: {
+        title: 'Jordan 4 Retro Military Black',
+        samples: 38,
+        min: 340,
+        median: 410,
+        max: 485,
+        avg: 412,
+        cost: 210,
+        bars: [25, 45, 75, 100, 85, 55, 30]
+      },
+      canary: {
+        title: 'Travis Scott Jordan 1 Low Canary',
+        samples: 52,
+        min: 450,
+        median: 530,
+        max: 620,
+        avg: 528,
+        cost: 150,
+        bars: [15, 35, 60, 95, 100, 70, 40]
+      },
+      panda: {
+        title: 'Nike Dunk Low Retro White Black Panda',
+        samples: 114,
+        min: 110,
+        median: 135,
+        max: 160,
+        avg: 134,
+        cost: 100,
+        bars: [40, 80, 100, 90, 65, 45, 20]
+      }
+    };
+
+    let activeEbayPreset = 'military';
+    let ebayLookupActive = false;
+
+    function selectEbayPreset(key) {
+      activeEbayPreset = key;
+      document.querySelectorAll('.ebay-preset-chip').forEach(c => c.classList.remove('active'));
+      const activeChip = document.getElementById(`chip-preset-${key}`);
+      if (activeChip) activeChip.classList.add('active');
+
+      const data = EBAY_DATA[key];
+      const input = document.getElementById('ebay-search-query');
+      if (input && data) input.value = data.title;
+      runEbayLookup();
+    }
+
+    function runEbayLookup() {
+      ebayLookupActive = true;
+      const key = activeEbayPreset in EBAY_DATA ? activeEbayPreset : 'military';
+      const data = EBAY_DATA[key];
+      const isIt = currentLang === 'it';
+
+      const pill = document.getElementById('p5-worker-pill');
+      const pillTxt = document.getElementById('p5-worker-txt');
+      if (pill) {
+        pill.style.background = 'rgba(245, 158, 11, 0.2)';
+        pill.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+        pill.style.color = 'var(--win-amber)';
+      }
+      if (pillTxt) {
+        pillTxt.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> EDGE QUERY: CLOUDFLARE...`;
+      }
+
+      setTimeout(() => {
+        if (pill) {
+          pill.style.background = 'rgba(16, 185, 129, 0.14)';
+          pill.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+          pill.style.color = 'var(--win-emerald)';
+        }
+        if (pillTxt) {
+          pillTxt.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> WORKER PROXY · 12ms (OK 200)`;
+        }
+
+        const cols = document.querySelectorAll('#p5-hist .hist-bar-col');
+        cols.forEach((col, idx) => {
+          const h = data.bars[idx] || 50;
+          col.dataset.h = h;
+          col.style.height = `${h}%`;
+        });
+
+        const samplesEl = document.getElementById('p5-samples');
+        if (samplesEl) samplesEl.textContent = `${data.samples} ${isIt ? 'annunci venduti' : 'sold listings'}`;
+
+        const medianEl = document.getElementById('ebay-hist-median');
+        if (medianEl) medianEl.textContent = `${isIt ? 'Mediana' : 'Median'} €${data.median}`;
+
+        const avgEl = document.getElementById('p5-avg');
+        if (avgEl) avgEl.textContent = `€ ${data.avg},00`;
+
+        const diff = data.avg - data.cost;
+        const roi = Math.round((diff / data.cost) * 100);
+        const spreadEl = document.getElementById('p5-spread');
+        if (spreadEl) {
+          spreadEl.textContent = isIt
+            ? `Margine: + € ${diff},00 (+${roi}% ROI)`
+            : `Margin: + € ${diff}.00 (+${roi}% ROI)`;
+        }
+
+        const gaugeFill = document.querySelector('.gauge-fill');
+        if (gaugeFill) {
+          const gaugePct = Math.min(100, Math.max(15, roi));
+          gaugeFill.style.width = `${gaugePct}%`;
+        }
+
+        const toast = document.getElementById('download-toast');
+        if (toast) {
+          toast.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--win-amber); flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" x2="16.65"/></svg><span>${isIt ? `eBay API: ${data.samples} vendite recenti analizzate via Cloudflare Edge!` : `eBay API: ${data.samples} recent sales analyzed via Cloudflare Edge!`}</span>`;
+          toast.classList.add('show');
+          clearTimeout(toast._timer);
+          toast._timer = setTimeout(() => toast.classList.remove('show'), 3800);
+        }
+      }, 200);
+    }
+
+    try {
+      const savedLang = localStorage.getItem('rsm_lang');
+      if (savedLang === 'it' || savedLang === 'en') {
+        currentLang = savedLang;
+      }
+    } catch (e) {}
+    setLanguage(currentLang);
+    updateFrame();
+  </script>
+  <div id="download-toast" class="download-toast" role="status" aria-live="polite"></div>
+</body>
+</html>

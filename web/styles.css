@@ -727,6 +727,7 @@ body {
 
 .data-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   text-align: left;
   font-size: 12px;
@@ -735,15 +736,17 @@ body {
 .data-table thead th {
   background: #0f1523;
   color: var(--text-muted);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 8px 12px;
+  padding: 8px 8px;
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .data-table th.col-center,
@@ -787,27 +790,50 @@ body {
 }
 
 .data-table td {
-  padding: 8px 12px;
+  padding: 7px 8px;
   vertical-align: middle;
   color: var(--text-main);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+/* Controlled Column Widths for Fixed Table Layout ("Zero-Lag" fit) */
+.data-table th.col-prod, .data-table td.col-prod { width: auto; min-width: 170px; }
+.data-table th.col-size, .data-table td.col-size { width: 60px; text-align: center; }
+.data-table th.col-qty, .data-table td.col-qty { width: 50px; text-align: center; }
+.data-table th.col-buy, .data-table td.col-buy { width: 90px; }
+.data-table th.col-sell, .data-table td.col-sell { width: 90px; }
+.data-table th.col-channel, .data-table td.col-channel { width: 95px; }
+.data-table th.col-profit, .data-table td.col-profit { width: 90px; }
+.data-table th.col-roi, .data-table td.col-roi { width: 65px; text-align: center; }
+.data-table th.col-place, .data-table td.col-place { width: 120px; }
+.data-table th.col-status, .data-table td.col-status { width: 105px; text-align: center; }
+.data-table th.col-actions, .data-table td.col-actions { width: 85px; text-align: center; }
 
 /* Product cell without emojis - clean typography */
 .product-cell {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .product-name {
   font-weight: 600;
   color: #fff;
-  font-size: 12.5px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .product-brand {
-  font-size: 10.5px;
+  font-size: 10px;
   color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Status Badges */
@@ -969,9 +995,11 @@ body {
 }
 
 .form-label {
+  display: block;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
+  margin-bottom: 4px;
 }
 
 .form-input {

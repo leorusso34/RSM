@@ -15,6 +15,22 @@ let metricsData = null;
 let realMonthlySales = [];
 let realPlatformProfits = [];
 
+async function callApi(endpoint, options = {}, retries = 2) {
+  const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      return res;
+    } catch (err) {
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 300));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 function formatMoney(val) {
   if (val === null || val === undefined || isNaN(val)) return "-";
   return `€ ${Number(val).toLocaleString("it-IT", {
@@ -235,33 +251,33 @@ function renderTable() {
     return `sortable ${sortOrder === "asc" ? "sorted-asc" : "sorted-desc"}`;
   };
 
-  // Render dell'Header in base alla visualizzazione attiva
+  // Render dell'Header in base alla visualizzazione attiva (misure ottimizzate "Zero-Lag")
   if (thead) {
     if (isStockView) {
       thead.innerHTML = `
         <tr>
-          <th class="${getSortClass('name')}" data-sort="name">Prodotto</th>
-          <th>Taglia</th>
-          <th>Q.tà</th>
-          <th class="${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
-          <th>L. Acquisto</th>
-          <th class="col-center">Stato</th>
-          <th class="col-center">Azioni</th>
+          <th class="col-prod ${getSortClass('name')}" data-sort="name">Prodotto</th>
+          <th class="col-size col-center">Taglia</th>
+          <th class="col-qty col-center">Q.tà</th>
+          <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
+          <th class="col-place">L. Acquisto</th>
+          <th class="col-status col-center">Stato</th>
+          <th class="col-actions col-center">Azioni</th>
         </tr>
       `;
     } else {
       thead.innerHTML = `
         <tr>
-          <th class="${getSortClass('name')}" data-sort="name">Prodotto</th>
-          <th>Taglia</th>
-          <th>Q.tà</th>
-          <th class="${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
-          <th class="${getSortClass('salePrice')}" data-sort="salePrice">P. Vendita</th>
-          <th>Canale</th>
-          <th class="${getSortClass('profit')}" data-sort="profit">Utile Netto</th>
-          <th class="${getSortClass('roi')}" data-sort="roi">ROI</th>
-          <th class="col-center">Stato</th>
-          <th class="col-center">Azioni</th>
+          <th class="col-prod ${getSortClass('name')}" data-sort="name">Prodotto</th>
+          <th class="col-size col-center">Taglia</th>
+          <th class="col-qty col-center">Q.tà</th>
+          <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
+          <th class="col-sell ${getSortClass('salePrice')}" data-sort="salePrice">P. Vendita</th>
+          <th class="col-channel">Canale</th>
+          <th class="col-profit ${getSortClass('profit')}" data-sort="profit">Utile Netto</th>
+          <th class="col-roi col-center ${getSortClass('roi')}" data-sort="roi">ROI</th>
+          <th class="col-status col-center">Stato</th>
+          <th class="col-actions col-center">Azioni</th>
         </tr>
       `;
     }
@@ -354,23 +370,23 @@ function renderTable() {
 
     if (isStockView) {
       tr.innerHTML = `
-        <td>
+        <td class="col-prod" title="${item.name}">
           <div class="product-cell">
             <div class="product-name">${item.name}</div>
             <div class="product-brand">${item.brand}</div>
           </div>
         </td>
-        <td><strong>${item.size}</strong></td>
-        <td>${item.quantity} pz</td>
-        <td>${formatMoney(item.purchasedPrice)}</td>
-        <td style="color: var(--text-muted);">${item.purchasedPlace}</td>
-        <td class="col-center">
+        <td class="col-size col-center"><strong>${item.size}</strong></td>
+        <td class="col-qty col-center">${item.quantity} pz</td>
+        <td class="col-buy">${formatMoney(item.purchasedPrice)}</td>
+        <td class="col-place" style="color: var(--text-muted);">${item.purchasedPlace}</td>
+        <td class="col-status col-center">
           <span class="status-badge ${statusClass}">
             <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
             ${statusLabel}
           </span>
         </td>
-        <td class="col-center">
+        <td class="col-actions col-center">
           ${actionBtnsHtml}
         </td>
       `;
@@ -385,26 +401,26 @@ function renderTable() {
       const roiHtml = hasSaleData ? `<span class="roi-badge">+${roi.toFixed(1)}%</span>` : `<span style="color:var(--text-dim)">-</span>`;
 
       tr.innerHTML = `
-        <td>
+        <td class="col-prod" title="${item.name}">
           <div class="product-cell">
             <div class="product-name">${item.name}</div>
             <div class="product-brand">${item.brand} • ${item.purchasedPlace}</div>
           </div>
         </td>
-        <td><strong>${item.size}</strong></td>
-        <td>${item.quantity} pz</td>
-        <td>${formatMoney(item.purchasedPrice)}</td>
-        <td>${salePriceHtml}</td>
-        <td>${sellingPlaceHtml}</td>
-        <td>${profitHtml}</td>
-        <td>${roiHtml}</td>
-        <td class="col-center">
+        <td class="col-size col-center"><strong>${item.size}</strong></td>
+        <td class="col-qty col-center">${item.quantity} pz</td>
+        <td class="col-buy">${formatMoney(item.purchasedPrice)}</td>
+        <td class="col-sell">${salePriceHtml}</td>
+        <td class="col-channel">${sellingPlaceHtml}</td>
+        <td class="col-profit">${profitHtml}</td>
+        <td class="col-roi col-center">${roiHtml}</td>
+        <td class="col-status col-center">
           <span class="status-badge ${statusClass}">
             <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
             ${statusLabel}
           </span>
         </td>
-        <td class="col-center">
+        <td class="col-actions col-center">
           ${actionBtnsHtml}
         </td>
       `;
@@ -631,6 +647,8 @@ function openAddProductModal() {
 
   const modalTitle = document.querySelector("#productModal .modal-header h3");
   if (modalTitle) modalTitle.textContent = "Aggiungi Nuovo Prodotto";
+  const submitBtn = document.querySelector("#productModal .modal-footer button[type='submit']");
+  if (submitBtn) submitBtn.textContent = "Salva nel Database";
 
   // Reset form pulito al 100% (senza dati fittizi)
   document.getElementById("prod-name").value = "";
@@ -871,6 +889,7 @@ async function handleSaveProduct(e) {
     return;
   }
 
+  const existingItem = currentEditingId ? inventoryData.find((i) => i.id === currentEditingId) : null;
   const payload = {
     name,
     brand,
@@ -882,19 +901,20 @@ async function handleSaveProduct(e) {
     salePrice,
     fees: salePrice ? salePrice * 0.08 : 0,
     status,
-    date: new Date().toISOString().split("T")[0]
+    date: (existingItem && existingItem.date) ? existingItem.date : new Date().toISOString().split("T")[0]
   };
 
   try {
     let res;
-    if (currentEditingId) {
-      res = await fetch(`${API_BASE}/products/${currentEditingId}`, {
+    const isEdit = Boolean(currentEditingId);
+    if (isEdit) {
+      res = await callApi(`/products/${currentEditingId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
     } else {
-      res = await fetch(`${API_BASE}/products`, {
+      res = await callApi("/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -906,7 +926,7 @@ async function handleSaveProduct(e) {
       closeModal();
       currentEditingId = null;
       await loadProductsFromBackend();
-      showToast(`✅ "${name}" salvato nel database SQLite!`);
+      showToast(isEdit ? `✅ "${name}" aggiornato nel database!` : `✅ "${name}" salvato nel database!`);
     } else {
       showToast(`❌ Errore: ${result.error || "Salvataggio non riuscito"}`);
     }
@@ -921,7 +941,7 @@ async function deleteProduct(id) {
 
   if (confirm(`Confermi l'eliminazione di "${item.name}" dal database SQLite?`)) {
     try {
-      const res = await fetch(`${API_BASE}/products/${id}`, { method: "DELETE" });
+      const res = await callApi(`/products/${id}`, { method: "DELETE" });
       const result = await res.json();
       if (result.success) {
         closeDrawer();
@@ -939,13 +959,16 @@ async function deleteProduct(id) {
 function editProduct(id) {
   const item = inventoryData.find((i) => i.id === id);
   if (!item) return;
-  currentEditingId = id;
   closeDrawer();
   closeModal();
   openAddProductModal();
+  // Assegna l'ID DOPO openAddProductModal (per non essere azzerato a null)
+  currentEditingId = id;
 
   const modalTitle = document.querySelector("#productModal .modal-header h3");
   if (modalTitle) modalTitle.textContent = `Modifica Prodotto #${id}`;
+  const submitBtn = document.querySelector("#productModal .modal-footer button[type='submit']");
+  if (submitBtn) submitBtn.textContent = "Aggiorna Prodotto";
 
   document.getElementById("prod-name").value = item.name || "";
   document.getElementById("prod-brand").value = item.brand || "";
@@ -1212,7 +1235,7 @@ async function saveEmailCredentials() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/settings`, {
+    const res = await callApi("/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email_sync_address: email, email_sync_app_password: pwd })
@@ -1240,7 +1263,7 @@ async function testEmailConnection() {
 
   statusEl.textContent = "Verifica connessione a Gmail in corso...";
   try {
-    const res = await fetch(`${API_BASE}/test-email-connection`, {
+    const res = await callApi("/test-email-connection", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email_sync_address: email, email_sync_app_password: pwd })
@@ -1277,7 +1300,7 @@ async function startEmailScan() {
   statusEl.textContent = "Connessione a Gmail e ricerca nuove email non lette...";
 
   try {
-    const res = await fetch(`${API_BASE}/scan-emails`, {
+    const res = await callApi("/scan-emails", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email_sync_address: email, email_sync_app_password: pwd })
@@ -1334,7 +1357,7 @@ async function saveEmailPreorders() {
   const uids = emailScannedItems.map((i) => i.uid).filter(Boolean);
 
   try {
-    const res = await fetch(`${API_BASE}/save-scanned-emails`, {
+    const res = await callApi("/save-scanned-emails", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: emailScannedItems, uids })
@@ -1475,6 +1498,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("productForm");
   if (form) {
     form.addEventListener("submit", handleSaveProduct);
+  }
+
+  // Massimizza la finestra all'avvio per visualizzazione zoomed a schermo intero
+  if (window.__TAURI__ && window.__TAURI__.window) {
+    try {
+      window.__TAURI__.window.appWindow.maximize();
+    } catch (_) {}
   }
 
   // Chiusura rapida con tasto ESC

@@ -147,10 +147,12 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
     def _set_cors_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Allow-Private-Network", "true")
+        self.send_header("Access-Control-Max-Age", "86400")
 
     def do_OPTIONS(self) -> None:
-        """Risponde alle chiamate pre-flight CORS dei browser / webview."""
+        """Risponde alle chiamate pre-flight CORS e Private Network Access (PNA) dei browser / webview."""
         self.send_response(HTTPStatus.NO_CONTENT)
         self._set_cors_headers()
         self.end_headers()

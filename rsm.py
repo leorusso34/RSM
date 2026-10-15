@@ -23,6 +23,36 @@ def kill_stale_bridge(port: int = 28472) -> None:
         pass
 
 
+def start_bridge_server(root_dir: Path, port: int = 28472) -> None:
+    """Avvia il server bridge locale con l'interprete Python corrente."""
+    import socket
+    import time
+
+    script = root_dir / "src" / "services" / "bridge_server.py"
+    if not script.exists():
+        return
+
+    flags = 0x08000000 if sys.platform == "win32" else 0  # CREATE_NO_WINDOW
+    try:
+        subprocess.Popen(
+            [sys.executable, str(script)],
+            cwd=str(root_dir),
+            creationflags=flags,
+            close_fds=True,
+        )
+        for _ in range(15):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                s.settimeout(0.1)
+                s.connect(("127.0.0.1", port))
+                s.close()
+                break
+            except Exception:
+                time.sleep(0.1)
+    except Exception as err:
+        print(f"[RSM] Avviso avvio bridge: {err}")
+
+
 def main() -> None:
     root_dir = Path(__file__).resolve().parent
 
@@ -43,6 +73,9 @@ def main() -> None:
             shutil.copy2(src_bridge, dist_bridge)
         except Exception:
             pass
+
+    # 3. Avvia il server bridge con il Python attivo
+    start_bridge_server(root_dir, 28472)
 
     # 3. Cerca l'eseguibile nativo di Tauri
     dist_exe = root_dir / "dist" / "RSM" / ("RSM.exe" if sys.platform == "win32" else "RSM")

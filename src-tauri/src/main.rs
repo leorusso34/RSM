@@ -137,6 +137,7 @@ fn main() {
     tauri::Builder::default()
         .setup(|app| {
             if let Some(window) = app.get_window("main") {
+                let _ = window.maximize();
                 let _ = window.show();
                 let _ = window.set_focus();
             }

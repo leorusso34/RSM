@@ -518,27 +518,27 @@
       <div class="modal-body">
         
         <!-- Box Credenziali -->
-        <div style="background: #0b101c; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
-          <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px;">
-              <label class="form-label" style="font-size: 11px;">Email Gmail:</label>
-              <input type="email" id="email-sync-address" class="form-input" style="height: 32px; font-size: 12px;" />
+        <div style="background: #0b101c; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 16px;">
+          <div style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 4px;">
+              <label class="form-label" for="email-sync-address" style="display: block; font-size: 11px; margin-bottom: 2px;">Email Gmail:</label>
+              <input type="email" id="email-sync-address" class="form-input" style="height: 32px; font-size: 12px; width: 100%; box-sizing: border-box;" />
             </div>
-            <div style="flex: 1; min-width: 180px;">
-              <label class="form-label" style="font-size: 11px;">Password App (16 car.):</label>
-              <div style="display: flex; gap: 6px; align-items: center;">
-                <input type="password" id="email-sync-pwd" class="form-input" style="height: 32px; font-size: 12px; flex: 1;" />
+            <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 4px;">
+              <label class="form-label" for="email-sync-pwd" style="display: block; font-size: 11px; margin-bottom: 2px;">Password App (16 car.):</label>
+              <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
+                <input type="password" id="email-sync-pwd" class="form-input" style="height: 32px; font-size: 12px; flex: 1; box-sizing: border-box;" />
                 <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; white-space: nowrap;">
                   <input type="checkbox" id="email-show-pwd" onchange="toggleEmailPwdVisibility(this.checked)" /> Mostra
                 </label>
               </div>
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; gap: 8px; margin-bottom: 1px;">
               <button type="button" class="btn btn-secondary" style="height: 32px; font-size: 11.5px;" onclick="testEmailConnection()">Test Connessione</button>
               <button type="button" class="btn btn-primary" style="height: 32px; font-size: 11.5px; background: #2563eb;" onclick="saveEmailCredentials()">Salva Dati</button>
             </div>
           </div>
-          <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 6px;">
+          <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 8px;">
             Inserisci una password per le app di Google generata con verifica a 2 fattori attiva.
           </div>
         </div>
