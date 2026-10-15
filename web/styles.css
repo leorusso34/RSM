@@ -920,6 +920,7 @@ body {
 .data-table th.col-buy, .data-table td.col-buy { width: 90px; }
 .data-table th.col-sell, .data-table td.col-sell { width: 90px; }
 .data-table th.col-channel, .data-table td.col-channel { width: 95px; }
+.data-table th.col-fees, .data-table td.col-fees { width: 90px; }
 .data-table th.col-profit, .data-table td.col-profit { width: 90px; }
 .data-table th.col-roi, .data-table td.col-roi { width: 65px; text-align: center; }
 .data-table th.col-place, .data-table td.col-place { width: 120px; }

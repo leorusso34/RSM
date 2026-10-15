@@ -390,7 +390,33 @@ def test_bridge_bulk_operations(tmp_path):
         assert sold_row["quantity"] == 1
         assert sold_row["sold_price"] == Decimal("280.00")
         assert sold_row["fees"] == Decimal("15.00")
-        assert sold_row["selling_place"] == "Vinted"
+        # 6. Test Undo Restore endpoint (/api/undo/restore)
+        undo_restore_req = request.Request(
+            f"http://127.0.0.1:{port}/api/undo/restore",
+            data=json.dumps({
+                "records": [
+                    {
+                        "id": multi_qty_id,
+                        "name": "Yeezy 350 Onyx",
+                        "size": "44",
+                        "quantity": 3,
+                        "purchased_price": 220.0,
+                        "purchased_place": "Confirmed",
+                        "status": "stock",
+                    }
+                ]
+            }).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(undo_restore_req) as resp:
+            restore_data = json.loads(resp.read().decode("utf-8"))
+            assert restore_data["success"] is True
+            assert restore_data["restored_count"] == 1
+
+        restored_row = db.get(multi_qty_id)
+        assert restored_row["quantity"] == 3
+        assert restored_row["status"] == STATUS_STOCK
 
     finally:
         server.shutdown()

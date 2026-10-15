@@ -93,6 +93,56 @@ let isSelectionModeActive = false;
 let selectedProductIds = new Set();
 let expandedBundles = new Set();
 
+// Storico Annulla (Undo Stack - Punto 6)
+let undoStack = []; // Max 20 azioni
+let clipboardProductIds = []; // Per scorciatoie Ctrl+C e Ctrl+V
+
+function pushUndo(action) {
+  undoStack.push(action);
+  if (undoStack.length > 20) {
+    undoStack.shift();
+  }
+}
+
+async function performUndo() {
+  if (undoStack.length === 0) {
+    showToast("Nessuna azione da annullare.");
+    return;
+  }
+  const action = undoStack.pop();
+  try {
+    if (action.type === "restore_records" && action.records && action.records.length > 0) {
+      const res = await callApi("/undo/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ records: action.records }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await loadProductsFromBackend();
+        showToast(`Annullato: ${action.desc}`);
+      } else {
+        showToast(`Errore durante l'annullamento: ${json.error}`);
+      }
+    } else if (action.type === "delete_ids" && action.ids && action.ids.length > 0) {
+      const res = await callApi("/products/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: action.ids }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await loadProductsFromBackend();
+        showToast(`Annullato: ${action.desc}`);
+      } else {
+        showToast(`Errore durante l'annullamento: ${json.error}`);
+      }
+    }
+  } catch (err) {
+    showToast(`Errore durante l'annullamento: ${err.message}`);
+  }
+}
+
 let monthlyProfitChart = null;
 let platformPieChart = null;
 
@@ -534,11 +584,11 @@ function renderTable() {
         <tr>
           ${checkboxTh}
           <th class="col-prod ${getSortClass('name')}" data-sort="name">Prodotto</th>
-          <th class="col-size col-center">Taglia</th>
           <th class="col-qty col-center">Q.tà</th>
           <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
           <th class="col-sell ${getSortClass('salePrice')}" data-sort="salePrice">P. Vendita</th>
           <th class="col-channel">Canale</th>
+          <th class="col-fees ${getSortClass('fees')}" data-sort="fees">Spese / Comm.</th>
           <th class="col-profit ${getSortClass('profit')}" data-sort="profit">Utile Netto</th>
           <th class="col-roi col-center ${getSortClass('roi')}" data-sort="roi">ROI</th>
           <th class="col-status col-center">Stato</th>
@@ -676,11 +726,11 @@ function renderTable() {
               <span class="product-name" style="font-weight: 700;">${bundleTitle}</span>
             </div>
           </td>
-          <td class="col-size col-center" style="color: var(--text-dim);">-</td>
           <td class="col-qty col-center"><strong>${totalQty} pz</strong></td>
           <td class="col-buy">${formatMoney(totalPurchased)}</td>
           <td class="col-sell"><strong>${formatMoney(totalSold)}</strong></td>
           <td class="col-channel"><span style="font-size: 11.5px; color: var(--text-muted);">${sellingPlace}</span></td>
+          <td class="col-fees">${totalFees > 0 ? formatMoney(totalFees) : '<span style="color:var(--text-dim)">-</span>'}</td>
           <td class="col-profit"><span class="profit-pos">+${formatMoney(totalProfit)}</span></td>
           <td class="col-roi col-center"><span class="roi-badge">+${totalRoi.toFixed(1)}%</span></td>
           <td class="col-status col-center">
@@ -770,11 +820,11 @@ function renderTable() {
                   <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "In Magazzino"}</div>
                 </div>
               </td>
-              <td class="col-size col-center"><strong>${child.size}</strong></td>
               <td class="col-qty col-center">${child.quantity} pz</td>
               <td class="col-buy">${formatMoney(child.purchasedPrice)}</td>
               <td class="col-sell" style="color: var(--text-dim); font-size: 11.5px;">(in bundle)</td>
               <td class="col-channel"><span style="font-size: 11.5px; color: var(--text-dim);">${child.sellingPlace || "-"}</span></td>
+              <td class="col-fees" style="color: var(--text-dim); font-size: 11.5px;">${child.fees ? formatMoney(child.fees) : "-"}</td>
               <td class="col-profit" style="color: var(--text-dim);">-</td>
               <td class="col-roi col-center" style="color: var(--text-dim);">-</td>
               <td class="col-status col-center"><span style="color: var(--text-dim); font-size: 11px;">(incluso)</span></td>
@@ -886,6 +936,8 @@ function renderTable() {
         const profitHtml = hasSaleData ? `<span class="profit-pos">+${formatMoney(netProfit)}</span>` : `<span style="color:var(--text-dim)">-</span>`;
         const roiHtml = hasSaleData ? `<span class="roi-badge">+${roi.toFixed(1)}%</span>` : `<span style="color:var(--text-dim)">-</span>`;
 
+        const feesHtml = hasSaleData && item.fees ? formatMoney(item.fees) : `<span style="color:var(--text-dim)">-</span>`;
+
         tr.innerHTML = `
           ${checkboxTd}
           <td class="col-prod" title="${item.name}">
@@ -894,11 +946,11 @@ function renderTable() {
               <div class="product-brand">${item.purchasedPlace || "Canale Diretto"}</div>
             </div>
           </td>
-          <td class="col-size col-center"><strong>${item.size}</strong></td>
           <td class="col-qty col-center">${item.quantity} pz</td>
           <td class="col-buy">${formatMoney(item.purchasedPrice)}</td>
           <td class="col-sell">${salePriceHtml}</td>
           <td class="col-channel">${sellingPlaceHtml}</td>
+          <td class="col-fees">${feesHtml}</td>
           <td class="col-profit">${profitHtml}</td>
           <td class="col-roi col-center">${roiHtml}</td>
           <td class="col-status col-center">
@@ -1391,6 +1443,7 @@ async function handleSaveProduct(e) {
   }
 
   const existingItem = currentEditingId ? inventoryData.find((i) => i.id === currentEditingId) : null;
+  const prevSnapshot = existingItem ? JSON.parse(JSON.stringify(existingItem)) : null;
   const payload = {
     name,
     size,
@@ -1424,6 +1477,19 @@ async function handleSaveProduct(e) {
 
     const result = await res.json();
     if (result.success) {
+      if (isEdit && prevSnapshot) {
+        pushUndo({
+          type: "restore_records",
+          desc: `Modifica "${prevSnapshot.name}"`,
+          records: [prevSnapshot],
+        });
+      } else if (!isEdit && result.id) {
+        pushUndo({
+          type: "delete_ids",
+          desc: `Creazione "${payload.name}"`,
+          ids: [result.id],
+        });
+      }
       closeModal();
       currentEditingId = null;
       await loadProductsFromBackend();
@@ -1441,10 +1507,16 @@ async function deleteProduct(id) {
   if (!item) return;
 
   if (confirm(`Confermi l'eliminazione di "${item.name}" dal database SQLite?`)) {
+    const snapshot = JSON.parse(JSON.stringify(item));
     try {
       const res = await callApi(`/products/${id}`, { method: "DELETE" });
       const result = await res.json();
       if (result.success) {
+        pushUndo({
+          type: "restore_records",
+          desc: `Eliminazione "${snapshot.name}"`,
+          records: [snapshot],
+        });
         closeDrawer();
         await loadProductsFromBackend();
         showToast(`"${item.name}" rimosso dal database.`);
@@ -1567,9 +1639,9 @@ function toggleSelectionMode() {
   isSelectionModeActive = !isSelectionModeActive;
   const btn = document.getElementById("btnToggleSelect");
   if (btn) btn.classList.toggle("active", isSelectionModeActive);
-  if (!isSelectionModeActive) {
-    selectedProductIds.clear();
-  }
+
+  // Parte sempre da zero elementi selezionati all'attivazione o disattivazione
+  selectedProductIds.clear();
   updateSelectionBadge();
   renderTable();
 }
@@ -1648,6 +1720,7 @@ async function deleteBundle(bundleId) {
   if (!confirm(`Sei sicuro di voler eliminare tutti i ${items.length} prodotti di questa vendita multipla dal database?`)) {
     return;
   }
+  const snapshots = JSON.parse(JSON.stringify(items));
   const ids = items.map((p) => p.id);
   try {
     const res = await callApi("/products/bulk-delete", {
@@ -1657,6 +1730,11 @@ async function deleteBundle(bundleId) {
     });
     const json = await res.json();
     if (json.success) {
+      pushUndo({
+        type: "restore_records",
+        desc: `Eliminazione vendita multipla (${snapshots.length} prodotti)`,
+        records: snapshots,
+      });
       ids.forEach((id) => selectedProductIds.delete(id));
       updateSelectionBadge();
       await loadProductsFromBackend();
@@ -1730,6 +1808,11 @@ function showContextMenu(x, y) {
 function hideContextMenu() {
   const menu = document.getElementById("tableContextMenu");
   if (menu) menu.style.display = "none";
+  if (!isSelectionModeActive) {
+    selectedProductIds.clear();
+    updateSelectionBadge();
+    renderTable();
+  }
 }
 
 // Azioni del menu contestuale
@@ -1752,7 +1835,12 @@ async function ctxActionDuplicate() {
       body: JSON.stringify({ ids }),
     });
     const json = await res.json();
-    if (json.success) {
+    if (json.success && json.ids) {
+      pushUndo({
+        type: "delete_ids",
+        desc: `Duplicazione di ${json.ids.length} prodotti`,
+        ids: json.ids,
+      });
       selectedProductIds.clear();
       updateSelectionBadge();
       await loadProductsFromBackend();
@@ -1776,6 +1864,10 @@ async function ctxActionStock() {
   if (ids.length === 0) return;
   if (!confirm(`Spostare ${ids.length} prodotti in Magazzino?`)) return;
 
+  const snapshots = inventoryData
+    .filter((i) => selectedProductIds.has(i.id))
+    .map((i) => JSON.parse(JSON.stringify(i)));
+
   try {
     const res = await callApi("/products/bulk-status", {
       method: "POST",
@@ -1784,6 +1876,11 @@ async function ctxActionStock() {
     });
     const json = await res.json();
     if (json.success) {
+      pushUndo({
+        type: "restore_records",
+        desc: `Spostamento in Magazzino (${snapshots.length} prodotti)`,
+        records: snapshots,
+      });
       selectedProductIds.clear();
       updateSelectionBadge();
       activeFilter = "stock";
@@ -1806,6 +1903,10 @@ async function ctxActionComplete() {
   if (ids.length === 0) return;
   if (!confirm(`Contrassegnare ${ids.length} vendite come completate?`)) return;
 
+  const snapshots = inventoryData
+    .filter((i) => selectedProductIds.has(i.id))
+    .map((i) => JSON.parse(JSON.stringify(i)));
+
   try {
     const res = await callApi("/products/bulk-status", {
       method: "POST",
@@ -1814,6 +1915,11 @@ async function ctxActionComplete() {
     });
     const json = await res.json();
     if (json.success) {
+      pushUndo({
+        type: "restore_records",
+        desc: `Completamento vendite (${snapshots.length} prodotti)`,
+        records: snapshots,
+      });
       selectedProductIds.clear();
       updateSelectionBadge();
       activeFilter = "completed";
@@ -1872,6 +1978,10 @@ async function ctxActionDelete() {
     : `Eliminare definitivamente ${ids.length} prodotti selezionati dal database SQLite?`;
   if (!confirm(msg)) return;
 
+  const snapshots = inventoryData
+    .filter((i) => selectedProductIds.has(i.id))
+    .map((i) => JSON.parse(JSON.stringify(i)));
+
   try {
     const res = await callApi("/products/bulk-delete", {
       method: "POST",
@@ -1880,6 +1990,11 @@ async function ctxActionDelete() {
     });
     const json = await res.json();
     if (json.success) {
+      pushUndo({
+        type: "restore_records",
+        desc: `Eliminazione (${snapshots.length} prodotti)`,
+        records: snapshots,
+      });
       selectedProductIds.clear();
       updateSelectionBadge();
       await loadProductsFromBackend();
@@ -2004,6 +2119,10 @@ async function handleBulkSaleSubmit(e) {
     payload.quantity_to_sell = parseInt(qtySelect.value, 10);
   }
 
+  const snapshots = inventoryData
+    .filter((i) => selectedProductIds.has(i.id))
+    .map((i) => JSON.parse(JSON.stringify(i)));
+
   try {
     const res = await callApi("/products/bulk-status", {
       method: "POST",
@@ -2012,6 +2131,11 @@ async function handleBulkSaleSubmit(e) {
     });
     const json = await res.json();
     if (json.success) {
+      pushUndo({
+        type: "restore_records",
+        desc: `Messa in vendita (${snapshots.length} prodotti)`,
+        records: snapshots,
+      });
       closeBulkSaleModal();
       selectedProductIds.clear();
       updateSelectionBadge();
@@ -2720,13 +2844,173 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Chiusura rapida con tasto ESC
-  window.addEventListener("keydown", (e) => {
+  // Scorciatoie Avanzate Tastiera (Punto 6)
+  let lastCtrlPressTime = 0;
+
+  window.addEventListener("keyup", (e) => {
+    if (e.key === "Control") {
+      const now = Date.now();
+      if (now - lastCtrlPressTime < 320 && now - lastCtrlPressTime > 40) {
+        lastCtrlPressTime = 0;
+        toggleSelectionMode();
+        showToast(isSelectionModeActive ? "Modalità Selezione: Attivata" : "Modalità Selezione: Disattivata");
+      } else {
+        lastCtrlPressTime = now;
+      }
+    } else {
+      lastCtrlPressTime = 0;
+    }
+  });
+
+  window.addEventListener("keydown", async (e) => {
+    // Chiusura rapida con tasto ESC
     if (e.key === "Escape") {
       closeDrawer();
       closeModal();
       closeBulkSaleModal();
       hideContextMenu();
+      return;
+    }
+
+    const isInputActive = e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT";
+    const isCtrl = e.ctrlKey || e.metaKey;
+
+    // 1. Ctrl + F: Ricerca rapida immediata
+    if (isCtrl && (e.key === "f" || e.key === "F")) {
+      e.preventDefault();
+      const searchInput = document.getElementById("global-search-input");
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+      return;
+    }
+
+    // 2. Ctrl + Z: Storico Annulla (Undo Stack)
+    if (isCtrl && (e.key === "z" || e.key === "Z") && !e.shiftKey) {
+      if (!isInputActive) {
+        e.preventDefault();
+        await performUndo();
+        return;
+      }
+    }
+
+    // 3. Ctrl + Tab / Ctrl + Shift + Tab: Spostamento ciclico tra tabelle
+    if (isCtrl && e.key === "Tab") {
+      e.preventDefault();
+      const tabKeys = ["all", "stock", "preorder", "active-sale", "completed"];
+      const currentIdx = tabKeys.indexOf(activeFilter);
+      const step = e.shiftKey ? -1 : 1;
+      const nextIdx = (currentIdx + step + tabKeys.length) % tabKeys.length;
+      activeFilter = tabKeys[nextIdx];
+
+      isSelectionModeActive = false;
+      const btnToggle = document.getElementById("btnToggleSelect");
+      if (btnToggle) btnToggle.classList.remove("active");
+      selectedProductIds.clear();
+      updateSelectionBadge();
+
+      document.querySelectorAll(".table-tab-pill").forEach((pill) => {
+        pill.classList.toggle("active", pill.getAttribute("data-filter") === activeFilter);
+      });
+      document.querySelectorAll(".nav-item").forEach((item) => {
+        const sec = item.getAttribute("data-section");
+        let matches = false;
+        if (activeFilter === "stock" && sec === "magazzino") matches = true;
+        else if (activeFilter === "preorder" && sec === "preordini") matches = true;
+        else if (activeFilter === "active-sale" && sec === "vendite") matches = true;
+        else if (activeFilter === "completed" && sec === "storico") matches = true;
+        else if (activeFilter === "all" && !["magazzino", "preordini", "vendite", "storico"].includes(sec)) matches = true;
+        item.classList.toggle("active", matches);
+      });
+
+      renderTable();
+      const pillActive = document.querySelector(".table-tab-pill.active");
+      if (pillActive) {
+        showToast(`Tabella: ${pillActive.textContent.trim()}`);
+      }
+      return;
+    }
+
+    // 4. Ctrl + C: Copia prodotti selezionati
+    if (isCtrl && (e.key === "c" || e.key === "C") && !isInputActive) {
+      if (selectedProductIds.size > 0) {
+        e.preventDefault();
+        clipboardProductIds = Array.from(selectedProductIds);
+        const selItems = inventoryData.filter((p) => selectedProductIds.has(p.id));
+        const tsv = selItems.map((p) => `${p.name}\t${p.size}\t${p.quantity}\t${p.purchasedPrice}\t${p.purchasedPlace}\t${p.sellingPlace || ""}\t${p.salePrice || ""}\t${p.fees || ""}`).join("\n");
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(tsv).catch(() => {});
+        }
+        showToast(`Copiati ${clipboardProductIds.length} prodott${clipboardProductIds.length === 1 ? "o" : "i"} negli appunti.`);
+        return;
+      }
+    }
+
+    // 5. Ctrl + V: Incolla prodotti duplicandoli
+    if (isCtrl && (e.key === "v" || e.key === "V") && !isInputActive) {
+      if (clipboardProductIds.length > 0) {
+        e.preventDefault();
+        try {
+          const res = await callApi("/products/duplicate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: clipboardProductIds }),
+          });
+          const json = await res.json();
+          if (json.success && json.ids) {
+            pushUndo({
+              type: "delete_ids",
+              desc: `Incollati ${json.ids.length} prodotti`,
+              ids: json.ids,
+            });
+            await loadProductsFromBackend();
+            showToast(`Incollati ${json.ids.length} prodott${json.ids.length === 1 ? "o" : "i"} con successo.`);
+          } else {
+            showToast(`Errore durante l'incolla: ${json.error || "Operazione non riuscita"}`);
+          }
+        } catch (err) {
+          showToast(`Errore di rete: ${err.message}`);
+        }
+        return;
+      }
+    }
+
+    // 6. Ctrl + Shift + Freccia Su / Giù (o Shift + Freccia Su / Giù): Selezione a intervallo da tastiera
+    if (e.shiftKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && !isInputActive) {
+      e.preventDefault();
+      const visible = getFilteredAndSortedProducts();
+      if (visible.length === 0) return;
+
+      if (!isSelectionModeActive) {
+        isSelectionModeActive = true;
+        const btn = document.getElementById("btnToggleSelect");
+        if (btn) btn.classList.add("active");
+        selectedProductIds.clear();
+      }
+
+      const visibleIds = visible.map((p) => p.id);
+      if (selectedProductIds.size === 0) {
+        selectedProductIds.add(visibleIds[0]);
+      } else {
+        let lastIdx = -1;
+        visibleIds.forEach((id, idx) => {
+          if (selectedProductIds.has(id)) lastIdx = idx;
+        });
+
+        if (e.key === "ArrowDown") {
+          const nextIdx = Math.min(visibleIds.length - 1, lastIdx + 1);
+          selectedProductIds.add(visibleIds[nextIdx]);
+        } else if (e.key === "ArrowUp") {
+          let firstIdx = visibleIds.findIndex((id) => selectedProductIds.has(id));
+          const prevIdx = Math.max(0, firstIdx - 1);
+          selectedProductIds.add(visibleIds[prevIdx]);
+        }
+      }
+
+      updateSelectionBadge();
+      renderTable();
+      return;
     }
   });
 });

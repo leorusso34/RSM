@@ -823,6 +823,57 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self._send_error(f"Errore duplicazione: {e}")
             return
 
+        # Operazioni massive / Undo Stack: Ripristino record
+        if path == "/api/undo/restore":
+            records = body.get("records", [])
+            restored_count = 0
+            for rec in records:
+                pid = rec.get("id")
+                st = rec.get("status", STATUS_STOCK)
+                is_completed = 1 if (st == "completed" or rec.get("is_completed") == 1) else 0
+                if st in ("completed", "active-sale", "Venduto"):
+                    db_status = STATUS_SOLD
+                elif st in ("preorder", "Pre-ordine"):
+                    db_status = STATUS_PREORDER
+                else:
+                    db_status = STATUS_STOCK
+
+                purchased_price = rec.get("purchased_price")
+                if purchased_price is None:
+                    purchased_price = rec.get("purchasedPrice", 0)
+
+                sold_price = rec.get("sold_price")
+                if sold_price is None:
+                    sold_price = rec.get("salePrice")
+
+                save_data = {
+                    "name": rec.get("name", "").strip(),
+                    "size": rec.get("size", "UNI").strip(),
+                    "quantity": int(rec.get("quantity", 1) or 1),
+                    "purchased_price": Decimal(str(purchased_price or 0)),
+                    "purchased_place": str(rec.get("purchased_place") or rec.get("purchasedPlace") or "").strip(),
+                    "selling_place": str(rec.get("selling_place") or rec.get("sellingPlace") or "").strip(),
+                    "selling_price": Decimal(str(sold_price)) if sold_price is not None else None,
+                    "sold_price": Decimal(str(sold_price)) if sold_price is not None else None,
+                    "fees": Decimal(str(rec.get("fees") or 0)),
+                    "sold_date": str(rec.get("sold_date") or rec.get("date") or "").strip(),
+                    "status": db_status,
+                    "notes": str(rec.get("notes") or "").strip(),
+                    "bundle_id": str(rec.get("bundle_id") or rec.get("bundleId") or "").strip(),
+                    "is_completed": is_completed,
+                }
+                try:
+                    target_id = int(pid) if (pid and str(pid).isdigit()) else None
+                    if target_id and self.db.get(target_id):
+                        self.db.save(save_data, target_id)
+                    else:
+                        self.db.save(save_data)
+                    restored_count += 1
+                except Exception as e:  # noqa: BLE001
+                    print(f"Errore ripristino record undo: {e}")
+            self._send_json({"success": True, "restored_count": restored_count})
+            return
+
         self._send_error("Endpoint POST non trovato", status=HTTPStatus.NOT_FOUND)
 
     # --------------------------------------------------------------------------
