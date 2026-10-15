@@ -800,7 +800,7 @@ function renderTable() {
               ${childCheckboxTd}
               <td class="col-prod" title="${child.name}">
                 <div class="product-cell" style="padding-left: 28px;">
-                  <div class="product-name" style="color: var(--text-secondary); font-size: 12px;">↳ ${child.name}</div>
+                  <div class="product-name" style="color: var(--text-secondary); font-size: 12px;">${child.name}</div>
                   <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "In Magazzino"}</div>
                 </div>
               </td>
@@ -816,7 +816,7 @@ function renderTable() {
               ${childCheckboxTd}
               <td class="col-prod" title="${child.name}">
                 <div class="product-cell" style="padding-left: 28px;">
-                  <div class="product-name" style="color: var(--text-secondary); font-size: 12px;">↳ ${child.name}</div>
+                  <div class="product-name" style="color: var(--text-secondary); font-size: 12px;">${child.name}</div>
                   <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "In Magazzino"}</div>
                 </div>
               </td>
