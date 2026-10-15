@@ -26,7 +26,9 @@
         <!-- Intestazione Sidebar con solo il Logo del Progetto e Pulsante Chiudi -->
         <div class="brand-section">
           <div class="brand-left">
-            <div class="brand-logo">R</div>
+            <div class="brand-logo">
+              <img src="app_icon.png" alt="RSM Logo" class="brand-logo-img" />
+            </div>
           </div>
           <button class="sidebar-toggle-btn" id="closeSidebarBtn" title="Nascondi barra laterale" onclick="toggleSidebar(false)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -137,8 +139,7 @@
               </div>
               <div class="kpi-value" id="kpi-invested">€ 0,00</div>
               <div class="kpi-footer">
-                <span class="kpi-trend neutral">+12.4%</span>
-                <span class="kpi-subtext">Acquisti nell'ultimo mese</span>
+                <span class="kpi-subtext" id="kpi-invested-sub">Magazzino e pre-ordini</span>
               </div>
             </div>
           </div>
@@ -154,8 +155,7 @@
               </div>
               <div class="kpi-value" id="kpi-stock">€ 0,00</div>
               <div class="kpi-footer">
-                <span class="kpi-trend positive">+8.6%</span>
-                <span class="kpi-subtext">Stima di realizzo a mercato</span>
+                <span class="kpi-subtext" id="kpi-stock-sub">Giacenza a costo di carico</span>
               </div>
             </div>
           </div>
@@ -171,8 +171,8 @@
               </div>
               <div class="kpi-value" id="kpi-profit">€ 0,00</div>
               <div class="kpi-footer">
-                <span class="kpi-trend positive" id="kpi-roi">+0% ROI</span>
-                <span class="kpi-subtext">Netto commissioni e spese</span>
+                <span class="kpi-trend positive" id="kpi-roi">+0.0% ROI</span>
+                <span class="kpi-subtext" id="kpi-profit-sub">Storico vendite e attive</span>
               </div>
             </div>
           </div>
@@ -348,19 +348,24 @@
               <input type="text" id="prod-sell-place" class="form-input" />
             </div>
             <div class="form-group" style="flex: 1;">
-              <label class="form-label">Stato</label>
-              <select id="prod-status" class="form-input" style="background:#0b101c; color:#fff;" onchange="onModalStatusChange(this.value)">
-                <option value="stock">Magazzino</option>
-                <option value="preorder">Pre-ordine</option>
-                <option value="active-sale">In Vendita Attiva</option>
-                <option value="completed">Venduto</option>
-              </select>
+              <label class="form-label">Prezzo di Vendita (€)</label>
+              <input type="number" step="0.01" id="prod-sold-price" class="form-input" />
             </div>
           </div>
 
-          <div class="form-group" id="prod-sold-price-group" style="display: none; margin-top: 6px;">
-            <label class="form-label">Prezzo Vendita Effettivo (€)</label>
-            <input type="number" step="0.01" id="prod-sold-price" class="form-input" />
+          <div class="form-group" style="margin-top: 6px;">
+            <label class="form-label">Stato</label>
+            <select id="prod-status" class="form-input" style="background:#0b101c; color:#fff;" onchange="onModalStatusChange(this.value)">
+              <option value="stock">Magazzino</option>
+              <option value="preorder">Pre-ordine</option>
+              <option value="active-sale">Vendita attiva</option>
+              <option value="completed">Venduto</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-top: 6px;">
+            <label class="form-label">Note</label>
+            <input type="text" id="prod-notes" class="form-input" />
           </div>
 
         </div>

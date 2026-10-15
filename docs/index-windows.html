@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RSM v1.5.0 — Russo Stock Manager | Interactive Showcase (Windows 11 Fluent Style)</title>
+  <title>RSM</title>
   <meta name="description" content="RSM v1.5.0 — Scrollytelling interattivo in stile Windows 11 Fluent Design / CustomTkinter. Mappatura 1:1 con il codice reale: SQLite WAL, Cloudflare Worker, Gemini AI e build PyInstaller." />
   <link rel="icon" type="image/png" href="assets/icon.png" />
   <style>
@@ -607,17 +607,10 @@
       font-size: clamp(2.2rem, 5vw, 3.8rem);
       font-weight: 700;
       letter-spacing: -0.03em;
-      line-height: 1.1;
+      line-height: 1.15;
       color: #ffffff;
       margin: 0;
-    }
-
-    .hero-subtitle {
-      font-size: clamp(0.95rem, 1.8vw, 1.15rem);
-      color: var(--text-muted);
-      line-height: 1.6;
-      max-width: 680px;
-      margin: 0;
+      padding-bottom: 0.2rem;
     }
 
     .hero-actions {
@@ -626,7 +619,7 @@
       justify-content: center;
       gap: 0.9rem;
       flex-wrap: wrap;
-      margin-top: 0.6rem;
+      margin-top: 0.15rem;
     }
 
     .hero-btn-primary {
@@ -790,6 +783,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 0.6rem;
+      flex-wrap: nowrap;
       padding-bottom: 0.85rem;
       margin-bottom: 1.25rem;
       border-bottom: 1px solid var(--win-border);
@@ -803,6 +798,17 @@
       gap: 0.55rem;
       color: #d1d7e5;
       font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .win-title-left span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
     }
 
     .win-app-icon {
@@ -821,6 +827,7 @@
       display: flex;
       align-items: center;
       gap: 2px;
+      flex-shrink: 0;
     }
 
     .win-cap-btn {
@@ -858,7 +865,9 @@
       color: var(--win-emerald);
       font-size: 0.67rem;
       font-weight: 650;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .pulsing-dot {
@@ -878,10 +887,9 @@
     .graphic-footer {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding-top: 1rem;
-      margin-top: 1.25rem;
-      border-top: 1px solid var(--win-border);
+      justify-content: flex-start;
+      padding-top: 0.6rem;
+      margin-top: 0.8rem;
       font-family: var(--font-mono);
       font-size: 0.7rem;
       color: var(--text-dim);
@@ -943,6 +951,7 @@
       margin-bottom: 0.25rem;
       line-height: 1.1;
       font-family: var(--font-mono);
+      white-space: nowrap;
     }
 
     .kpi-footer-row {
@@ -1732,10 +1741,6 @@
           Controlla il tuo impero di rivendita.
         </h1>
 
-        <p class="hero-subtitle" id="hero-subtitle">
-          Tracciamento giacenze multi-piattaforma, parsing intelligente fatture con Gemini 3.1 Flash e calcolo ROI in tempo reale. 100% offline su database SQLite.
-        </p>
-
         <!-- Call to Action Buttons -->
         <div class="hero-actions">
           <button type="button" class="hero-btn-primary" id="hero-explore-btn" onclick="scrollToPoint1()">
@@ -1794,7 +1799,7 @@
               <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
               <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
             </svg>
-            <span id="p1-topbar-title">RSM — Dashboard Finanziaria (CustomTkinter)</span>
+            <span id="p1-topbar-title">src/ui/dashboard_view.py</span>
           </div>
           <div style="display:flex; align-items:center; gap:0.6rem;">
             <div class="status-pill-live" style="cursor:pointer;" onclick="cycleTimeframe()" title="Clicca per cambiare periodo di visualizzazione">
@@ -1914,7 +1919,6 @@
 
         <div class="graphic-footer">
           <span id="p1-footer-months">MAG · GIU · LUG · AGO · SET · OTT 2026</span>
-          <div class="scroll-scrub"><div class="scroll-scrub-fill"></div></div>
         </div>
       </div>
     </section>
@@ -1948,7 +1952,7 @@
               <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
               <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
             </svg>
-            <span id="p2-topbar-title">RSM — Gestione Magazzino &amp; Bundle</span>
+            <span id="p2-topbar-title">src/ui/main_window.py</span>
           </div>
           <div style="display:flex; align-items:center; gap:0.6rem;">
             <div class="status-pill-live" id="p2-badge-pill" style="background:rgba(0,120,212,0.12); border-color:rgba(0,120,212,0.3); color:var(--win-accent); cursor:pointer;" onclick="toggleBundleDemo()" title="Clicca per testare la selezione bundle">
@@ -2077,7 +2081,7 @@
               <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
               <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
             </svg>
-            <span>email_sync.py · IMAP SSL + Gemini Parser</span>
+            <span id="p3-topbar-title">src/email_sync.py</span>
           </div>
           <div style="display:flex; align-items:center; gap:0.6rem;">
             <div class="status-pill-live" id="p3-status-pill" style="background:rgba(139,92,246,0.12); border-color:rgba(139,92,246,0.3); color:var(--win-purple); cursor:pointer;" onclick="runEmailSyncDemo()" title="Clicca per testare la sincronizzazione IMAP">
@@ -2154,7 +2158,6 @@
 
         <div class="graphic-footer">
           <span id="p3-footer-note">INSERIMENTO DIRETTO NEI PRE-ORDINI DI SQLITE</span>
-          <div class="scroll-scrub"><div class="scroll-scrub-fill"></div></div>
         </div>
       </div>
     </section>
@@ -2186,11 +2189,11 @@
               <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
               <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
             </svg>
-            <span id="p4-topbar-title">src/ui/ai_dialog.py · Inserimento Rapido AI</span>
+            <span id="p4-topbar-title">src/ui/ai_dialog.py</span>
           </div>
           <div style="display:flex; align-items:center; gap:0.6rem;">
             <div class="status-pill-live" id="p4-live-pill" onclick="toggleVoiceDemo()" style="background:rgba(0,120,212,0.12); border-color:rgba(0,120,212,0.3); color:var(--win-accent); cursor:pointer;" title="Clicca per avviare o fermare la simulazione vocale">
-              <span id="p4-topbar-stream" style="display:inline-flex; align-items:center; gap:0.35rem;"><svg class="chip-icon-svg mic-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg> <span id="p4-topbar-stream-txt">IT-IT 48kHz HD STREAM</span></span>
+              <span id="p4-topbar-stream" style="display:inline-flex; align-items:center; gap:0.35rem;"><svg class="chip-icon-svg mic-icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg> <span id="p4-topbar-stream-txt">48kHz STREAM</span></span>
             </div>
             <div class="win-caption-controls">
               <button class="win-cap-btn">—</button>
@@ -2228,7 +2231,6 @@
 
         <div class="graphic-footer">
           <span id="p4-footer-note">PARSING STRUTTURATO JSON &amp; VAD IN TEMPO REALE</span>
-          <div class="scroll-scrub"><div class="scroll-scrub-fill"></div></div>
         </div>
       </div>
     </section>
@@ -2260,11 +2262,11 @@
               <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
               <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
             </svg>
-            <span>src/ui/ebay_price_dialog.py · Cloudflare Edge Proxy</span>
+            <span id="p5-topbar-title">src/ui/ebay_price_dialog.py</span>
           </div>
           <div style="display:flex; align-items:center; gap:0.6rem;">
             <div class="status-pill-live" id="p5-worker-pill" style="background:rgba(245,158,11,0.12); border-color:rgba(245,158,11,0.3); color:var(--win-amber); cursor:pointer;" onclick="runEbayLookup()" title="Interroga l'edge Cloudflare">
-              <span id="p5-worker-txt" style="display:inline-flex; align-items:center; gap:0.35rem;"><svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> WORKER PROXY · 12ms</span>
+              <span id="p5-worker-txt" style="display:inline-flex; align-items:center; gap:0.35rem;"><svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> WORKER · 12ms</span>
             </div>
             <div class="win-caption-controls">
               <button class="win-cap-btn">—</button>
@@ -2329,7 +2331,6 @@
 
         <div class="graphic-footer">
           <span id="p5-footer-note">ZERO TOKEN LEAK: AUTENTICAZIONE GESTITA ALL'EDGE</span>
-          <div class="scroll-scrub"><div class="scroll-scrub-fill"></div></div>
         </div>
       </div>
     </section>
@@ -2361,7 +2362,7 @@
               <rect x="2" y="12.8" width="9.2" height="9.2" rx="0.75"/>
               <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="0.75"/>
             </svg>
-            <span>build.py · PyInstaller Standalone Packaging</span>
+            <span id="p6-topbar-title">build.py</span>
           </div>
           <div style="display:flex; align-items:center; gap:0.6rem;">
             <div class="status-pill-live" id="p6-status-pill" style="background:rgba(16,185,129,0.12); border-color:rgba(16,185,129,0.3); color:var(--win-emerald); cursor:pointer;" onclick="runDevopsDemo()" title="Clicca per simulare la build CI/CD">
@@ -2439,7 +2440,6 @@
         heroBadge: '⚡ Resell & Inventory Cockpit · Gemini AI Powered',
         heroVersion: 'v1.5.0 Standalone Ready',
         heroTitle: 'Controlla il tuo impero di rivendita.',
-        heroSubtitle: 'Tracciamento giacenze multi-piattaforma, parsing intelligente fatture con Gemini 3.1 Flash e calcolo ROI in tempo reale. 100% offline su database SQLite.',
         heroExploreBtn: 'Esplora Funzionalità',
         heroDownloadBtn: 'Scarica RSM.exe (v1.5.0)',
         heroScrollHint: 'Scrolla per scoprire le 6 innovazioni',
@@ -2449,7 +2449,7 @@
         p1Ctrl1: 'Vista KPI Attiva',
         p1Ctrl2: 'Canali: ["StockX", "Vinted", "eBay"]',
         p1Ctrl3: 'Anno: 2026',
-        p1Topbar: 'RSM — Dashboard Finanziaria (CustomTkinter)',
+        p1Topbar: 'src/ui/dashboard_view.py',
         kpiInvested: 'Capitale Investito',
         kpiSubInvested: 'Spesa ultimo mese',
         kpiStock: 'Valore Magazzino',
@@ -2469,7 +2469,7 @@
         p2Ctrl1: 'Crea Bundle',
         p2Ctrl2: 'Filtri: In Magazzino (24)',
         p2Ctrl3: 'Drawer: Cronistoria Attiva',
-        p2Topbar: 'RSM — Gestione Magazzino & Bundle',
+        p2Topbar: 'src/ui/main_window.py',
         tabChip1: 'Tutti (122)',
         tabChip2: 'Magazzino (24)',
         tabChip3: 'Pre-ordini (6)',
@@ -2521,8 +2521,8 @@
         p4Desc: "In <code>ai_dialog.py</code> e <code>speech_helper.py</code> premi l'icona microfono a 48kHz o scrivi una nota veloce: scorri per vedere lo spettrogramma vocale trascrivere la frase e popolare i campi con l'AI di Google Gemini.",
         p4Ctrl1: 'Microfono 48kHz HD',
         p4Ctrl2: 'Modello: Gemini 3.1 Flash Lite',
-        p4TopbarTitle: 'src/ui/ai_dialog.py · Inserimento Rapido AI',
-        p4TopbarStream: 'IT-IT 48kHz HD STREAM',
+        p4TopbarTitle: 'src/ui/ai_dialog.py',
+        p4TopbarStream: '48kHz STREAM',
         p4Phrase: '"Aggiungi 2 paia di Jordan 4 SB Navy taglia 42.5 pagate 225€ su SNKRS"',
         p4T1: 'Prodotto: Jordan 4 SB Navy',
         p4T1Wait: 'Prodotto: ...',
@@ -2567,7 +2567,6 @@
         heroBadge: '⚡ Resell & Inventory Cockpit · Gemini AI Powered',
         heroVersion: 'v1.5.0 Standalone Ready',
         heroTitle: 'Master your reselling empire.',
-        heroSubtitle: 'Multi-platform inventory tracking, intelligent invoice parsing with Gemini 3.1 Flash, and real-time ROI calculation. 100% offline on SQLite database.',
         heroExploreBtn: 'Explore Features',
         heroDownloadBtn: 'Download RSM.exe (v1.5.0)',
         heroScrollHint: 'Scroll to discover the 6 innovations',
@@ -2577,7 +2576,7 @@
         p1Ctrl1: 'Active KPI View',
         p1Ctrl2: 'Channels: ["StockX", "Vinted", "eBay"]',
         p1Ctrl3: 'Year: 2026',
-        p1Topbar: 'RSM — Financial Dashboard (CustomTkinter)',
+        p1Topbar: 'src/ui/dashboard_view.py',
         kpiInvested: 'Invested Capital',
         kpiSubInvested: 'Last month spending',
         kpiStock: 'Inventory Value',
@@ -2597,7 +2596,7 @@
         p2Ctrl1: 'Create Bundle',
         p2Ctrl2: 'Filters: In Stock (24)',
         p2Ctrl3: 'Drawer: Timeline Active',
-        p2Topbar: 'RSM — Inventory & Lot Management',
+        p2Topbar: 'src/ui/main_window.py',
         tabChip1: 'All (122)',
         tabChip2: 'In Stock (24)',
         tabChip3: 'Pre-orders (6)',
@@ -2649,8 +2648,8 @@
         p4Desc: 'In <code>ai_dialog.py</code> and <code>speech_helper.py</code>, click the 48kHz microphone icon or write a quick note: scroll to watch the voice spectrogram transcribe the sentence and populate fields with Google Gemini AI.',
         p4Ctrl1: '48kHz HD Microphone',
         p4Ctrl2: 'Model: Gemini 3.1 Flash Lite',
-        p4TopbarTitle: 'src/ui/ai_dialog.py · Quick AI Input',
-        p4TopbarStream: 'EN/IT 48kHz HD STREAM',
+        p4TopbarTitle: 'src/ui/ai_dialog.py',
+        p4TopbarStream: '48kHz STREAM',
         p4Phrase: '"Add 2 pairs of Jordan 4 SB Navy size 42.5 paid 225€ on SNKRS"',
         p4T1: 'Product: Jordan 4 SB Navy',
         p4T1Wait: 'Product: ...',
@@ -2713,8 +2712,6 @@
       if (hVer) hVer.textContent = t.heroVersion;
       const hTitle = document.getElementById('hero-title');
       if (hTitle) hTitle.textContent = t.heroTitle;
-      const hSub = document.getElementById('hero-subtitle');
-      if (hSub) hSub.textContent = t.heroSubtitle;
       const hExp = document.getElementById('hero-explore-btn-txt');
       if (hExp) hExp.textContent = t.heroExploreBtn;
       const hDown = document.getElementById('hero-download-btn-txt');
@@ -2898,15 +2895,15 @@
         monthsEn: 'MAY · JUN · JUL · AUG · SEP · OCT 2026'
       },
       2: {
-        invested: 29400, stock: 38150, profit: 11280, roi: '42,1',
+        invested: 29400, stock: 38150, profit: 3150, roi: '36,4',
         path: 'M 18 118 C 90 105, 135 88, 195 70 C 255 60, 295 38, 360 22 C 395 18, 420 12, 442 8 L 442 120 L 18 120 Z',
         stroke: 'M 18 118 C 90 105, 135 88, 195 70 C 255 60, 295 38, 360 22 C 395 18, 420 12, 442 8',
         nodes: [118, 105, 70, 48, 22, 8],
-        monthsIt: 'ULTIMI 6 MESI · MEDIA MENSILE € 1.880',
-        monthsEn: 'LAST 6 MONTHS · MONTHLY AVERAGE € 1,880'
+        monthsIt: 'ULTIMI 6 MESI · MEDIA MENSILE € 525',
+        monthsEn: 'LAST 6 MONTHS · MONTHLY AVERAGE € 525'
       },
       3: {
-        invested: 58200, stock: 74900, profit: 26840, roi: '46,1',
+        invested: 58200, stock: 74900, profit: 8940, roi: '42,8',
         path: 'M 18 124 C 90 110, 135 78, 195 62 C 255 45, 295 28, 360 16 C 395 14, 420 10, 442 6 L 442 120 L 18 120 Z',
         stroke: 'M 18 124 C 90 110, 135 78, 195 62 C 255 45, 295 28, 360 16 C 395 14, 420 10, 442 6',
         nodes: [124, 100, 62, 38, 16, 6],
@@ -3511,7 +3508,7 @@
         livePill.style.color = '#fb7185';
       }
       if (streamTxt) {
-        streamTxt.textContent = isIt ? 'REGISTRAZIONE AUDIO ATTIVA (48kHz)' : 'AUDIO RECORDING ACTIVE (48kHz)';
+        streamTxt.textContent = isIt ? 'REGISTRAZIONE (48kHz)' : 'RECORDING (48kHz)';
       }
 
       [t1, t2, t3, t4].forEach(t => {
@@ -3581,7 +3578,7 @@
             livePill.style.color = 'var(--win-emerald)';
           }
           if (streamTxt) {
-            streamTxt.textContent = isIt ? '✓ GEMINI AI: PARSING 100% COMPLETATO' : '✓ GEMINI AI: 100% PARSING COMPLETE';
+            streamTxt.textContent = isIt ? 'PARSING 100%' : 'PARSED 100%';
           }
           if (micBtn) {
             micBtn.classList.remove('recording');
@@ -3615,7 +3612,7 @@
         livePill.style.color = 'var(--win-accent)';
       }
       if (streamTxt) {
-        streamTxt.textContent = isIt ? 'IT-IT 48kHz HD STREAM' : 'EN-US 48kHz HD STREAM';
+        streamTxt.textContent = '48kHz STREAM';
       }
       p4Bars.forEach((b) => b.style.height = '30%');
     }
@@ -3685,7 +3682,7 @@
         pill.style.color = 'var(--win-amber)';
       }
       if (pillTxt) {
-        pillTxt.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> EDGE QUERY: CLOUDFLARE...`;
+        pillTxt.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> EDGE QUERY...`;
       }
 
       setTimeout(() => {
@@ -3695,7 +3692,7 @@
           pill.style.color = 'var(--win-emerald)';
         }
         if (pillTxt) {
-          pillTxt.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> WORKER PROXY · 12ms (OK 200)`;
+          pillTxt.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> WORKER · 12ms`;
         }
 
         const cols = document.querySelectorAll('#p5-hist .hist-bar-col');

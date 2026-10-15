@@ -264,54 +264,30 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
         # KPI & Metriche Dashboard
         if path == "/api/metrics":
-            products = self.db.all_products()
-            total_invested = 0.0
-            total_stock_value = 0.0
-            total_profit = 0.0
-            total_roi_sum = 0.0
-            completed_count = 0
-            platforms_count: dict[str, int] = {}
-
-            for p in products:
-                cost = float(p.get("purchased_price") or 0) * int(p.get("quantity") or 1)
-                total_invested += cost
-                st = p.get("status")
-                is_completed = (p.get("is_completed") == 1)
-
-                if st == STATUS_STOCK:
-                    sell_p = float(p.get("selling_price") or p.get("purchased_price") or 0)
-                    total_stock_value += sell_p * int(p.get("quantity") or 1)
-
-                if is_completed:
-                    sale = float(p.get("sold_price") or p.get("selling_price") or 0) * int(p.get("quantity") or 1)
-                    fees = float(p.get("fees") or 0) * int(p.get("quantity") or 1)
-                    profit = sale - cost - fees
-                    total_profit += profit
-                    completed_count += 1
-                    if cost > 0:
-                        total_roi_sum += (profit / cost) * 100
-
-                    # Conta piattaforma
-                    place = p.get("selling_place") or "Altro"
-                    platforms_count[place] = platforms_count.get(place, 0) + 1
-
-            avg_roi = (total_roi_sum / completed_count) if completed_count > 0 else 0.0
-
+            totals = self.db.totals()
             monthly_sales = self.db.get_monthly_sales()
             platform_profits = self.db.get_profit_by_platform()
             top_products = self.db.get_top_profitable_products(limit=6)
 
+            raw_products = self.db.all_products()
+            platforms_count: dict[str, int] = {}
+            for p in raw_products:
+                if p.get("is_completed") == 1 or p.get("status") == STATUS_SOLD:
+                    place = p.get("selling_place") or "Altro"
+                    platforms_count[place] = platforms_count.get(place, 0) + 1
+
             self._send_json({
                 "success": True,
                 "kpi": {
-                    "totalInvested": round(total_invested, 2),
-                    "totalStockValue": round(total_stock_value, 2),
-                    "totalProfit": round(total_profit, 2),
-                    "avgRoi": round(avg_roi, 1),
-                    "completedSalesCount": completed_count,
-                    "activeSalesCount": sum(1 for p in products if p.get("status") == STATUS_SOLD and p.get("is_completed") != 1),
-                    "stockCount": sum(1 for p in products if p.get("status") == STATUS_STOCK),
-                    "preorderCount": sum(1 for p in products if p.get("status") == STATUS_PREORDER),
+                    "totalInvested": float(totals["committed_total"]),
+                    "totalStockValue": float(totals["stock_total"]),
+                    "totalProfit": float(totals["sold_profit"]),
+                    "avgRoi": float(totals["sold_roi"]),
+                    "completedSalesCount": totals["sold_count_completed"],
+                    "activeSalesCount": totals["sold_count_active"],
+                    "stockCount": totals["stock_count"],
+                    "preorderCount": totals["preorder_count"],
+                    "allCount": totals["all_count"],
                 },
                 "platforms": platforms_count,
                 "monthlySales": monthly_sales,

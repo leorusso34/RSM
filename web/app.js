@@ -192,36 +192,85 @@ function updateDashboardMetrics() {
   let totalProfit = 0;
   let totalRoiSum = 0;
   let completedCount = 0;
+  let stockCount = 0;
+  let preorderCount = 0;
+  let activeCount = 0;
 
-  inventoryData.forEach((item) => {
-    const cost = item.purchasedPrice * item.quantity;
-    totalInvested += cost;
+  if (metricsData && metricsData.kpi) {
+    const kpi = metricsData.kpi;
+    totalInvested = kpi.totalInvested || 0;
+    totalStockValue = kpi.totalStockValue || 0;
+    totalProfit = kpi.totalProfit || 0;
+    const avgRoi = kpi.avgRoi || 0;
+    stockCount = kpi.stockCount || 0;
+    preorderCount = kpi.preorderCount || 0;
+    activeCount = kpi.activeSalesCount || 0;
+    completedCount = kpi.completedSalesCount || 0;
 
-    const estSale = (item.salePrice || item.purchasedPrice * 1.5) * item.quantity;
-    totalStockValue += estSale;
+    const kpiInvested = document.getElementById("kpi-invested");
+    const kpiStock = document.getElementById("kpi-stock");
+    const kpiProfit = document.getElementById("kpi-profit");
+    const kpiRoi = document.getElementById("kpi-roi");
+    const kpiInvestedSub = document.getElementById("kpi-invested-sub");
+    const kpiStockSub = document.getElementById("kpi-stock-sub");
+    const kpiProfitSub = document.getElementById("kpi-profit-sub");
 
-    if (item.status === "completed" || item.salePrice) {
-      const sale = item.salePrice * item.quantity;
-      const fees = (item.fees || 0) * item.quantity;
-      const profit = sale - cost - fees;
-      totalProfit += profit;
-      const roi = cost > 0 ? (profit / cost) * 100 : 0;
-      totalRoiSum += roi;
-      completedCount++;
+    if (kpiInvested) setMetricValue(kpiInvested, totalInvested, true);
+    if (kpiStock) setMetricValue(kpiStock, totalStockValue, true);
+    if (kpiProfit) setMetricValue(kpiProfit, totalProfit, true);
+    if (kpiRoi) {
+      kpiRoi.textContent = `${avgRoi >= 0 ? "+" : ""}${avgRoi.toFixed(1)}% ROI`;
+      kpiRoi.className = `kpi-trend ${avgRoi >= 0 ? "positive" : "negative"}`;
     }
-  });
+    if (kpiInvestedSub) kpiInvestedSub.textContent = `${stockCount} in stock • ${preorderCount} pre-ordini`;
+    if (kpiStockSub) kpiStockSub.textContent = `${stockCount} articoli a costo di carico`;
+    if (kpiProfitSub) kpiProfitSub.textContent = `${completedCount} completate • ${activeCount} attive`;
+  } else {
+    // Calcolo fedele basato sullo stato reale dei prodotti SQLite
+    inventoryData.forEach((item) => {
+      const qty = item.quantity || 1;
+      const cost = (item.purchasedPrice || 0) * qty;
 
-  const avgRoi = completedCount > 0 ? totalRoiSum / completedCount : 48.2;
+      if (item.status === "stock") {
+        totalInvested += cost;
+        totalStockValue += cost;
+        stockCount += qty;
+      } else if (item.status === "preorder") {
+        totalInvested += cost;
+        preorderCount += qty;
+      } else if (item.status === "completed" || item.status === "active-sale") {
+        if (item.status === "active-sale") activeCount += qty;
+        if (item.status === "completed") completedCount += qty;
+        const sale = (item.salePrice || 0) * qty;
+        const fees = (item.fees || 0) * qty;
+        const profit = sale - cost - fees;
+        totalProfit += profit;
+        if (cost > 0) totalRoiSum += (profit / cost) * 100;
+      }
+    });
 
-  const kpiInvested = document.getElementById("kpi-invested");
-  const kpiStock = document.getElementById("kpi-stock");
-  const kpiProfit = document.getElementById("kpi-profit");
-  const kpiRoi = document.getElementById("kpi-roi");
+    const totalSold = completedCount + activeCount;
+    const avgRoi = totalSold > 0 ? (totalRoiSum / totalSold) : 0;
 
-  if (kpiInvested) setMetricValue(kpiInvested, totalInvested, true);
-  if (kpiStock) setMetricValue(kpiStock, totalStockValue, true);
-  if (kpiProfit) setMetricValue(kpiProfit, totalProfit, true);
-  if (kpiRoi) kpiRoi.textContent = `+${avgRoi.toFixed(1)}% ROI`;
+    const kpiInvested = document.getElementById("kpi-invested");
+    const kpiStock = document.getElementById("kpi-stock");
+    const kpiProfit = document.getElementById("kpi-profit");
+    const kpiRoi = document.getElementById("kpi-roi");
+    const kpiInvestedSub = document.getElementById("kpi-invested-sub");
+    const kpiStockSub = document.getElementById("kpi-stock-sub");
+    const kpiProfitSub = document.getElementById("kpi-profit-sub");
+
+    if (kpiInvested) setMetricValue(kpiInvested, totalInvested, true);
+    if (kpiStock) setMetricValue(kpiStock, totalStockValue, true);
+    if (kpiProfit) setMetricValue(kpiProfit, totalProfit, true);
+    if (kpiRoi) {
+      kpiRoi.textContent = `${avgRoi >= 0 ? "+" : ""}${avgRoi.toFixed(1)}% ROI`;
+      kpiRoi.className = `kpi-trend ${avgRoi >= 0 ? "positive" : "negative"}`;
+    }
+    if (kpiInvestedSub) kpiInvestedSub.textContent = `${stockCount} in stock • ${preorderCount} pre-ordini`;
+    if (kpiStockSub) kpiStockSub.textContent = `${stockCount} articoli a costo di carico`;
+    if (kpiProfitSub) kpiProfitSub.textContent = `${completedCount} completate • ${activeCount} attive`;
+  }
 
   // Aggiorna badge laterali
   const badgeStock = document.getElementById("badge-stock");
@@ -229,10 +278,10 @@ function updateDashboardMetrics() {
   const badgeActive = document.getElementById("badge-active");
   const badgeCompleted = document.getElementById("badge-completed");
 
-  if (badgeStock) badgeStock.textContent = inventoryData.filter(i => i.status === "stock").length;
-  if (badgePreorder) badgePreorder.textContent = inventoryData.filter(i => i.status === "preorder").length;
-  if (badgeActive) badgeActive.textContent = inventoryData.filter(i => i.status === "active-sale").length;
-  if (badgeCompleted) badgeCompleted.textContent = inventoryData.filter(i => i.status === "completed").length;
+  if (badgeStock) badgeStock.textContent = stockCount;
+  if (badgePreorder) badgePreorder.textContent = preorderCount;
+  if (badgeActive) badgeActive.textContent = activeCount;
+  if (badgeCompleted) badgeCompleted.textContent = completedCount;
 }
 
 // ==========================================================================
@@ -661,19 +710,14 @@ function openAddProductModal() {
   document.getElementById("prod-buy-price").value = "";
   document.getElementById("prod-buy-place").value = "";
   document.getElementById("prod-sell-place").value = "";
+  document.getElementById("prod-sold-price").value = "";
   document.getElementById("prod-status").value = "stock";
-
-  const soldGroup = document.getElementById("prod-sold-price-group");
-  if (soldGroup) soldGroup.style.display = "none";
-  const soldPriceInput = document.getElementById("prod-sold-price");
-  if (soldPriceInput) soldPriceInput.value = "";
+  const notesEl = document.getElementById("prod-notes");
+  if (notesEl) notesEl.value = "";
 }
 
-function onModalStatusChange(val) {
-  const soldGroup = document.getElementById("prod-sold-price-group");
-  if (soldGroup) {
-    soldGroup.style.display = (val === "completed") ? "block" : "none";
-  }
+function onModalStatusChange(_val) {
+  // Prezzo di Vendita è ora un campo permanente del layout
 }
 
 function closeModal() {
@@ -868,12 +912,13 @@ async function handleSaveProduct(e) {
   const sellingPlace = document.getElementById("prod-sell-place").value.trim();
   const status = document.getElementById("prod-status").value;
 
-  const isSold = (status === "completed");
   const soldPriceEl = document.getElementById("prod-sold-price");
-  const salePrice = isSold && soldPriceEl ? (parseFloat(soldPriceEl.value) || null) : null;
+  const salePrice = soldPriceEl && soldPriceEl.value !== "" ? (parseFloat(soldPriceEl.value) || null) : null;
+  const notesEl = document.getElementById("prod-notes");
+  const notes = notesEl ? notesEl.value.trim() : "";
 
   if (!name) {
-    showToast("⚠️ Inserisci un nome per il prodotto!");
+    showToast("Inserisci un nome per il prodotto!");
     return;
   }
 
@@ -888,6 +933,7 @@ async function handleSaveProduct(e) {
     salePrice,
     fees: salePrice ? salePrice * 0.08 : 0,
     status,
+    notes,
     date: (existingItem && existingItem.date) ? existingItem.date : new Date().toISOString().split("T")[0]
   };
 
@@ -913,12 +959,12 @@ async function handleSaveProduct(e) {
       closeModal();
       currentEditingId = null;
       await loadProductsFromBackend();
-      showToast(isEdit ? `✅ "${name}" aggiornato nel database!` : `✅ "${name}" salvato nel database!`);
+      showToast(isEdit ? `"${name}" aggiornato nel database!` : `"${name}" salvato nel database!`);
     } else {
-      showToast(`❌ Errore: ${result.error || "Salvataggio non riuscito"}`);
+      showToast(`Errore: ${result.error || "Salvataggio non riuscito"}`);
     }
   } catch (err) {
-    showToast(`❌ Errore di rete: ${err.message}`);
+    showToast(`Errore di rete: ${err.message}`);
   }
 }
 
@@ -933,12 +979,12 @@ async function deleteProduct(id) {
       if (result.success) {
         closeDrawer();
         await loadProductsFromBackend();
-        showToast(`🗑️ "${item.name}" rimosso dal database.`);
+        showToast(`"${item.name}" rimosso dal database.`);
       } else {
-        showToast(`❌ Errore eliminazione: ${result.error}`);
+        showToast(`Errore eliminazione: ${result.error}`);
       }
     } catch (err) {
-      showToast(`❌ Errore di rete: ${err.message}`);
+      showToast(`Errore di rete: ${err.message}`);
     }
   }
 }
@@ -947,7 +993,7 @@ function editProduct(id) {
   const item = inventoryData.find((i) => i.id === id);
   if (!item) return;
   if (item.status === "completed") {
-    showToast("⚠️ Le vendite completate non possono essere modificate.");
+    showToast("Le vendite completate non possono essere modificate.");
     return;
   }
   closeDrawer();
@@ -967,13 +1013,10 @@ function editProduct(id) {
   document.getElementById("prod-buy-price").value = item.purchasedPrice || 0;
   document.getElementById("prod-buy-place").value = item.purchasedPlace || "";
   document.getElementById("prod-sell-place").value = item.sellingPlace || "";
+  document.getElementById("prod-sold-price").value = (item.salePrice !== null && item.salePrice !== undefined) ? item.salePrice : "";
   document.getElementById("prod-status").value = item.status || "stock";
-
-  const isSold = (item.status === "completed" || item.status === "active-sale");
-  const soldGroup = document.getElementById("prod-sold-price-group");
-  const soldPriceInput = document.getElementById("prod-sold-price");
-  if (soldGroup) soldGroup.style.display = isSold ? "block" : "none";
-  if (soldPriceInput) soldPriceInput.value = item.salePrice || "";
+  const notesEl = document.getElementById("prod-notes");
+  if (notesEl) notesEl.value = item.notes || "";
 }
 
 // ==========================================================================
@@ -1003,12 +1046,12 @@ async function openEbayPriceLookup(productName, size = "") {
       document.getElementById("ebay-rec-val").textContent = `€ ${min.toLocaleString("it-IT", { minimumFractionDigits: 2 })} - € ${max.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`;
       document.getElementById("ebay-vol-val").textContent = `${count} inserzioni attive`;
     } else {
-      showToast(`⚠️ eBay: ${json.error || "Nessun risultato trovato"}`);
+      showToast(`eBay: ${json.error || "Nessun risultato trovato"}`);
       closeModal();
     }
   } catch (err) {
     document.getElementById("ebay-loading").style.display = "none";
-    showToast(`❌ Errore ricerca eBay: ${err.message}`);
+    showToast(`Errore ricerca eBay: ${err.message}`);
     closeModal();
   }
 }
@@ -1367,11 +1410,15 @@ async function saveEmailPreorders() {
   }
 }
 
-// Toast Helper
+// Toast Helper (Zero-Emoji Guaranteed)
 function showToast(message) {
   const toast = document.getElementById("toastNotification");
   if (!toast) return;
-  toast.innerHTML = `<span>${message}</span>`;
+  // Rimozione totale di emoji grafiche e simboli non testuali per standard aziendale pulito
+  const cleanMessage = String(message || "")
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}]/gu, "")
+    .trim();
+  toast.innerHTML = `<span>${cleanMessage}</span>`;
   toast.classList.add("show");
   setTimeout(() => {
     toast.classList.remove("show");
