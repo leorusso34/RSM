@@ -859,7 +859,7 @@ function openDrawer(id) {
   if (ebayBtn) {
     ebayBtn.onclick = () => {
       closeDrawer();
-      openEbayPriceLookup(item.name);
+      openEbayPriceLookup(item.name, item.size);
     };
   }
 
@@ -1022,6 +1022,8 @@ function editProduct(id) {
 // ==========================================================================
 // FUNZIONALITÀ REALI RSM (eBay, AI, Sync Email)
 // ==========================================================================
+let currentEbayQuery = { name: "", size: "" };
+
 async function openEbayPriceLookup(productName, size = "") {
   closeDrawer();
   closeModal();
@@ -1029,30 +1031,63 @@ async function openEbayPriceLookup(productName, size = "") {
   if (!modal) return;
   modal.classList.add("open");
 
-  document.getElementById("ebay-query-title").textContent = productName;
-  document.getElementById("ebay-loading").style.display = "block";
-  document.getElementById("ebay-results").style.display = "none";
+  currentEbayQuery = { name: productName, size: size || "" };
+
+  const effectiveSize = (size || "").trim();
+  const subtitle = (effectiveSize && effectiveSize.toUpperCase() !== "UNI")
+    ? `${productName}  ·  taglia ${effectiveSize}`
+    : productName;
+
+  const subEl = document.getElementById("ebay-subtitle");
+  if (subEl) subEl.textContent = subtitle;
+
+  const loadingEl = document.getElementById("ebay-loading");
+  const resultsEl = document.getElementById("ebay-results");
+  if (loadingEl) loadingEl.style.display = "block";
+  if (resultsEl) resultsEl.style.display = "none";
 
   try {
     const url = `${API_BASE}/ebay-prices?name=${encodeURIComponent(productName)}&size=${encodeURIComponent(size || "")}`;
     const res = await fetch(url);
     const json = await res.json();
-    document.getElementById("ebay-loading").style.display = "none";
+    if (loadingEl) loadingEl.style.display = "none";
 
     if (json.success && json.data) {
-      document.getElementById("ebay-results").style.display = "block";
+      if (resultsEl) resultsEl.style.display = "block";
       const { avg, min, max, count } = json.data;
-      document.getElementById("ebay-avg-val").textContent = `€ ${avg.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`;
-      document.getElementById("ebay-rec-val").textContent = `€ ${min.toLocaleString("it-IT", { minimumFractionDigits: 2 })} - € ${max.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`;
-      document.getElementById("ebay-vol-val").textContent = `${count} inserzioni attive`;
+      const minEl = document.getElementById("ebay-min-val");
+      const avgEl = document.getElementById("ebay-avg-val");
+      const maxEl = document.getElementById("ebay-max-val");
+      const countEl = document.getElementById("ebay-count-text");
+
+      if (minEl) minEl.textContent = `€ ${min.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      if (avgEl) avgEl.textContent = `€ ${avg.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      if (maxEl) maxEl.textContent = `€ ${max.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      if (countEl) countEl.textContent = `Analizzate ${count} inserzioni controllate su eBay.it`;
     } else {
       showToast(`eBay: ${json.error || "Nessun risultato trovato"}`);
       closeModal();
     }
   } catch (err) {
-    document.getElementById("ebay-loading").style.display = "none";
+    if (loadingEl) loadingEl.style.display = "none";
     showToast(`Errore ricerca eBay: ${err.message}`);
     closeModal();
+  }
+}
+
+async function openEbayInBrowser() {
+  if (!currentEbayQuery.name) return;
+  try {
+    await fetch(`${API_BASE}/ebay-open-browser`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: currentEbayQuery.name,
+        size: currentEbayQuery.size
+      })
+    });
+  } catch (err) {
+    showToast(`Errore apertura browser: ${err.message}`);
   }
 }
 
@@ -1535,13 +1570,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("productForm");
   if (form) {
     form.addEventListener("submit", handleSaveProduct);
-  }
-
-  // Massimizza la finestra all'avvio per visualizzazione zoomed a schermo intero
-  if (window.__TAURI__ && window.__TAURI__.window) {
-    try {
-      window.__TAURI__.window.appWindow.maximize();
-    } catch (_) {}
   }
 
   // Chiusura rapida con tasto ESC

@@ -91,7 +91,7 @@ def main() -> None:
         print(f"[RSM] Avvio applicazione ({target_exe.name})...")
         try:
             if sys.platform == "win32":
-                os.startfile(str(target_exe))
+                os.startfile(str(target_exe), show_cmd=3)
             else:
                 subprocess.Popen([str(target_exe)])
             return

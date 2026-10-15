@@ -48,7 +48,7 @@
         "decorations": true,
         "transparent": false,
         "center": true,
-        "visible": true,
+        "visible": false,
         "focus": true,
         "maximized": true
       }

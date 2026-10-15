@@ -427,6 +427,20 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self._send_error(f"Errore connessione: {e}")
             return
 
+        # Apertura ricerca eBay nel browser predefinito
+        if path == "/api/ebay-open-browser":
+            try:
+                from src.ebay_api import open_search_in_browser
+                name = str(body.get("name", "")).strip()
+                size = str(body.get("size", "")).strip()
+                if size.upper() == "UNI":
+                    size = ""
+                open_search_in_browser(name, size)
+                self._send_json({"success": True})
+            except Exception as e:  # noqa: BLE001
+                self._send_error(f"Errore apertura browser eBay: {e}")
+            return
+
         # Scansione Email Gmail con anteprima
         if path == "/api/scan-emails":
             email_addr = (body.get("email_sync_address") or self.db.get_setting("email_sync_address", "")).strip()

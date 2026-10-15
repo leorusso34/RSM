@@ -378,47 +378,48 @@
   </div>
 
   <!-- ====================================================================
-       MODALE: STIMA PREZZI EBAY API (SIMULATORE)
+       MODALE: PREZZI DI MERCATO EBAY (IDENTICO AD EBAYPRICEDIALOG)
        ==================================================================== -->
   <div class="modal-backdrop" id="ebayModal">
-    <div class="modal-card">
+    <div class="modal-card" style="width: 480px; max-width: 92vw;">
       <div class="modal-header">
-        <h3>Stima di Mercato eBay Ufficiale</h3>
+        <div>
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Prezzi di Mercato eBay</h3>
+          <p id="ebay-subtitle" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+            Caricamento...
+          </p>
+        </div>
         <button class="modal-close-btn" onclick="closeModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="font-size: 13.5px; font-weight: 600; color: #fff; margin-bottom: 3px;" id="ebay-query-title">
-          Caricamento...
-        </div>
-        <div style="font-size: 11.5px; color: var(--text-muted);">
-          Scansione vendite concluse e inserzioni verificate su eBay EU.
+        <div id="ebay-loading" style="text-align: center; padding: 28px; color: var(--text-muted);">
+          <div style="font-size: 12.5px;">Recupero prezzi in corso...</div>
         </div>
 
-        <div id="ebay-loading" style="text-align: center; padding: 24px; color: #818cf8;">
-          <div style="font-size: 13px;">Interrogazione eBay Finding API...</div>
-        </div>
-
-        <div id="ebay-results" style="display: none; margin-top: 14px;">
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;">
-            <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; text-align: center;">
-              <div style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;">Prezzo Medio</div>
-              <div style="font-size: 16px; font-weight: 800; color: #34d399; margin-top: 3px;" id="ebay-avg-val">€ 340,00</div>
+        <div id="ebay-results" style="display: none; margin-top: 6px;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 12px 8px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">MINIMO</div>
+              <div style="font-size: 16px; font-weight: 800; color: #10b981; margin-top: 4px;" id="ebay-min-val">€ 0,00</div>
             </div>
-            <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; text-align: center;">
-              <div style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;">Consigliato</div>
-              <div style="font-size: 16px; font-weight: 800; color: #60a5fa; margin-top: 3px;" id="ebay-rec-val">€ 325,00</div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 12px 8px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">MEDIO</div>
+              <div style="font-size: 16px; font-weight: 800; color: #3b82f6; margin-top: 4px;" id="ebay-avg-val">€ 0,00</div>
             </div>
-            <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; text-align: center;">
-              <div style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;">Liquidità</div>
-              <div style="font-size: 13px; font-weight: 700; color: #a78bfa; margin-top: 5px;" id="ebay-vol-val">18 vendite / 30gg</div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 12px 8px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">MASSIMO</div>
+              <div style="font-size: 16px; font-weight: 800; color: #f59e0b; margin-top: 4px;" id="ebay-max-val">€ 0,00</div>
             </div>
           </div>
-          <div style="font-size: 11.5px; color: var(--text-muted); background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); padding: 8px 12px; border-radius: 6px;">
-            Suggerimento: La domanda per questa taglia è solida con buon margine di realizzo rapido.
+          <div id="ebay-count-text" style="font-size: 11.5px; color: var(--text-muted); text-align: center; padding: 4px 0;">
+            Analizzate 0 inserzioni controllate su eBay.it
           </div>
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-secondary" id="btn-ebay-browser" onclick="openEbayInBrowser()">
+          Vedi su eBay
+        </button>
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Chiudi</button>
       </div>
     </div>
