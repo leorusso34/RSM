@@ -721,10 +721,13 @@ function onModalStatusChange(_val) {
 }
 
 function closeModal() {
-  ["productModal", "ebayModal", "aiModal", "emailSyncModal"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove("open");
+  document.querySelectorAll(".modal-backdrop").forEach((el) => {
+    el.classList.remove("open");
   });
+  const excelStatus = document.getElementById("excel-parse-status");
+  if (excelStatus) excelStatus.textContent = "";
+  const excelInput = document.getElementById("excelFileInput");
+  if (excelInput) excelInput.value = "";
 }
 
 // ==========================================================================
@@ -1750,6 +1753,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (form) {
     form.addEventListener("submit", handleSaveProduct);
   }
+
+  // Chiusura al clic sullo sfondo scuro dei modali
+  document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) {
+        closeModal();
+      }
+    });
+  });
 
   // Chiusura rapida con tasto ESC
   window.addEventListener("keydown", (e) => {
