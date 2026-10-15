@@ -232,3 +232,125 @@ def test_bridge_excel_endpoints(tmp_path):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_bridge_bulk_operations(tmp_path):
+    """Verifica le operazioni massive: bulk-status, bulk-delete, duplicate."""
+    test_db = tmp_path / "test_bulk_ops.db"
+    db = InventoryDatabase(test_db)
+
+    id1 = db.save({
+        "name": "Jordan 1 High Chicago",
+        "size": "42",
+        "quantity": 1,
+        "purchased_price": Decimal("180.00"),
+        "purchased_place": "Nike SNKRS",
+        "status": STATUS_STOCK,
+    })
+    id2 = db.save({
+        "name": "Jordan 1 Low Travis",
+        "size": "43",
+        "quantity": 1,
+        "purchased_price": Decimal("150.00"),
+        "purchased_place": "Nike SNKRS",
+        "status": STATUS_STOCK,
+    })
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        # 1. Bulk Status: Metti in vendita multipla (active-sale con bundle)
+        bulk_sale_req = request.Request(
+            f"http://127.0.0.1:{port}/api/products/bulk-status",
+            data=json.dumps({
+                "ids": [id1, id2],
+                "status": "active-sale",
+                "sold_price_total": 400.0,
+                "fees_total": 30.0,
+                "selling_place": "Vinted",
+            }).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(bulk_sale_req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["updated_count"] == 2
+
+        prod1 = db.get(id1)
+        prod2 = db.get(id2)
+        assert prod1["status"] == STATUS_SOLD
+        assert prod1["is_completed"] == 0
+        assert prod1["sold_price"] == Decimal("200.00")
+        assert prod1["fees"] == Decimal("15.00")
+        assert prod1["selling_place"] == "Vinted"
+        assert prod1["bundle_id"] != ""
+        assert prod1["bundle_id"] == prod2["bundle_id"]
+
+        # 2. Bulk Status: Completa vendita
+        complete_req = request.Request(
+            f"http://127.0.0.1:{port}/api/products/bulk-status",
+            data=json.dumps({
+                "ids": [id1, id2],
+                "status": "completed",
+            }).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(complete_req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["updated_count"] == 2
+
+        assert db.get(id1)["is_completed"] == 1
+        assert db.get(id2)["is_completed"] == 1
+
+        # 3. Duplicate
+        dup_req = request.Request(
+            f"http://127.0.0.1:{port}/api/products/duplicate",
+            data=json.dumps({"ids": [id1]}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(dup_req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            dup_ids = data["ids"]
+            assert len(dup_ids) == 1
+            dup_id = dup_ids[0]
+
+        dup_prod = db.get(dup_id)
+        assert "Jordan 1 High Chicago (Copia)" in dup_prod["name"]
+        assert dup_prod["bundle_id"] == ""
+        assert dup_prod["is_completed"] == 0
+
+        # 4. Bulk Delete
+        del_req = request.Request(
+            f"http://127.0.0.1:{port}/api/products/bulk-delete",
+            data=json.dumps({"ids": [id1, id2, dup_id]}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(del_req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["deleted_count"] == 3
+
+        assert db.get(id1) is None
+        assert db.get(id2) is None
+        assert db.get(dup_id) is None
+
+    finally:
+        server.shutdown()
+        server.server_close()
+

@@ -692,6 +692,58 @@ body {
   color: #34d399;
 }
 
+/* Pulsante Modalità Selezione Multipla */
+.btn-toggle-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-toggle-select:hover {
+  background: #192338;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.btn-toggle-select.active {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.selection-count-badge {
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Pulsante Rapido Azzera Filtri (Centrato e Compatto) */
+#btnResetFilters {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
+  text-align: center;
+  line-height: 1;
+}
+
 /* Mini Square Sorting Button */
 .sort-dropdown-wrap {
   position: relative;
@@ -850,6 +902,18 @@ body {
 }
 
 /* Controlled Column Widths for Fixed Table Layout ("Zero-Lag" fit) */
+.data-table th.col-checkbox, .data-table td.col-checkbox { width: 36px; min-width: 36px; max-width: 36px; text-align: center; padding: 0 4px; }
+.data-table th.col-checkbox input[type="checkbox"],
+.data-table td.col-checkbox input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+  vertical-align: middle;
+}
+.data-table tbody tr.row-selected {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+}
 .data-table th.col-prod, .data-table td.col-prod { width: auto; min-width: 170px; }
 .data-table th.col-size, .data-table td.col-size { width: 60px; text-align: center; }
 .data-table th.col-qty, .data-table td.col-qty { width: 50px; text-align: center; }
@@ -861,6 +925,82 @@ body {
 .data-table th.col-place, .data-table td.col-place { width: 120px; }
 .data-table th.col-status, .data-table td.col-status { width: 105px; text-align: center; }
 .data-table th.col-actions, .data-table td.col-actions { width: 85px; text-align: center; }
+
+/* Menu Contestuale Personalizzato Russo Stock (Flat Dark, Zero Lag) */
+.context-menu {
+  position: fixed;
+  z-index: 99999;
+  min-width: 200px;
+  background: #0f1523;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  user-select: none;
+}
+
+.context-menu-header {
+  padding: 6px 10px 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: var(--border-color);
+  margin: 3px 0;
+}
+
+.context-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-main);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.context-menu-item svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+.context-menu-item:hover svg {
+  color: #60a5fa;
+}
+
+.context-menu-item.danger {
+  color: #f87171;
+}
+
+.context-menu-item.danger svg {
+  color: #f87171;
+}
+
+.context-menu-item.danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.context-menu-item.danger:hover svg {
+  color: #ef4444;
+}
 
 /* Product cell without emojis - clean typography */
 .product-cell {

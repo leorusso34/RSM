@@ -88,6 +88,10 @@ let filterSellingPlace = "";
 let filterMinPrice = null;
 let filterMaxPrice = null;
 
+// Modalità Selezione Multipla & Operazioni Massive
+let isSelectionModeActive = false;
+let selectedProductIds = new Set();
+
 let monthlyProfitChart = null;
 let platformPieChart = null;
 
@@ -268,7 +272,7 @@ function updateFilterIndicators() {
 
   const btnReset = document.getElementById("btnResetFilters");
   if (btnReset) {
-    btnReset.style.display = hasAnyFilter ? "inline-block" : "none";
+    btnReset.style.display = hasAnyFilter ? "inline-flex" : "none";
   }
 }
 
@@ -423,53 +427,9 @@ function updateDashboardMetrics() {
 }
 
 // ==========================================================================
-// RENDER TABLE
+// RENDER TABLE & FILTRAGGIO
 // ==========================================================================
-function renderTable() {
-  const thead = document.getElementById("inventory-table-head");
-  const tbody = document.getElementById("inventory-table-body");
-  if (!tbody) return;
-
-  const isStockView = (activeFilter === "stock" || activeFilter === "preorder");
-
-  // Helper per classi di ordinamento
-  const getSortClass = (field) => {
-    if (sortField !== field) return "sortable";
-    return `sortable ${sortOrder === "asc" ? "sorted-asc" : "sorted-desc"}`;
-  };
-
-  // Render dell'Header in base alla visualizzazione attiva (misure ottimizzate "Zero-Lag")
-  if (thead) {
-    if (isStockView) {
-      thead.innerHTML = `
-        <tr>
-          <th class="col-prod ${getSortClass('name')}" data-sort="name">Prodotto</th>
-          <th class="col-size col-center">Taglia</th>
-          <th class="col-qty col-center">Q.tà</th>
-          <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
-          <th class="col-place">L. Acquisto</th>
-          <th class="col-status col-center">Stato</th>
-          <th class="col-actions col-center">Azioni</th>
-        </tr>
-      `;
-    } else {
-      thead.innerHTML = `
-        <tr>
-          <th class="col-prod ${getSortClass('name')}" data-sort="name">Prodotto</th>
-          <th class="col-size col-center">Taglia</th>
-          <th class="col-qty col-center">Q.tà</th>
-          <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
-          <th class="col-sell ${getSortClass('salePrice')}" data-sort="salePrice">P. Vendita</th>
-          <th class="col-channel">Canale</th>
-          <th class="col-profit ${getSortClass('profit')}" data-sort="profit">Utile Netto</th>
-          <th class="col-roi col-center ${getSortClass('roi')}" data-sort="roi">ROI</th>
-          <th class="col-status col-center">Stato</th>
-          <th class="col-actions col-center">Azioni</th>
-        </tr>
-      `;
-    }
-  }
-
+function getFilteredAndSortedProducts() {
   let filtered = inventoryData.filter((item) => {
     // 1. Filtro per stato tab
     if (activeFilter !== "all" && item.status !== activeFilter) return false;
@@ -533,9 +493,64 @@ function renderTable() {
     return sortOrder === "asc" ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
   });
 
+  return filtered;
+}
+
+function renderTable() {
+  const thead = document.getElementById("inventory-table-head");
+  const tbody = document.getElementById("inventory-table-body");
+  if (!tbody) return;
+
+  const isStockView = (activeFilter === "stock" || activeFilter === "preorder");
+
+  // Helper per classi di ordinamento
+  const getSortClass = (field) => {
+    if (sortField !== field) return "sortable";
+    return `sortable ${sortOrder === "asc" ? "sorted-asc" : "sorted-desc"}`;
+  };
+
+  const checkboxTh = isSelectionModeActive
+    ? '<th class="col-checkbox col-center"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)" /></th>'
+    : '';
+
+  // Render dell'Header in base alla visualizzazione attiva (misure ottimizzate "Zero-Lag")
+  if (thead) {
+    if (isStockView) {
+      thead.innerHTML = `
+        <tr>
+          ${checkboxTh}
+          <th class="col-prod ${getSortClass('name')}" data-sort="name">Prodotto</th>
+          <th class="col-size col-center">Taglia</th>
+          <th class="col-qty col-center">Q.tà</th>
+          <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
+          <th class="col-place">L. Acquisto</th>
+          <th class="col-status col-center">Stato</th>
+          <th class="col-actions col-center">Azioni</th>
+        </tr>
+      `;
+    } else {
+      thead.innerHTML = `
+        <tr>
+          ${checkboxTh}
+          <th class="col-prod ${getSortClass('name')}" data-sort="name">Prodotto</th>
+          <th class="col-size col-center">Taglia</th>
+          <th class="col-qty col-center">Q.tà</th>
+          <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
+          <th class="col-sell ${getSortClass('salePrice')}" data-sort="salePrice">P. Vendita</th>
+          <th class="col-channel">Canale</th>
+          <th class="col-profit ${getSortClass('profit')}" data-sort="profit">Utile Netto</th>
+          <th class="col-roi col-center ${getSortClass('roi')}" data-sort="roi">ROI</th>
+          <th class="col-status col-center">Stato</th>
+          <th class="col-actions col-center">Azioni</th>
+        </tr>
+      `;
+    }
+  }
+
+  const filtered = getFilteredAndSortedProducts();
   tbody.innerHTML = "";
 
-  const totalCols = isStockView ? 7 : 10;
+  const totalCols = (isStockView ? 7 : 10) + (isSelectionModeActive ? 1 : 0);
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
@@ -550,6 +565,14 @@ function renderTable() {
 
   filtered.forEach((item) => {
     const tr = document.createElement("tr");
+    const isChecked = selectedProductIds.has(item.id);
+    if (isChecked) {
+      tr.classList.add("row-selected");
+    }
+
+    const checkboxTd = isSelectionModeActive
+      ? `<td class="col-checkbox col-center" onclick="event.stopPropagation()"><input type="checkbox" class="row-checkbox" ${isChecked ? "checked" : ""} onchange="toggleItemSelection(${item.id}, this.checked)" /></td>`
+      : "";
 
     // Status Badge Info
     let statusClass = "stock";
@@ -587,6 +610,7 @@ function renderTable() {
 
     if (isStockView) {
       tr.innerHTML = `
+        ${checkboxTd}
         <td class="col-prod" title="${item.name}">
           <div class="product-cell">
             <div class="product-name">${item.name}</div>
@@ -618,6 +642,7 @@ function renderTable() {
       const roiHtml = hasSaleData ? `<span class="roi-badge">+${roi.toFixed(1)}%</span>` : `<span style="color:var(--text-dim)">-</span>`;
 
       tr.innerHTML = `
+        ${checkboxTd}
         <td class="col-prod" title="${item.name}">
           <div class="product-cell">
             <div class="product-name">${item.name}</div>
@@ -643,12 +668,42 @@ function renderTable() {
       `;
     }
 
-    // Apertura Side-Drawer con click singolo o doppio tap sulla riga
-    tr.addEventListener("click", () => openDrawer(item.id));
-    tr.addEventListener("dblclick", () => openDrawer(item.id));
+    // Gestione click riga: se selezione attiva fa toggle checkbox; altrimenti apre il drawer
+    if (isSelectionModeActive) {
+      tr.addEventListener("click", () => toggleItemSelection(item.id));
+    } else {
+      tr.addEventListener("click", () => openDrawer(item.id));
+      tr.addEventListener("dblclick", () => openDrawer(item.id));
+    }
+
+    // Menu contestuale personalizzato col tasto destro del mouse
+    tr.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!selectedProductIds.has(item.id)) {
+        if (!isSelectionModeActive) {
+          selectedProductIds.clear();
+        }
+        selectedProductIds.add(item.id);
+        updateSelectionBadge();
+        renderTable();
+      }
+      showContextMenu(e.clientX, e.clientY);
+    });
 
     tbody.appendChild(tr);
   });
+
+  // Aggiorna checkbox master nell'intestazione
+  if (isSelectionModeActive) {
+    const selectAllBox = document.getElementById("selectAllCheckbox");
+    if (selectAllBox && filtered.length > 0) {
+      const allSelected = filtered.every((p) => selectedProductIds.has(p.id));
+      const someSelected = filtered.some((p) => selectedProductIds.has(p.id));
+      selectAllBox.checked = allSelected;
+      selectAllBox.indeterminate = !allSelected && someSelected;
+    }
+  }
 }
 
 // ==========================================================================
@@ -1259,6 +1314,370 @@ async function openEbayInBrowser() {
 }
 
 // ==========================================================================
+// SELEZIONE MULTIPLA & OPERAZIONI MASSIVE (BULK ACTIONS & CONTEXT MENU)
+// ==========================================================================
+
+function toggleSelectionMode() {
+  isSelectionModeActive = !isSelectionModeActive;
+  const btn = document.getElementById("btnToggleSelect");
+  if (btn) btn.classList.toggle("active", isSelectionModeActive);
+  if (!isSelectionModeActive) {
+    selectedProductIds.clear();
+  }
+  updateSelectionBadge();
+  renderTable();
+}
+
+function updateSelectionBadge() {
+  const badge = document.getElementById("selectedCountBadge");
+  if (!badge) return;
+  const count = selectedProductIds.size;
+  if (isSelectionModeActive && count > 0) {
+    badge.textContent = count;
+    badge.style.display = "inline-block";
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+function toggleItemSelection(id, explicitState = null) {
+  if (explicitState !== null) {
+    if (explicitState) {
+      selectedProductIds.add(id);
+    } else {
+      selectedProductIds.delete(id);
+    }
+  } else {
+    if (selectedProductIds.has(id)) {
+      selectedProductIds.delete(id);
+    } else {
+      selectedProductIds.add(id);
+    }
+  }
+  updateSelectionBadge();
+  renderTable();
+}
+
+function toggleSelectAll(checked) {
+  const visible = getFilteredAndSortedProducts();
+  if (checked) {
+    visible.forEach((p) => selectedProductIds.add(p.id));
+  } else {
+    visible.forEach((p) => selectedProductIds.delete(p.id));
+  }
+  updateSelectionBadge();
+  renderTable();
+}
+
+// Visualizzazione menu contestuale
+function showContextMenu(x, y) {
+  const menu = document.getElementById("tableContextMenu");
+  if (!menu) return;
+
+  const count = selectedProductIds.size;
+  if (count === 0) return;
+
+  const header = document.getElementById("ctxMenuHeader");
+  if (header) {
+    header.textContent = `${count} Prodott${count === 1 ? "o Selezionato" : "i Selezionati"}`;
+  }
+
+  const selectedRecords = inventoryData.filter((i) => selectedProductIds.has(i.id));
+
+  // Regole visibilità voci di menu fedeli al progetto originale
+  const canEdit = count === 1 && selectedRecords[0] && selectedRecords[0].status !== "completed";
+  const canDuplicate = true;
+  const canSell = selectedRecords.some((i) => i.status === "stock" || i.status === "preorder");
+  const canStock = selectedRecords.some((i) => i.status === "preorder" || i.status === "active-sale");
+  const canComplete = selectedRecords.some((i) => i.status === "active-sale");
+  const canSearchEbay = true;
+  const canEbayPrices = count === 1;
+  const canDelete = true;
+
+  const elEdit = document.getElementById("ctxItemEdit");
+  const elDup = document.getElementById("ctxItemDuplicate");
+  const elSell = document.getElementById("ctxItemSell");
+  const elStock = document.getElementById("ctxItemStock");
+  const elComplete = document.getElementById("ctxItemComplete");
+  const elSearchEbay = document.getElementById("ctxItemSearchEbay");
+  const elEbayPrices = document.getElementById("ctxItemEbayPrices");
+  const elDelete = document.getElementById("ctxItemDelete");
+
+  if (elEdit) elEdit.style.display = canEdit ? "flex" : "none";
+  if (elDup) elDup.style.display = canDuplicate ? "flex" : "none";
+  if (elSell) elSell.style.display = canSell ? "flex" : "none";
+  if (elStock) elStock.style.display = canStock ? "flex" : "none";
+  if (elComplete) elComplete.style.display = canComplete ? "flex" : "none";
+  if (elSearchEbay) elSearchEbay.style.display = canSearchEbay ? "flex" : "none";
+  if (elEbayPrices) elEbayPrices.style.display = canEbayPrices ? "flex" : "none";
+  if (elDelete) elDelete.style.display = canDelete ? "flex" : "none";
+
+  // Posizionamento nel viewport
+  menu.style.display = "block";
+  const rect = menu.getBoundingClientRect();
+  const winW = window.innerWidth;
+  const winH = window.innerHeight;
+
+  let left = x;
+  let top = y;
+  if (left + rect.width > winW - 10) left = winW - rect.width - 10;
+  if (top + rect.height > winH - 10) top = winH - rect.height - 10;
+
+  menu.style.left = `${Math.max(8, left)}px`;
+  menu.style.top = `${Math.max(8, top)}px`;
+}
+
+function hideContextMenu() {
+  const menu = document.getElementById("tableContextMenu");
+  if (menu) menu.style.display = "none";
+}
+
+// Azioni del menu contestuale
+function ctxActionEdit() {
+  hideContextMenu();
+  const ids = Array.from(selectedProductIds);
+  if (ids.length === 1) {
+    editProduct(ids[0]);
+  }
+}
+
+async function ctxActionDuplicate() {
+  hideContextMenu();
+  const ids = Array.from(selectedProductIds);
+  if (ids.length === 0) return;
+  try {
+    const res = await callApi("/products/duplicate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      selectedProductIds.clear();
+      updateSelectionBadge();
+      await loadProductsFromBackend();
+      showToast(`Duplicati ${ids.length} prodotti con successo!`);
+    } else {
+      showToast(`Errore duplicazione: ${json.error}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  }
+}
+
+function ctxActionSell() {
+  hideContextMenu();
+  openBulkSaleModal();
+}
+
+async function ctxActionStock() {
+  hideContextMenu();
+  const ids = Array.from(selectedProductIds);
+  if (ids.length === 0) return;
+  if (!confirm(`Spostare ${ids.length} prodotti in Magazzino?`)) return;
+
+  try {
+    const res = await callApi("/products/bulk-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids, status: "stock" }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      selectedProductIds.clear();
+      updateSelectionBadge();
+      activeFilter = "stock";
+      document.querySelectorAll(".table-tab-pill").forEach((pill) => {
+        pill.classList.toggle("active", pill.getAttribute("data-filter") === "stock");
+      });
+      await loadProductsFromBackend();
+      showToast(`${ids.length} prodotti spostati in Magazzino!`);
+    } else {
+      showToast(`Errore spostamento: ${json.error}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  }
+}
+
+async function ctxActionComplete() {
+  hideContextMenu();
+  const ids = Array.from(selectedProductIds);
+  if (ids.length === 0) return;
+  if (!confirm(`Contrassegnare ${ids.length} vendite come completate?`)) return;
+
+  try {
+    const res = await callApi("/products/bulk-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids, status: "completed" }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      selectedProductIds.clear();
+      updateSelectionBadge();
+      activeFilter = "completed";
+      document.querySelectorAll(".table-tab-pill").forEach((pill) => {
+        pill.classList.toggle("active", pill.getAttribute("data-filter") === "completed");
+      });
+      await loadProductsFromBackend();
+      showToast(`${ids.length} vendite contrassegnate come completate!`);
+    } else {
+      showToast(`Errore completamento: ${json.error}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  }
+}
+
+async function ctxActionSearchEbay() {
+  hideContextMenu();
+  const selectedRecords = inventoryData.filter((i) => selectedProductIds.has(i.id));
+  if (selectedRecords.length === 0) return;
+
+  let opened = 0;
+  for (const item of selectedRecords) {
+    if (!item.name) continue;
+    try {
+      await callApi("/ebay-open-browser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: item.name,
+          size: item.size || "",
+        }),
+      });
+      opened++;
+    } catch (_) {}
+  }
+  showToast(`Aperte ${opened} schede di ricerca eBay nel browser.`);
+}
+
+function ctxActionEbayPrices() {
+  hideContextMenu();
+  const ids = Array.from(selectedProductIds);
+  if (ids.length !== 1) return;
+  const item = inventoryData.find((i) => i.id === ids[0]);
+  if (item) {
+    openEbayPriceLookup(item.name, item.size || "");
+  }
+}
+
+async function ctxActionDelete() {
+  hideContextMenu();
+  const ids = Array.from(selectedProductIds);
+  if (ids.length === 0) return;
+  const msg = ids.length === 1
+    ? "Eliminare definitivamente il prodotto selezionato?"
+    : `Eliminare definitivamente ${ids.length} prodotti selezionati dal database SQLite?`;
+  if (!confirm(msg)) return;
+
+  try {
+    const res = await callApi("/products/bulk-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      selectedProductIds.clear();
+      updateSelectionBadge();
+      await loadProductsFromBackend();
+      showToast(`Eliminati ${json.deleted_count} prodotti dal database.`);
+    } else {
+      showToast(`Errore eliminazione: ${json.error}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  }
+}
+
+// Modale Vendita Multipla (Bulk Sale Modal)
+function openBulkSaleModal() {
+  const modal = document.getElementById("bulkSaleModal");
+  if (!modal) return;
+  const count = selectedProductIds.size;
+  if (count === 0) return;
+
+  const titleEl = document.getElementById("bulkSaleModalTitle");
+  if (titleEl) {
+    titleEl.textContent = `Metti in Vendita (${count} Prodott${count === 1 ? "o" : "i"})`;
+  }
+
+  const datalist = document.getElementById("bulk-selling-places-list");
+  if (datalist) {
+    const placesSet = new Set();
+    inventoryData.forEach((i) => {
+      if (i.sellingPlace && i.sellingPlace.trim()) placesSet.add(i.sellingPlace.trim());
+    });
+    datalist.innerHTML = "";
+    Array.from(placesSet).sort().forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p;
+      datalist.appendChild(opt);
+    });
+  }
+
+  document.getElementById("bulk-sale-total-price").value = "";
+  document.getElementById("bulk-sale-total-fees").value = "0.00";
+  document.getElementById("bulk-sale-place").value = "";
+
+  modal.classList.add("open");
+  const priceInput = document.getElementById("bulk-sale-total-price");
+  if (priceInput) setTimeout(() => priceInput.focus(), 60);
+}
+
+function closeBulkSaleModal() {
+  const modal = document.getElementById("bulkSaleModal");
+  if (modal) modal.classList.remove("open");
+}
+
+async function handleBulkSaleSubmit(e) {
+  e.preventDefault();
+  const ids = Array.from(selectedProductIds);
+  if (ids.length === 0) return;
+
+  const priceVal = parseFloat(document.getElementById("bulk-sale-total-price").value) || 0;
+  const feesVal = parseFloat(document.getElementById("bulk-sale-total-fees").value) || 0;
+  const placeVal = document.getElementById("bulk-sale-place").value.trim();
+
+  if (priceVal <= 0) {
+    showToast("Inserisci un prezzo di vendita totale valido!");
+    return;
+  }
+
+  try {
+    const res = await callApi("/products/bulk-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ids,
+        status: "active-sale",
+        sold_price_total: priceVal,
+        fees_total: feesVal,
+        selling_place: placeVal,
+      }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      closeBulkSaleModal();
+      selectedProductIds.clear();
+      updateSelectionBadge();
+      activeFilter = "active-sale";
+      document.querySelectorAll(".table-tab-pill").forEach((pill) => {
+        pill.classList.toggle("active", pill.getAttribute("data-filter") === "active-sale");
+      });
+      await loadProductsFromBackend();
+      showToast(`${ids.length} prodotti messi in vendita con successo!`);
+    } else {
+      showToast(`Errore vendita multipla: ${json.error}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  }
+}
+
+// ==========================================================================
 // ASSISTENTE AI GEMINI (INSERIMENTO RAPIDO - IDENTICO AD AIDIALOG)
 // ==========================================================================
 let aiExtractedProducts = [];
@@ -1854,6 +2273,11 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll(".table-tab-pill").forEach((p) => p.classList.remove("active"));
       pill.classList.add("active");
       activeFilter = pill.getAttribute("data-filter");
+      // La selezione si azzera solo nel caso si cambi tabella come richiesto dall'utente
+      if (selectedProductIds.size > 0) {
+        selectedProductIds.clear();
+        updateSelectionBadge();
+      }
       renderTable();
     });
   });
@@ -1877,6 +2301,12 @@ document.addEventListener("DOMContentLoaded", () => {
         activeFilter = "all";
       }
 
+      // La selezione si azzera solo nel caso si cambi tabella come richiesto dall'utente
+      if (selectedProductIds.size > 0) {
+        selectedProductIds.clear();
+        updateSelectionBadge();
+      }
+
       // Sincronizza anche la pill attiva
       document.querySelectorAll(".table-tab-pill").forEach((pill) => {
         if (pill.getAttribute("data-filter") === activeFilter) {
@@ -1890,8 +2320,6 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast(`Visualizzazione: ${item.querySelector("span").textContent}`);
     });
   });
-
-
 
   // Delegazione click per ordinamento colonne tabella
   const tableHead = document.getElementById("inventory-table-head");
@@ -1924,8 +2352,16 @@ document.addEventListener("DOMContentLoaded", () => {
     backdrop.addEventListener("click", (e) => {
       if (e.target === backdrop) {
         closeModal();
+        closeBulkSaleModal();
       }
     });
+  });
+
+  // Chiusura al click fuori dal menu contestuale
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#tableContextMenu")) {
+      hideContextMenu();
+    }
   });
 
   // Chiusura rapida con tasto ESC
@@ -1933,6 +2369,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Escape") {
       closeDrawer();
       closeModal();
+      closeBulkSaleModal();
+      hideContextMenu();
     }
   });
 });

@@ -12,8 +12,9 @@ import sys
 import tempfile
 import threading
 import time
+import uuid
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -681,6 +682,107 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     print(f"Errore salvataggio record Excel: {e}")
 
             self._send_json({"success": True, "saved_count": saved_count})
+            return
+
+        # Operazioni massive: Aggiornamento stato di gruppo
+        if path == "/api/products/bulk-status":
+            ids = [int(i) for i in body.get("ids", []) if str(i).isdigit()]
+            if not ids:
+                self._send_error("Nessun ID prodotto fornito.")
+                return
+
+            target_status = str(body.get("status", "")).strip().lower()
+            if target_status not in ("stock", "preorder", "active-sale", "completed"):
+                self._send_error("Stato target non valido.")
+                return
+
+            try:
+                if target_status == "completed":
+                    placeholders = ", ".join("?" for _ in ids)
+                    with self.db.connection:
+                        self.db.connection.execute(
+                            f"UPDATE products SET is_completed = 1, updated_at = CURRENT_TIMESTAMP WHERE id IN ({placeholders})",
+                            ids,
+                        )
+                    self._send_json({"success": True, "updated_count": len(ids)})
+                    return
+
+                if target_status == "stock":
+                    self.db.update_status_many(ids, STATUS_STOCK)
+                    self._send_json({"success": True, "updated_count": len(ids)})
+                    return
+
+                if target_status == "preorder":
+                    self.db.update_status_many(ids, STATUS_PREORDER)
+                    self._send_json({"success": True, "updated_count": len(ids)})
+                    return
+
+                if target_status == "active-sale":
+                    extra: dict[str, Any] = {}
+                    sp_total = body.get("sold_price_total")
+                    fees_total = body.get("fees_total", 0)
+                    count_dec = Decimal(str(len(ids))) if ids else Decimal(1)
+
+                    if sp_total is not None and str(sp_total).strip() != "":
+                        sp_dec = Decimal(str(sp_total))
+                        extra["sold_price"] = (sp_dec / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+                    fees_dec = Decimal(str(fees_total or 0))
+                    extra["fees"] = (fees_dec / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+                    if "selling_place" in body:
+                        extra["selling_place"] = str(body["selling_place"]).strip()
+
+                    extra["sold_date"] = datetime.now(tz=timezone.utc).astimezone().date().isoformat()
+                    extra["bundle_id"] = str(uuid.uuid4()) if len(ids) > 1 else ""
+
+                    self.db.update_status_many(ids, STATUS_SOLD, extra_data=extra)
+                    placeholders = ", ".join("?" for _ in ids)
+                    with self.db.connection:
+                        self.db.connection.execute(
+                            f"UPDATE products SET is_completed = 0 WHERE id IN ({placeholders})",
+                            ids,
+                        )
+                    self._send_json({"success": True, "updated_count": len(ids)})
+                    return
+            except Exception as e:  # noqa: BLE001
+                self._send_error(f"Errore aggiornamento massivo: {e}")
+                return
+
+        # Operazioni massive: Eliminazione di gruppo
+        if path == "/api/products/bulk-delete":
+            ids = [int(i) for i in body.get("ids", []) if str(i).isdigit()]
+            if not ids:
+                self._send_error("Nessun ID prodotto fornito.")
+                return
+            try:
+                deleted_count = self.db.delete_many(ids)
+                self._send_json({"success": True, "deleted_count": deleted_count})
+            except Exception as e:  # noqa: BLE001
+                self._send_error(f"Errore eliminazione multipla: {e}")
+            return
+
+        # Operazioni massive: Duplicazione prodotti
+        if path == "/api/products/duplicate":
+            ids = [int(i) for i in body.get("ids", []) if str(i).isdigit()]
+            if not ids:
+                self._send_error("Nessun ID prodotto fornito.")
+                return
+            try:
+                duplicated_ids = []
+                for prod_id in ids:
+                    rec = self.db.get(prod_id)
+                    if rec:
+                        copy_rec = dict(rec)
+                        copy_rec.pop("id", None)
+                        copy_rec["name"] = f"{copy_rec.get('name', 'Prodotto')} (Copia)"
+                        copy_rec["bundle_id"] = ""
+                        copy_rec["is_completed"] = 0
+                        new_id = self.db.save(copy_rec)
+                        duplicated_ids.append(new_id)
+                self._send_json({"success": True, "ids": duplicated_ids, "count": len(duplicated_ids)})
+            except Exception as e:  # noqa: BLE001
+                self._send_error(f"Errore duplicazione: {e}")
             return
 
         self._send_error("Endpoint POST non trovato", status=HTTPStatus.NOT_FOUND)
