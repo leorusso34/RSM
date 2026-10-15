@@ -1134,22 +1134,46 @@ function initCharts() {
     updateMonthlyChart();
   }
 
-  // Chart 2: Piattaforme Reale (dal database SQLite)
+  // Chart 2: Piattaforme Reale (dal database SQLite calibrato su base 100%)
   const ctxPlatform = document.getElementById("platformPieChart");
   if (ctxPlatform) {
     let platLabels = [];
     let platData = [];
+    let platRawValues = [];
     const platColors = ["#6366f1", "#10b981", "#8b5cf6", "#f59e0b", "#3b82f6", "#ec4899", "#14b8a6"];
 
+    let rawItems = [];
     if (realPlatformProfits && realPlatformProfits.length > 0) {
-      platLabels = realPlatformProfits.map((p) => p.platform || "Altro");
-      platData = realPlatformProfits.map((p) => Math.max(0, Number(p.profit || 0)));
+      const positive = realPlatformProfits.filter((p) => Number(p.profit || 0) > 0);
+      if (positive.length > 0) {
+        rawItems = positive.map((p) => ({
+          label: p.platform || "Altro",
+          value: Number(p.profit || 0),
+        }));
+      } else {
+        rawItems = realPlatformProfits.map((p) => ({
+          label: p.platform || "Altro",
+          value: Math.max(0, Number(p.revenue || p.count || 0)),
+        }));
+      }
     } else if (metricsData && metricsData.platforms && Object.keys(metricsData.platforms).length > 0) {
-      platLabels = Object.keys(metricsData.platforms);
-      platData = Object.values(metricsData.platforms);
+      rawItems = Object.entries(metricsData.platforms).map(([k, v]) => ({
+        label: k || "Altro",
+        value: Number(v || 0),
+      }));
+    }
+
+    const totalRaw = rawItems.reduce((acc, curr) => acc + curr.value, 0);
+
+    if (rawItems.length > 0 && totalRaw > 0) {
+      platLabels = rawItems.map((item) => item.label);
+      // Calibrazione rigorosa su base 100%
+      platData = rawItems.map((item) => Number(((item.value / totalRaw) * 100).toFixed(1)));
+      platRawValues = rawItems.map((item) => item.value);
     } else {
       platLabels = ["Nessuna vendita"];
-      platData = [1];
+      platData = [100];
+      platRawValues = [0];
     }
 
     platformPieChart = new Chart(ctxPlatform, {
@@ -1187,7 +1211,25 @@ function initCharts() {
               boxWidth: 8,
               boxHeight: 8,
               padding: 8,
-              font: { size: 10.5 }
+              font: { size: 10.5 },
+              generateLabels: (chart) => {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  const dataset = data.datasets[0];
+                  return data.labels.map((label, i) => {
+                    const pct = dataset.data[i] || 0;
+                    return {
+                      text: `${label} (${pct}%)`,
+                      fillStyle: dataset.backgroundColor[i],
+                      strokeStyle: dataset.borderColor || "#101726",
+                      lineWidth: dataset.borderWidth || 1,
+                      hidden: false,
+                      index: i
+                    };
+                  });
+                }
+                return [];
+              }
             }
           },
           tooltip: {
@@ -1195,7 +1237,15 @@ function initCharts() {
             borderColor: "rgba(255, 255, 255, 0.1)",
             borderWidth: 1,
             callbacks: {
-              label: (context) => ` ${context.label}: ${context.parsed}% delle vendite`
+              label: (context) => {
+                if (platLabels[0] === "Nessuna vendita") {
+                  return " Nessuna vendita registrata";
+                }
+                const idx = context.dataIndex;
+                const pct = context.parsed;
+                const rawVal = platRawValues[idx] || 0;
+                return ` ${context.label}: € ${rawVal.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${pct}% del totale)`;
+              }
             }
           }
         }
@@ -1808,25 +1858,30 @@ function showContextMenu(x, y) {
 function hideContextMenu() {
   const menu = document.getElementById("tableContextMenu");
   if (menu) menu.style.display = "none";
+}
+
+// Azioni del menu contestuale
+function ctxActionEdit() {
+  const ids = Array.from(selectedProductIds);
+  hideContextMenu();
   if (!isSelectionModeActive) {
     selectedProductIds.clear();
     updateSelectionBadge();
     renderTable();
   }
-}
-
-// Azioni del menu contestuale
-function ctxActionEdit() {
-  hideContextMenu();
-  const ids = Array.from(selectedProductIds);
   if (ids.length === 1) {
     editProduct(ids[0]);
   }
 }
 
 async function ctxActionDuplicate() {
-  hideContextMenu();
   const ids = Array.from(selectedProductIds);
+  hideContextMenu();
+  if (!isSelectionModeActive) {
+    selectedProductIds.clear();
+    updateSelectionBadge();
+    renderTable();
+  }
   if (ids.length === 0) return;
   try {
     const res = await callApi("/products/duplicate", {
@@ -1859,13 +1914,20 @@ function ctxActionSell() {
 }
 
 async function ctxActionStock() {
-  hideContextMenu();
   const ids = Array.from(selectedProductIds);
+  hideContextMenu();
   if (ids.length === 0) return;
-  if (!confirm(`Spostare ${ids.length} prodotti in Magazzino?`)) return;
+  if (!confirm(`Spostare ${ids.length} prodotti in Magazzino?`)) {
+    if (!isSelectionModeActive) {
+      selectedProductIds.clear();
+      updateSelectionBadge();
+      renderTable();
+    }
+    return;
+  }
 
   const snapshots = inventoryData
-    .filter((i) => selectedProductIds.has(i.id))
+    .filter((i) => ids.includes(i.id))
     .map((i) => JSON.parse(JSON.stringify(i)));
 
   try {
@@ -1898,13 +1960,20 @@ async function ctxActionStock() {
 }
 
 async function ctxActionComplete() {
-  hideContextMenu();
   const ids = Array.from(selectedProductIds);
+  hideContextMenu();
   if (ids.length === 0) return;
-  if (!confirm(`Contrassegnare ${ids.length} vendite come completate?`)) return;
+  if (!confirm(`Contrassegnare ${ids.length} vendite come completate?`)) {
+    if (!isSelectionModeActive) {
+      selectedProductIds.clear();
+      updateSelectionBadge();
+      renderTable();
+    }
+    return;
+  }
 
   const snapshots = inventoryData
-    .filter((i) => selectedProductIds.has(i.id))
+    .filter((i) => ids.includes(i.id))
     .map((i) => JSON.parse(JSON.stringify(i)));
 
   try {
@@ -1937,8 +2006,13 @@ async function ctxActionComplete() {
 }
 
 async function ctxActionSearchEbay() {
-  hideContextMenu();
   const selectedRecords = inventoryData.filter((i) => selectedProductIds.has(i.id));
+  hideContextMenu();
+  if (!isSelectionModeActive) {
+    selectedProductIds.clear();
+    updateSelectionBadge();
+    renderTable();
+  }
   if (selectedRecords.length === 0) return;
 
   let opened = 0;
@@ -1960,8 +2034,13 @@ async function ctxActionSearchEbay() {
 }
 
 function ctxActionEbayPrices() {
-  hideContextMenu();
   const ids = Array.from(selectedProductIds);
+  hideContextMenu();
+  if (!isSelectionModeActive) {
+    selectedProductIds.clear();
+    updateSelectionBadge();
+    renderTable();
+  }
   if (ids.length !== 1) return;
   const item = inventoryData.find((i) => i.id === ids[0]);
   if (item) {
@@ -1970,16 +2049,23 @@ function ctxActionEbayPrices() {
 }
 
 async function ctxActionDelete() {
-  hideContextMenu();
   const ids = Array.from(selectedProductIds);
+  hideContextMenu();
   if (ids.length === 0) return;
   const msg = ids.length === 1
     ? "Eliminare definitivamente il prodotto selezionato?"
     : `Eliminare definitivamente ${ids.length} prodotti selezionati dal database SQLite?`;
-  if (!confirm(msg)) return;
+  if (!confirm(msg)) {
+    if (!isSelectionModeActive) {
+      selectedProductIds.clear();
+      updateSelectionBadge();
+      renderTable();
+    }
+    return;
+  }
 
   const snapshots = inventoryData
-    .filter((i) => selectedProductIds.has(i.id))
+    .filter((i) => ids.includes(i.id))
     .map((i) => JSON.parse(JSON.stringify(i)));
 
   try {
@@ -2089,6 +2175,11 @@ function openBulkSaleModal() {
 function closeBulkSaleModal() {
   const modal = document.getElementById("bulkSaleModal");
   if (modal) modal.classList.remove("open");
+  if (!isSelectionModeActive && selectedProductIds.size > 0) {
+    selectedProductIds.clear();
+    updateSelectionBadge();
+    renderTable();
+  }
 }
 
 async function handleBulkSaleSubmit(e) {
@@ -2841,6 +2932,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("click", (e) => {
     if (!e.target.closest("#tableContextMenu")) {
       hideContextMenu();
+      if (!isSelectionModeActive && selectedProductIds.size > 0) {
+        selectedProductIds.clear();
+        updateSelectionBadge();
+        renderTable();
+      }
     }
   });
 
@@ -2869,6 +2965,11 @@ document.addEventListener("DOMContentLoaded", () => {
       closeModal();
       closeBulkSaleModal();
       hideContextMenu();
+      if (!isSelectionModeActive && selectedProductIds.size > 0) {
+        selectedProductIds.clear();
+        updateSelectionBadge();
+        renderTable();
+      }
       return;
     }
 
