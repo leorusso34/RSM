@@ -225,6 +225,13 @@ def apply_update_and_restart(
         with zipfile.ZipFile(zip_dest, "r") as z:
             z.extractall(extract_dir)
 
+        # Gestione automatica archivi zip annidati (es. zip scaricati da GitHub Actions)
+        nested_zips = list(extract_dir.glob("*.zip"))
+        if len(nested_zips) == 1 and not (extract_dir / "RSM.exe").is_file() and not (extract_dir / "src").is_dir():
+            with zipfile.ZipFile(nested_zips[0], "r") as nz:
+                nz.extractall(extract_dir)
+            nested_zips[0].unlink(missing_ok=True)
+
         # Individua in modo robusto la cartella sorgente contenente l'applicazione:
         # Se 'RSM.exe' o 'RSM.app' si trova direttamente in extract_dir, usiamo quella.
         # Altrimenti cerchiamo il file eseguibile nei sotto-percorsi (es. dentro 'RSM/').

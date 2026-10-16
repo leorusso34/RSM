@@ -192,3 +192,30 @@ def test_source_root_extraction_resolution(tmp_path):
     assert candidates2[0].parent == extract_dir2
 
 
+def test_nested_zip_extraction(tmp_path):
+    import zipfile
+    inner_zip_path = tmp_path / "inner.zip"
+    with zipfile.ZipFile(inner_zip_path, "w") as z:
+        z.writestr("RSM/RSM.exe", "fake_binary")
+        z.writestr("RSM/src/main.py", "print(1)")
+
+    outer_zip_path = tmp_path / "outer.zip"
+    with zipfile.ZipFile(outer_zip_path, "w") as z:
+        z.write(inner_zip_path, arcname="RSM-Windows.zip")
+
+    extract_dir = tmp_path / "extracted"
+    extract_dir.mkdir()
+    with zipfile.ZipFile(outer_zip_path, "r") as z:
+        z.extractall(extract_dir)
+
+    # Verifica gestione zip annidato come in updater.py
+    nested_zips = list(extract_dir.glob("*.zip"))
+    if len(nested_zips) == 1 and not (extract_dir / "RSM.exe").is_file() and not (extract_dir / "src").is_dir():
+        with zipfile.ZipFile(nested_zips[0], "r") as nz:
+            nz.extractall(extract_dir)
+        nested_zips[0].unlink(missing_ok=True)
+
+    assert (extract_dir / "RSM" / "RSM.exe").is_file()
+
+
+
