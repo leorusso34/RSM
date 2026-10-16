@@ -291,6 +291,19 @@ body {
   border-color: #334155;
 }
 
+.btn-icon-square.countdown {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #f59e0b;
+  animation: pulse-countdown 1s infinite;
+}
+
+@keyframes pulse-countdown {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
 .btn-icon-square.recording {
   background: rgba(239, 68, 68, 0.2);
   border-color: #ef4444;
@@ -955,6 +968,71 @@ body {
 .data-table th.col-status, .data-table td.col-status { width: 105px; text-align: center; }
 .data-table th.col-actions, .data-table td.col-actions { width: 85px; text-align: center; }
 
+/* ==========================================================================
+   MODAL DATA TABLES (AI EXTRACTION, EMAIL SYNC, EXCEL IMPORT)
+   ========================================================================== */
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 11.5px;
+  table-layout: fixed;
+}
+
+.inventory-table thead th {
+  background: #0f172a;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.inventory-table th.col-center,
+.inventory-table td.col-center {
+  text-align: center;
+}
+
+.inventory-table th.col-right,
+.inventory-table td.col-right {
+  text-align: right;
+}
+
+.inventory-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.15s ease;
+}
+
+.inventory-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.inventory-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.inventory-table tbody td {
+  padding: 8px 10px;
+  color: var(--text-main);
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+.table-size-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  letter-spacing: 0.3px;
+}
+
 /* Menu Contestuale Personalizzato Russo Stock (Flat Dark, Zero Lag) */
 .context-menu {
   position: fixed;
@@ -1144,6 +1222,11 @@ body {
 
 .profit-pos {
   color: #34d399;
+  font-weight: 700;
+}
+
+.profit-neg {
+  color: #ef4444;
   font-weight: 700;
 }
 

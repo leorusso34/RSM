@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "RSM"
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.6.0"
 GITHUB_REPO = "leorusso34/RSM"
 
 # Cloudflare Worker Proxy per API sicure (eBay, Gemini AI, GitHub Updates)

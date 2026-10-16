@@ -1,11 +1,9 @@
 import csv
 import sqlite3
 from decimal import Decimal
-from unittest.mock import MagicMock
 
 from src.config import STATUS_PREORDER, STATUS_SOLD, STATUS_STOCK
 from src.database import InventoryDatabase
-from src.ui.main_window import InventoryApp
 from src.utils import (
     calculate_profit,
     export_to_csv,
@@ -107,33 +105,6 @@ def test_read_spreadsheet_raw_csv(tmp_path):
     assert "90" in raw
 
 
-def test_sort_tree_is_defined():
-    class FakeTree:
-        def __init__(self):
-            self.rows = {"a": {"name": "Zeta"}, "b": {"name": "Alpha"}}
-            self.moves = []
-
-        def set(self, item, column):
-            return self.rows[item][column]
-
-        def get_children(self, _root):
-            return tuple(self.rows)
-
-        def move(self, item, _parent, _index):
-            self.moves.append(item)
-
-    fake_tree = FakeTree()
-    controller = type("Controller", (), {"trees": {STATUS_STOCK: fake_tree}, "current_sort": {}})()
-    InventoryApp.sort_tree(controller, STATUS_STOCK, "name")
-    assert fake_tree.moves == ["b", "a"]
-
-
-def test_table_shows_only_compact_columns():
-    assert "id" not in InventoryApp.COLUMNS
-    assert "selling_price" not in InventoryApp.COLUMNS
-    assert "release_date" not in InventoryApp.COLUMNS
-    assert "sale_price" in InventoryApp.COLUMNS
-    assert len(InventoryApp.COLUMNS) == 11
 
 
 def test_email_sync_html_stripper():
@@ -146,29 +117,6 @@ def test_email_sync_html_stripper():
     assert "<" not in clean
 
 
-def test_email_sync_dialog_initialization(tmp_path):
-    from src.ui.email_sync_dialog import EmailSyncDialog
-    db = InventoryDatabase(tmp_path / "test_email.db")
-    db.set_setting("email_sync_address", "test@gmail.com")
-    db.set_setting("email_sync_app_password", "abcdefghijklmnop")
-
-    try:
-        app = InventoryApp()
-    except Exception:  # noqa: BLE001
-        import pytest
-        db.close()
-        pytest.skip("Tcl/Tk non disponibile nell'ambiente di test senza display")
-
-    try:
-        app.update_idletasks()
-        dialog = EmailSyncDialog(app, db, lambda: None)
-        dialog.update_idletasks()
-        assert dialog.var_email.get() == "test@gmail.com"
-        assert dialog.var_password.get() == "abcdefghijklmnop"
-        dialog.destroy()
-    finally:
-        app.destroy()
-        db.close()
 
 
 def test_external_config_json_priority(tmp_path, monkeypatch):
@@ -235,55 +183,6 @@ def test_search_by_price(tmp_path):
     db.close()
 
 
-def test_undo_stack_limit_and_actions(tmp_path):
-    """Verifica che l'undo stack rispetti il limite massimo di 10 azioni e ripristini correttamente i record."""
-    db = InventoryDatabase(tmp_path / "test_undo.db")
-    status_var = type("Var", (), {"set": lambda self, v: None})()
-    
-    app_stub = type("AppStub", (), {
-        "_undo_stack": [],
-        "db": db,
-        "status_bar_var": status_var,
-        "refresh": lambda self: None,
-        "_push_undo": InventoryApp._push_undo,
-        "undo": InventoryApp.undo,
-        "_undo_insert": InventoryApp._undo_insert,
-        "_undo_update": InventoryApp._undo_update,
-        "_undo_delete": InventoryApp._undo_delete,
-        "set_status": InventoryApp.set_status,
-    })()
-
-    # Inseriamo un prodotto
-    pid = db.save({
-        "name": "Articolo Originale", "size": "42", "quantity": 1,
-        "purchased_price": Decimal("100.00"), "purchased_place": "Store",
-        "selling_place": "", "selling_price": None, "sold_price": None,
-        "fees": Decimal(0), "sold_date": "", "status": STATUS_STOCK,
-        "release_date": "", "notes": ""
-    })
-    app_stub._push_undo("Aggiunto articolo", lambda nids=[pid]: app_stub._undo_insert(nids))
-    assert len(app_stub._undo_stack) == 1
-
-    # Verifichiamo il limite massimo di 10 elementi
-    for i in range(15):
-        app_stub._push_undo(f"Azione {i}", lambda: None)
-    assert len(app_stub._undo_stack) == 10
-
-    # Test eliminazione e ripristino con undo
-    app_stub._undo_stack.clear()
-    old_rec = dict(db.get(pid))
-    db.delete_many([pid])
-    assert db.get(pid) is None
-
-    app_stub._push_undo("Eliminato", lambda recs=[old_rec]: app_stub._undo_delete(recs))
-    app_stub.undo()
-    
-    # Il prodotto è stato ripristinato
-    prods = db.list_products()
-    assert len(prods) == 1
-    assert prods[0]["name"] == "Articolo Originale"
-
-    db.close()
 
 
 def test_safe_parse_json_products_truncated():
@@ -526,172 +425,7 @@ def test_bulk_status_move_with_selling_place(tmp_path):
     db.close()
 
 
-def test_scrollable_dropdown_behavior():
-    """Verifica che CTkScrollableDropdown apra, chiuda e imposti correttamente i valori sul combobox."""
-    import time
 
-    import customtkinter as ctk
-
-    from src.ui.dialogs import CTkScrollableDropdown
-
-    root = None
-    for attempt in range(3):
-        try:
-            root = ctk.CTk()
-            break
-        except Exception:  # noqa: BLE001
-            time.sleep(0.15)
-    if root is None:
-        import pytest
-        pytest.skip("Tcl/Tk non disponibile nell'ambiente di test")
-
-    root.withdraw()
-    cb = ctk.CTkComboBox(root, values=["Negozio A", "Negozio B", "Negozio C"])
-    cb.pack()
-    dd = CTkScrollableDropdown(cb)
-    root.update()
-
-    assert not dd.is_open()
-    dd.open()
-    root.update()
-    assert dd.is_open()
-
-    # Seleziona un valore
-    dd._select("Negozio B")
-    root.update()
-    assert cb.get() == "Negozio B"
-    assert not dd.is_open()
-
-    root.destroy()
-
-
-def test_sort_persistence_on_save_and_reset_on_tab_change():
-    """Verifica che l'ordinamento (sia dropdown sort_var che colonna current_sort)
-    non si resetti salvando un prodotto o aggiornando la stessa scheda,
-    ma si resetti solo quando si cambia effettivamente scheda."""
-    class DummyVar:
-        def __init__(self, val):
-            self._val = val
-        def get(self):
-            return self._val
-        def set(self, val):
-            self._val = val
-
-    class DummyButton:
-        def configure(self, **kwargs):
-            pass
-
-    class DummyFrame:
-        def pack(self, **kwargs):
-            pass
-        def pack_forget(self):
-            pass
-
-    refreshed_count = 0
-    def dummy_refresh_tables(*args, **kwargs):
-        nonlocal refreshed_count
-        refreshed_count += 1
-
-    app_stub = type("StubApp", (), {
-        "tab_frames": {"Magazzino": DummyFrame(), "Vendite Attive": DummyFrame()},
-        "tab_buttons": {"Magazzino": DummyButton(), "Vendite Attive": DummyButton()},
-        "sort_options": [
-            "Data inserimento (Recenti)",
-            "Data inserimento (Meno recenti)",
-            "Prezzo acquisto (Crescente)",
-            "Prezzo acquisto (Decrescente)",
-        ],
-        "current_tab_name": "Magazzino",
-        "current_sort": {},
-        "refresh_tables": dummy_refresh_tables,
-        "_update_action_states": lambda self: None,
-        "set_tab": InventoryApp.set_tab,
-    })()
-    app_stub.sort_var = DummyVar(app_stub.sort_options[2])  # "Prezzo acquisto (Crescente)"
-    app_stub.current_sort = {STATUS_STOCK: ("purchased_price", True)}
-
-    # Chiamata a set_tab con la STESSA scheda (es. dopo salvataggio prodotto che resta in Magazzino)
-    app_stub.set_tab("Magazzino")
-    assert app_stub.sort_var.get() == "Prezzo acquisto (Crescente)"
-    assert app_stub.current_sort == {STATUS_STOCK: ("purchased_price", True)}
-
-    # Cambio scheda a "Vendite Attive": ora deve resettarsi ai valori predefiniti
-    app_stub.set_tab("Vendite Attive")
-    assert app_stub.current_tab_name == "Vendite Attive"
-    assert app_stub.sort_var.get() == "Data inserimento (Recenti)"
-    assert app_stub.current_sort == {}
-
-
-def test_sort_tree_with_explicit_ascending():
-    """Verifica che sort_tree con ascending esplicito preservi l'ordine senza invertirlo."""
-    class FakeTree:
-        def __init__(self):
-            self.rows = {"1": {"purchased_price": "100.00"}, "2": {"purchased_price": "50.00"}}
-            self.moves = []
-
-        def set(self, item, column):
-            return self.rows[item][column]
-
-        def get_children(self, _root):
-            return tuple(self.rows)
-
-        def move(self, item, _parent, _index):
-            self.moves.append(item)
-
-    fake_tree = FakeTree()
-    controller = type("Controller", (), {"trees": {STATUS_STOCK: fake_tree}, "current_sort": {STATUS_STOCK: ("purchased_price", True)}})()
-    # Ordinamento crescente esplicito
-    InventoryApp.sort_tree(controller, STATUS_STOCK, "purchased_price", ascending=True)
-    assert fake_tree.moves == ["2", "1"]
-    assert controller.current_sort[STATUS_STOCK] == ("purchased_price", True)
-
-    fake_tree.moves = []
-    # Riassegnazione con ascending=True non inverte (come farebbe un click header), mantiene True
-    InventoryApp.sort_tree(controller, STATUS_STOCK, "purchased_price", ascending=True)
-    assert fake_tree.moves == ["2", "1"]
-    assert controller.current_sort[STATUS_STOCK] == ("purchased_price", True)
-
-def test_status_timer_auto_reset():
-    """Verifica che set_status imposti il messaggio e pianifichi il ripristino su 'Vista aggiornata'."""
-    scheduled = {}
-    cancelled = []
-
-    class MockApp:
-        def __init__(self):
-            self.status_bar_var = type("Var", (), {"_val": "Pronto", "set": lambda s, v: setattr(s, "_val", v), "get": lambda s: s._val})()
-            self._status_timer = None
-
-        def after(self, delay, callback):
-            timer_id = f"timer_{len(scheduled)}"
-            scheduled[timer_id] = (delay, callback)
-            return timer_id
-
-        def after_cancel(self, timer_id):
-            cancelled.append(timer_id)
-            scheduled.pop(timer_id, None)
-
-        set_status = InventoryApp.set_status
-        _reset_status = InventoryApp._reset_status
-
-    app = MockApp()
-    app.set_status("1 prodotto modificato con successo", auto_reset=True, timeout_ms=5000)
-    assert app.status_bar_var.get() == "1 prodotto modificato con successo"
-    assert app._status_timer is not None
-    assert app._status_timer in scheduled
-    assert scheduled[app._status_timer][0] == 5000
-
-    # Simula lo scadere del timer
-    _delay, cb = scheduled[app._status_timer]
-    cb()
-    assert app.status_bar_var.get() == "Vista aggiornata"
-    assert app._status_timer is None
-
-    # Verifica cancellazione timer precedente su nuova notifica
-    app.set_status("Prima notifica", auto_reset=True)
-    first_timer = app._status_timer
-    app.set_status("Seconda notifica", auto_reset=True)
-    assert first_timer in cancelled
-    assert app.status_bar_var.get() == "Seconda notifica"
 
 
 def test_cross_platform_config_app_directory(monkeypatch):
@@ -718,23 +452,7 @@ def test_cross_platform_config_app_directory(monkeypatch):
     assert win_dir.as_posix().endswith("Program Files/RSM")
 
 
-def test_cross_platform_utils_non_win32(monkeypatch):
-    """Verifica che apply_dark_titlebar e center_window non vadano in crash su macOS / Linux."""
-    import sys
 
-    from src.utils import apply_dark_titlebar, center_window
-
-    monkeypatch.setattr(sys, "platform", "darwin")
-
-    mock_win = MagicMock()
-    mock_win.winfo_screenwidth.return_value = 1920
-    mock_win.winfo_screenheight.return_value = 1080
-    mock_win._get_window_scaling = lambda: 1.0
-
-    # Non deve sollevare alcuna eccezione
-    apply_dark_titlebar(mock_win)
-    center_window(mock_win, 800, 600)
-    mock_win.geometry.assert_called_with("800x600+560+240")
 
 
 

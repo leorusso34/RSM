@@ -126,10 +126,10 @@
       <!-- Footer della Sidebar -->
       <div class="sidebar-footer">
         <div class="status-pill">
-          <div class="status-indicator"></div>
+          <div class="status-indicator" id="bridge-status-indicator"></div>
           <div>
             <div style="font-weight: 600; color: #fff;">Database Locale SQLite</div>
-            <div style="font-size: 10px; color: var(--text-dim);">Sincronizzato • Latenza 0ms</div>
+            <div style="font-size: 10px; color: var(--text-dim);">Sincronizzato • Latenza <span id="bridge-latency-val">1ms</span></div>
           </div>
         </div>
         <div style="font-size: 10px; color: var(--text-dim); margin-top: 6px; text-align: center; letter-spacing: 0.3px;">
@@ -178,7 +178,7 @@
               </div>
               <div class="kpi-value" id="kpi-stock">€ 0,00</div>
               <div class="kpi-footer">
-                <span class="kpi-subtext" id="kpi-stock-sub">Giacenza a costo di carico</span>
+                <span class="kpi-subtext" id="kpi-stock-sub">Quota capitale investito</span>
               </div>
             </div>
           </div>
@@ -556,17 +556,17 @@
         <div id="ai-status-msg" style="font-size: 11.5px; color: var(--text-muted); min-height: 16px;"></div>
 
         <!-- Tabella anteprima prodotti estratti -->
-        <div id="ai-results-wrap" style="display: none;">
-          <div style="font-size: 11px; font-weight: 700; color: #818cf8; margin-bottom: 6px; text-transform: uppercase;">Prodotti Estratti:</div>
-          <div style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
-            <table class="inventory-table" style="font-size: 11px;">
+        <div id="ai-results-wrap" style="display: none; margin-top: 12px;">
+          <div style="font-size: 11px; font-weight: 700; color: #818cf8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Prodotti Estratti:</div>
+          <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #0b101c;">
+            <table class="inventory-table">
               <thead>
                 <tr>
-                  <th>Prodotto</th>
-                  <th>Taglia</th>
-                  <th>Q.tà</th>
-                  <th>P. Acquisto</th>
-                  <th>Luogo</th>
+                  <th style="width: 44%;">Prodotto</th>
+                  <th class="col-center" style="width: 14%;">Taglia</th>
+                  <th class="col-center" style="width: 12%;">Q.tà</th>
+                  <th class="col-center" style="width: 16%;">P. Acquisto</th>
+                  <th style="width: 14%;">Luogo</th>
                 </tr>
               </thead>
               <tbody id="ai-results-body"></tbody>
@@ -637,16 +637,16 @@
         </div>
 
         <!-- Tabella Prodotti Rilevati -->
-        <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
-          <table class="inventory-table" style="font-size: 11.5px;">
+        <div style="max-height: 240px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #0b101c;">
+          <table class="inventory-table">
             <thead>
               <tr>
-                <th>PRODOTTO RILEVATO</th>
-                <th class="col-center">TAGLIA</th>
-                <th class="col-center">Q.TÀ</th>
-                <th class="col-center">PREZZO (€)</th>
-                <th>NEGOZIO / SITO</th>
-                <th class="col-center">DATA ORDINE</th>
+                <th style="width: 36%;">PRODOTTO RILEVATO</th>
+                <th class="col-center" style="width: 12%;">TAGLIA</th>
+                <th class="col-center" style="width: 10%;">Q.TÀ</th>
+                <th class="col-center" style="width: 14%;">PREZZO (€)</th>
+                <th style="width: 14%;">NEGOZIO / SITO</th>
+                <th class="col-center" style="width: 14%;">DATA ORDINE</th>
               </tr>
             </thead>
             <tbody id="email-sync-table-body">
@@ -725,17 +725,17 @@
       </div>
       <div class="modal-body">
         <!-- Tabella Anteprima Prodotti Estratti -->
-        <div style="max-height: 340px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
-          <table class="inventory-table" style="font-size: 11.5px;">
+        <div style="max-height: 340px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #0b101c;">
+          <table class="inventory-table">
             <thead>
               <tr>
-                <th>PRODOTTO</th>
-                <th class="col-center">TAGLIA</th>
-                <th class="col-center">Q.TÀ</th>
-                <th class="col-center">P. ACQUISTO</th>
-                <th>L. ACQUISTO</th>
-                <th>L. VENDITA</th>
-                <th class="col-center">STATO</th>
+                <th style="width: 30%;">PRODOTTO</th>
+                <th class="col-center" style="width: 10%;">TAGLIA</th>
+                <th class="col-center" style="width: 9%;">Q.TÀ</th>
+                <th class="col-center" style="width: 14%;">P. ACQUISTO</th>
+                <th style="width: 13%;">L. ACQUISTO</th>
+                <th style="width: 13%;">L. VENDITA</th>
+                <th class="col-center" style="width: 11%;">STATO</th>
               </tr>
             </thead>
             <tbody id="excel-preview-tbody">
@@ -769,9 +769,8 @@
       <div class="drawer-header-left">
         <span id="drawerStatusBadge" class="status-badge stock">
           <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
-          <span id="drawerStatusText">In Magazzino</span>
+          <span id="drawerStatusText">Magazzino</span>
         </span>
-        <span class="drawer-id-tag">ID: #RSM-<span id="drawerId">1</span></span>
       </div>
       <button class="drawer-close-btn" onclick="closeDrawer()" title="Chiudi (ESC)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -844,9 +843,9 @@
         </div>
       </div>
 
-      <!-- Note Personali & Condizioni -->
+      <!-- Note e Condizioni -->
       <div class="drawer-section">
-        <div class="drawer-section-title">Note Personali & Condizioni</div>
+        <div class="drawer-section-title">Note e Condizioni</div>
         <p id="drawerNotes" style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin: 0;">
           Prodotto originale verificato con scatola integra e accessori originali inclusi.
         </p>

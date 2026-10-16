@@ -88,8 +88,8 @@ python rsm.py
 Il progetto integra una suite di test completa con **Pytest** e controlli automatici di formattazione e linting con **Ruff** (attivi anche nella CI di GitHub Actions):
 
 ```powershell
-# Installa le dipendenze di sviluppo
-python -m pip install -r requirements-dev.txt
+# Installa le dipendenze
+python -m pip install -r requirements.txt
 
 # Esegui i test unitari
 pytest -v
@@ -100,9 +100,9 @@ ruff check .
 
 ---
 
-## 📦 Compilazione Eseguibile (.exe) Standalone
+## 📦 Compilazione Eseguibile Standalone
 
-Per compilare l'applicazione in una cartella autonoma per Windows (senza bisogno di Python sul PC di destinazione):
+Per compilare l'applicazione in una cartella autonoma (Zero-Lag Engine con Tauri e Rust):
 
 ```powershell
 python build.py
@@ -117,33 +117,26 @@ L'eseguibile completo e pronto all'uso verrà generato nella cartella `dist/RSM/
 ```text
 RUSSO STOCK/
 ├── assets/                       # Icone, logo, grafiche e preview GIF
-│   ├── app_logo_animated.gif     # Logo animato (slancio rialzista)
-│   └── graphs.gif                # Preview animata della dashboard
-├── src/                          # Codice sorgente modulare
+├── src/                          # Backend Python modulare
 │   ├── ai_agent.py               # Integrazione API Gemini
-│   ├── config.py                 # Costanti di configurazione e tema colori
+│   ├── config.py                 # Costanti di configurazione e percorsi
 │   ├── database.py               # Database SQLite, query e migrazioni
 │   ├── ebay_api.py               # Integrazione API eBay per prezzi di mercato
 │   ├── email_sync.py             # Sincronizzazione ordini Gmail via IMAP
-│   ├── main.py                   # Entry point e DPI scaling
 │   ├── speech_helper.py          # Riconoscimento vocale
 │   ├── types.py                  # Type annotations
 │   ├── updater.py                # Auto-updater e controllo release GitHub
-│   ├── utils.py                  # Calcoli matematici, formattazioni, I/O
-│   └── ui/                       # Componenti grafici CustomTkinter
-│       ├── ai_dialog.py          # Dialogo inserimento rapido AI / Voce
-│       ├── dashboard_view.py     # Grafici e statistiche KPI
-│       ├── dialogs.py            # Finestre di creazione, modifica e luoghi
-│       ├── ebay_price_dialog.py  # Dialog comparazione prezzi di mercato eBay
-│       ├── email_sync_dialog.py  # Dialog sincronizzazione ordini da email
-│       ├── excel_import_dialog.py# Dialog importazione guidata Excel con AI
-│       ├── main_window.py        # Finestra principale
-│       ├── theme.py              # Tema e stili grafici CustomTkinter
-│       └── update_dialog.py      # Dialog notifica e download aggiornamenti
-├── tests/                        # Test suite automatica (test_core, test_updater)
-├── build.py                      # Script di packaging PyInstaller
+│   ├── utils.py                  # Calcoli matematici, formattazioni, I/O Excel
+│   └── services/                 # Servizi applicativi
+│       └── bridge_server.py      # Micro-server bridge locale ad altissime prestazioni
+├── src-tauri/                    # Core nativo Rust Tauri (finestra, IPC e Zero-Lag)
+├── web/                          # Frontend moderno Zero-Lag (HTML5, Vanilla JS, CSS3)
+│   ├── index.html                # Interfaccia grafica completa
+│   ├── app.js                    # Logica frontend reattiva
+│   └── styles.css                # Stile dark theme ad alto contrasto
+├── tests/                        # Test suite automatica (test_core, test_bridge, test_updater)
+├── build.py                      # Script di packaging e compilazione nativa Tauri
 ├── config.json                   # Configurazione credenziali esterna
-├── requirements.txt              # Dipendenze applicative
-├── requirements-dev.txt          # Dipendenze di sviluppo (pytest, ruff)
+├── requirements.txt              # Dipendenze Python unificate
 └── rsm.py                        # Launcher principale
 ```

@@ -2,7 +2,6 @@
 
 Entry point principale di avvio.
 Avvia la nuova interfaccia grafica nativa Tauri (Zero-Lag).
-Per avviare la vecchia interfaccia CustomTkinter di fallback: python RSM.py --legacy
 """
 
 import os
@@ -55,12 +54,6 @@ def start_bridge_server(root_dir: Path, port: int = 28472) -> None:
 
 def main() -> None:
     root_dir = Path(__file__).resolve().parent
-
-    # Flag per accedere alla vecchia interfaccia CustomTkinter di riferimento
-    if "--legacy" in sys.argv:
-        from src.main import main as legacy_main
-        legacy_main()
-        return
 
     # 1. Termina eventuali bridge precedenti per garantire che le nuove API siano attive
     kill_stale_bridge(28472)

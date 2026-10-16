@@ -416,8 +416,9 @@ function updateDashboardMetrics() {
       kpiRoi.textContent = `${avgRoi >= 0 ? "+" : ""}${avgRoi.toFixed(1)}% ROI`;
       kpiRoi.className = `kpi-trend ${avgRoi >= 0 ? "positive" : "negative"}`;
     }
+    const stockPct = totalInvested > 0 ? Math.round((totalStockValue / totalInvested) * 100) : 0;
     if (kpiInvestedSub) kpiInvestedSub.textContent = `${stockCount} in stock • ${preorderCount} pre-ordini`;
-    if (kpiStockSub) kpiStockSub.textContent = `${stockCount} articoli a costo di carico`;
+    if (kpiStockSub) kpiStockSub.textContent = `${stockPct}% del capitale investito`;
     if (kpiProfitSub) kpiProfitSub.textContent = `${completedCount} completate • ${activeCount} attive`;
   } else {
     // Calcolo fedele basato sullo stato reale dei prodotti SQLite
@@ -454,6 +455,8 @@ function updateDashboardMetrics() {
     const kpiStockSub = document.getElementById("kpi-stock-sub");
     const kpiProfitSub = document.getElementById("kpi-profit-sub");
 
+    const stockPct = totalInvested > 0 ? Math.round((totalStockValue / totalInvested) * 100) : 0;
+
     if (kpiInvested) setMetricValue(kpiInvested, totalInvested, true);
     if (kpiStock) setMetricValue(kpiStock, totalStockValue, true);
     if (kpiProfit) setMetricValue(kpiProfit, totalProfit, true);
@@ -462,7 +465,7 @@ function updateDashboardMetrics() {
       kpiRoi.className = `kpi-trend ${avgRoi >= 0 ? "positive" : "negative"}`;
     }
     if (kpiInvestedSub) kpiInvestedSub.textContent = `${stockCount} in stock • ${preorderCount} pre-ordini`;
-    if (kpiStockSub) kpiStockSub.textContent = `${stockCount} articoli a costo di carico`;
+    if (kpiStockSub) kpiStockSub.textContent = `${stockPct}% del capitale investito`;
     if (kpiProfitSub) kpiProfitSub.textContent = `${completedCount} completate • ${activeCount} attive`;
   }
 
@@ -482,19 +485,92 @@ function updateDashboardMetrics() {
 // RENDER TABLE & FILTRAGGIO
 // ==========================================================================
 function getFilteredAndSortedProducts() {
+  // Pre-calcolo aggregato dei bundle per consentire la ricerca sia sui singoli capi sia sui totali del bundle (es. prezzo acquisto totale bundle)
+  const bundleTotalsMap = new Map();
+  inventoryData.forEach((p) => {
+    const bId = p.bundle_id || p.bundleId;
+    if (bId) {
+      if (!bundleTotalsMap.has(bId)) {
+        bundleTotalsMap.set(bId, { totalPurchased: 0, totalSold: 0, totalFees: 0, allItems: [] });
+      }
+      const bInfo = bundleTotalsMap.get(bId);
+      bInfo.allItems.push(p);
+      const qty = p.quantity || 1;
+      bInfo.totalPurchased += (p.purchasedPrice || 0) * qty;
+      bInfo.totalSold += (p.salePrice || 0);
+      bInfo.totalFees += (p.fees || 0);
+    }
+  });
+
   let filtered = inventoryData.filter((item) => {
     // 1. Filtro per stato tab
     if (activeFilter !== "all" && item.status !== activeFilter) return false;
 
-    // 2. Filtro di ricerca testuale
+    // 2. Filtro di ricerca testuale esteso (tutte le colonne tranne quantità, utile netto, roi, stato)
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const match =
-        item.name.toLowerCase().includes(term) ||
-        item.size.toLowerCase().includes(term) ||
-        (item.sellingPlace && item.sellingPlace.toLowerCase().includes(term)) ||
-        (item.purchasedPlace && item.purchasedPlace.toLowerCase().includes(term));
-      if (!match) return false;
+      const terms = searchTerm.toLowerCase().trim().split(/\s+/).filter(Boolean);
+      if (terms.length > 0) {
+        const buyRaw = item.purchasedPrice !== undefined && item.purchasedPrice !== null ? String(item.purchasedPrice) : "";
+        const buyFormatted = item.purchasedPrice ? formatMoney(item.purchasedPrice).toLowerCase() : "";
+        const sellRaw = item.salePrice !== undefined && item.salePrice !== null ? String(item.salePrice) : "";
+        const sellFormatted = item.salePrice ? formatMoney(item.salePrice).toLowerCase() : "";
+        const feesRaw = item.fees !== undefined && item.fees !== null ? String(item.fees) : "";
+        const feesFormatted = item.fees ? formatMoney(item.fees).toLowerCase() : "";
+
+        // Se l'elemento fa parte di una vendita multipla (bundle), includiamo anche il totale di acquisto e vendita aggregato
+        const bId = item.bundle_id || item.bundleId;
+        const bInfo = bId ? bundleTotalsMap.get(bId) : null;
+        let bBuyRaw = "";
+        let bBuyFormatted = "";
+        let bBuyComma = "";
+        let bBuyDec = "";
+        let bBuyDecComma = "";
+        let bSellRaw = "";
+        let bSellFormatted = "";
+        let bSellComma = "";
+
+        if (bInfo) {
+          bBuyRaw = String(bInfo.totalPurchased);
+          bBuyFormatted = formatMoney(bInfo.totalPurchased).toLowerCase();
+          bBuyComma = String(bInfo.totalPurchased).replace(".", ",");
+          bBuyDec = bInfo.totalPurchased.toFixed(2);
+          bBuyDecComma = bInfo.totalPurchased.toFixed(2).replace(".", ",");
+
+          bSellRaw = String(bInfo.totalSold);
+          bSellFormatted = formatMoney(bInfo.totalSold).toLowerCase();
+          bSellComma = String(bInfo.totalSold).replace(".", ",");
+        }
+
+        const searchBlob = [
+          item.id !== undefined && item.id !== null ? String(item.id) : "",
+          item.name || "",
+          item.size || "",
+          item.purchasedPlace || "",
+          item.sellingPlace || "",
+          item.notes || "",
+          item.date || "",
+          buyRaw,
+          buyRaw.replace(".", ","),
+          buyFormatted,
+          sellRaw,
+          sellRaw.replace(".", ","),
+          sellFormatted,
+          feesRaw,
+          feesRaw.replace(".", ","),
+          feesFormatted,
+          bBuyRaw,
+          bBuyComma,
+          bBuyFormatted,
+          bBuyDec,
+          bBuyDecComma,
+          bSellRaw,
+          bSellComma,
+          bSellFormatted
+        ].join(" ").toLowerCase();
+
+        const match = terms.every((t) => searchBlob.includes(t));
+        if (!match) return false;
+      }
     }
 
     // 3. Filtro Luogo di Acquisto
@@ -519,6 +595,31 @@ function getFilteredAndSortedProducts() {
 
     return true;
   });
+
+  // Se la ricerca o i filtri matchano elementi di una vendita multipla, assicuriamo che tutti i prodotti
+  // di quel bundle vengano mantenuti insieme per consentire alla riga bundle di mostrare il totale corretto
+  const matchedBundleIds = new Set();
+  filtered.forEach((item) => {
+    const bId = item.bundle_id || item.bundleId;
+    if (bId) matchedBundleIds.add(bId);
+  });
+
+  if (matchedBundleIds.size > 0) {
+    const existingIds = new Set(filtered.map((i) => i.id));
+    matchedBundleIds.forEach((bId) => {
+      const bInfo = bundleTotalsMap.get(bId);
+      if (bInfo && bInfo.allItems) {
+        bInfo.allItems.forEach((p) => {
+          if (!existingIds.has(p.id)) {
+            if (activeFilter === "all" || p.status === activeFilter) {
+              existingIds.add(p.id);
+              filtered.push(p);
+            }
+          }
+        });
+      }
+    });
+  }
 
   // Ordinamento
   filtered.sort((a, b) => {
@@ -732,8 +833,8 @@ function renderTable() {
           <td class="col-sell"><strong>${formatMoney(totalSold)}</strong></td>
           <td class="col-channel"><span style="font-size: 11.5px; color: var(--text-muted);">${sellingPlace}</span></td>
           <td class="col-fees">${totalFees > 0 ? formatMoney(totalFees) : '<span style="color:var(--text-dim)">-</span>'}</td>
-          <td class="col-profit"><span class="profit-pos">+${formatMoney(totalProfit)}</span></td>
-          <td class="col-roi col-center"><span class="roi-badge">+${totalRoi.toFixed(1)}%</span></td>
+          <td class="col-profit">${totalProfit > 0 ? `<span style="color: #34d399; font-weight: 700;">€ ${totalProfit.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>` : totalProfit < 0 ? `<span style="color: #ef4444; font-weight: 700;">-€ ${Math.abs(totalProfit).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>` : `<span style="color: var(--text-dim); font-weight: 600;">€ 0,00</span>`}</td>
+          <td class="col-roi col-center">${totalRoi > 0 ? `<span style="color: #34d399; font-weight: 700;">${totalRoi.toFixed(1)}%</span>` : totalRoi < 0 ? `<span style="color: #ef4444; font-weight: 700;">${totalRoi.toFixed(1)}%</span>` : `<span style="color: var(--text-dim); font-weight: 600;">0.0%</span>`}</td>
           <td class="col-status col-center">
             <span class="status-badge ${bundleStatusClass}">
               <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
@@ -802,7 +903,7 @@ function renderTable() {
               <td class="col-prod" title="${child.name}">
                 <div class="product-cell" style="padding-left: 28px;">
                   <div class="product-name" style="color: var(--text-secondary); font-size: 12px;">${child.name}</div>
-                  <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "In Magazzino"}</div>
+                  <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "Magazzino"}</div>
                 </div>
               </td>
               <td class="col-size col-center"><strong>${child.size}</strong></td>
@@ -818,7 +919,7 @@ function renderTable() {
               <td class="col-prod" title="${child.name}">
                 <div class="product-cell" style="padding-left: 28px;">
                   <div class="product-name" style="color: var(--text-secondary); font-size: 12px;">${child.name}</div>
-                  <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "In Magazzino"}</div>
+                  <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "Magazzino"}</div>
                 </div>
               </td>
               <td class="col-qty col-center">${child.quantity} pz</td>
@@ -872,7 +973,7 @@ function renderTable() {
 
       // Status Badge Info
       let statusClass = "stock";
-      let statusLabel = "In Magazzino";
+      let statusLabel = "Magazzino";
       if (item.status === "preorder") {
         statusClass = "preorder";
         statusLabel = "Pre-ordine";
@@ -910,7 +1011,7 @@ function renderTable() {
           <td class="col-prod" title="${item.name}">
             <div class="product-cell">
               <div class="product-name">${item.name}</div>
-              <div class="product-brand">${item.purchasedPlace || "In Magazzino"}</div>
+              <div class="product-brand">${item.purchasedPlace || "Magazzino"}</div>
             </div>
           </td>
           <td class="col-size col-center"><strong>${item.size}</strong></td>
@@ -934,8 +1035,28 @@ function renderTable() {
         const hasSaleData = item.status === "completed" || item.status === "active-sale";
         const salePriceHtml = hasSaleData && item.salePrice ? formatMoney(item.salePrice) : `<span style="color:var(--text-dim)">-</span>`;
         const sellingPlaceHtml = hasSaleData && item.sellingPlace ? `<span style="font-size: 11.5px; color: var(--text-muted);">${item.sellingPlace}</span>` : `<span style="color:var(--text-dim)">-</span>`;
-        const profitHtml = hasSaleData ? `<span class="profit-pos">+${formatMoney(netProfit)}</span>` : `<span style="color:var(--text-dim)">-</span>`;
-        const roiHtml = hasSaleData ? `<span class="roi-badge">+${roi.toFixed(1)}%</span>` : `<span style="color:var(--text-dim)">-</span>`;
+
+        let profitHtml = `<span style="color:var(--text-dim)">-</span>`;
+        if (hasSaleData) {
+          if (netProfit > 0) {
+            profitHtml = `<span style="color: #34d399; font-weight: 700;">€ ${netProfit.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
+          } else if (netProfit < 0) {
+            profitHtml = `<span style="color: #ef4444; font-weight: 700;">-€ ${Math.abs(netProfit).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
+          } else {
+            profitHtml = `<span style="color: var(--text-dim); font-weight: 600;">€ 0,00</span>`;
+          }
+        }
+
+        let roiHtml = `<span style="color:var(--text-dim)">-</span>`;
+        if (hasSaleData) {
+          if (roi > 0) {
+            roiHtml = `<span style="color: #34d399; font-weight: 700;">${roi.toFixed(1)}%</span>`;
+          } else if (roi < 0) {
+            roiHtml = `<span style="color: #ef4444; font-weight: 700;">${roi.toFixed(1)}%</span>`;
+          } else {
+            roiHtml = `<span style="color: var(--text-dim); font-weight: 600;">0.0%</span>`;
+          }
+        }
 
         const feesHtml = hasSaleData && item.fees ? formatMoney(item.fees) : `<span style="color:var(--text-dim)">-</span>`;
 
@@ -1100,11 +1221,12 @@ function initCharts() {
         animation: false,
         responsive: true,
         maintainAspectRatio: false,
+        devicePixelRatio: Math.max(window.devicePixelRatio || 1, 2),
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "#111827",
-            titleColor: "#f8fafc",
+            backgroundColor: "#0f172a",
+            titleColor: "#ffffff",
             bodyColor: "#a5b4fc",
             borderColor: "rgba(99, 102, 241, 0.4)",
             borderWidth: 1,
@@ -1141,7 +1263,7 @@ function initCharts() {
     let platLabels = [];
     let platData = [];
     let platCounts = [];
-    const platColors = ["#6366f1", "#10b981", "#8b5cf6", "#f59e0b", "#3b82f6", "#ec4899", "#14b8a6", "#06b6d4"];
+    const platColors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#06b6d4", "#ec4899", "#6366f1", "#14b8a6"];
 
     // Raggruppamento per NUMERO DI VENDITE con normalizzazione case-insensitive
     const channelMap = new Map();
@@ -1210,6 +1332,8 @@ function initCharts() {
       platCounts = [0];
     }
 
+    const isNoSales = platLabels[0] === "Nessuna vendita";
+
     platformPieChart = new Chart(ctxPlatform, {
       type: "doughnut",
       data: {
@@ -1217,10 +1341,10 @@ function initCharts() {
         datasets: [
           {
             data: platData,
-            backgroundColor: platColors.slice(0, platLabels.length),
+            backgroundColor: isNoSales ? ["#1e293b"] : platColors.slice(0, platLabels.length),
             borderWidth: 2,
-            borderColor: "#101726",
-            hoverOffset: 4
+            borderColor: "#0b0f19",
+            hoverOffset: isNoSales ? 0 : 5
           }
         ]
       },
@@ -1228,10 +1352,11 @@ function initCharts() {
         animation: false,
         responsive: true,
         maintainAspectRatio: false,
+        devicePixelRatio: Math.max(window.devicePixelRatio || 1, 2),
         cutout: "68%",
         layout: {
           padding: {
-            top: 2,
+            top: 4,
             bottom: 4,
             left: 6,
             right: 6
@@ -1241,11 +1366,11 @@ function initCharts() {
           legend: {
             position: "bottom",
             labels: {
-              color: "#cbd5e1",
-              boxWidth: 8,
-              boxHeight: 8,
-              padding: 8,
-              font: { size: 10.5, family: "Segoe UI, sans-serif" },
+              color: "#ffffff",
+              boxWidth: 9,
+              boxHeight: 9,
+              padding: 9,
+              font: { size: 11, weight: "600", family: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" },
               generateLabels: (chart) => {
                 const data = chart.data;
                 if (data.labels.length && data.datasets.length) {
@@ -1255,9 +1380,9 @@ function initCharts() {
                     return {
                       text: `${label} (${pct}%)`,
                       fillStyle: dataset.backgroundColor[i],
-                      strokeStyle: dataset.borderColor || "#101726",
+                      strokeStyle: dataset.borderColor || "#0b0f19",
                       lineWidth: dataset.borderWidth || 1,
-                      fontColor: "#cbd5e1",
+                      fontColor: "#ffffff",
                       hidden: false,
                       index: i
                     };
@@ -1268,11 +1393,15 @@ function initCharts() {
             }
           },
           tooltip: {
-            backgroundColor: "#111827",
-            borderColor: "rgba(255, 255, 255, 0.1)",
+            backgroundColor: "#0f172a",
+            borderColor: "rgba(255, 255, 255, 0.15)",
             borderWidth: 1,
-            titleColor: "#f8fafc",
-            bodyColor: "#cbd5e1",
+            titleColor: "#ffffff",
+            bodyColor: "#f8fafc",
+            titleFont: { size: 12, weight: "700" },
+            bodyFont: { size: 11.5, weight: "500" },
+            padding: 10,
+            cornerRadius: 6,
             callbacks: {
               label: (context) => {
                 if (platLabels[0] === "Nessuna vendita") {
@@ -1337,6 +1466,9 @@ function closeModal() {
   if (excelStatus) excelStatus.textContent = "";
   const excelInput = document.getElementById("excelFileInput");
   if (excelInput) excelInput.value = "";
+  if (typeof resetVoiceRecordingState === "function") {
+    resetVoiceRecordingState();
+  }
 }
 
 // ==========================================================================
@@ -1377,10 +1509,20 @@ function openDrawer(id) {
 
   if (drawerProfit) {
     if (hasSaleData) {
-      drawerProfit.textContent = `+${formatMoney(netProfit)}`;
-      drawerProfit.className = "drawer-metric-val profit";
+      if (netProfit > 0) {
+        drawerProfit.textContent = `€ ${netProfit.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        drawerProfit.style.color = "#34d399";
+      } else if (netProfit < 0) {
+        drawerProfit.textContent = `-€ ${Math.abs(netProfit).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        drawerProfit.style.color = "#ef4444";
+      } else {
+        drawerProfit.textContent = "€ 0,00";
+        drawerProfit.style.color = "var(--text-dim)";
+      }
+      drawerProfit.className = "drawer-metric-val";
     } else {
       drawerProfit.textContent = "-";
+      drawerProfit.style.color = "";
       drawerProfit.className = "drawer-metric-val";
     }
   }
@@ -1390,7 +1532,15 @@ function openDrawer(id) {
   if (drawerStore) drawerStore.textContent = item.purchasedPlace || "Store Ufficiale";
   if (drawerDate) drawerDate.textContent = item.date || "Recente";
   if (drawerChannel) drawerChannel.textContent = item.sellingPlace || "-";
-  if (drawerRoi) drawerRoi.textContent = hasSaleData ? `+${roi.toFixed(1)}%` : "-";
+  if (drawerRoi) {
+    if (hasSaleData) {
+      drawerRoi.textContent = `${roi.toFixed(1)}%`;
+      drawerRoi.style.color = roi > 0 ? "#34d399" : roi < 0 ? "#ef4444" : "var(--text-dim)";
+    } else {
+      drawerRoi.textContent = "-";
+      drawerRoi.style.color = "";
+    }
+  }
   if (drawerFees) drawerFees.textContent = item.fees ? formatMoney(item.fees) : "€ 0,00";
 
   if (drawerNotes) {
@@ -1401,7 +1551,7 @@ function openDrawer(id) {
   const badgeEl = document.getElementById("drawerStatusBadge");
   const textEl = document.getElementById("drawerStatusText");
   let statusClass = "stock";
-  let statusLabel = "In Magazzino";
+  let statusLabel = "Magazzino";
   if (item.status === "preorder") {
     statusClass = "preorder";
     statusLabel = "Pre-ordine";
@@ -1438,7 +1588,7 @@ function openDrawer(id) {
     if (item.status === "active-sale" || item.status === "completed") {
       timelineHtml += `
         <div class="drawer-timeline-step completed">
-          <div class="drawer-timeline-title">Inserzione Attiva</div>
+          <div class="drawer-timeline-title">Vendita Attiva</div>
           <div class="drawer-timeline-date">Piattaforma: ${item.sellingPlace || "Marketplace"}</div>
         </div>
       `;
@@ -1448,7 +1598,7 @@ function openDrawer(id) {
       timelineHtml += `
         <div class="drawer-timeline-step completed">
           <div class="drawer-timeline-title">Vendita Conclusa & Accreditata</div>
-          <div class="drawer-timeline-date">Utile netto incassato: +€ ${netProfit.toFixed(2)}</div>
+          <div class="drawer-timeline-date">Utile netto incassato: ${netProfit >= 0 ? `€ ${netProfit.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `-€ ${Math.abs(netProfit).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</div>
         </div>
       `;
     } else if (item.status === "preorder") {
@@ -2614,10 +2764,27 @@ async function deleteCustomPlace(name) {
 let aiExtractedProducts = [];
 let speechRecognitionInstance = null;
 let isVoiceRecording = false;
+let isVoiceCountdown = false;
+let voiceCountdownTimer = null;
+
+function resetVoiceRecordingState() {
+  if (voiceCountdownTimer) {
+    clearInterval(voiceCountdownTimer);
+    voiceCountdownTimer = null;
+  }
+  isVoiceCountdown = false;
+  isVoiceRecording = false;
+  const btn = document.getElementById("btn-mic");
+  if (btn) {
+    btn.classList.remove("recording");
+    btn.classList.remove("countdown");
+  }
+}
 
 function openAIModal() {
   closeDrawer();
   closeModal();
+  resetVoiceRecordingState();
   const modal = document.getElementById("aiModal");
   if (!modal) return;
   modal.classList.add("open");
@@ -2635,48 +2802,84 @@ async function toggleVoiceRecording() {
   const statusEl = document.getElementById("ai-status-msg");
   const promptEl = document.getElementById("ai-prompt-text");
 
-  if (!isVoiceRecording) {
-    // 1° Clic: Avvia registrazione con microfono di sistema
-    isVoiceRecording = true;
-    if (btn) btn.classList.add("recording");
-    if (statusEl) statusEl.textContent = "Microfono attivo: parla ora... (clicca di nuovo sul microfono per terminare e trascrivere)";
-
+  // Se l'utente clicca mentre c'è il countdown attivo, annulla il conto alla rovescia
+  if (isVoiceCountdown) {
+    resetVoiceRecordingState();
+    if (statusEl) statusEl.textContent = "Registrazione annullata.";
     try {
-      const res = await fetch(`${API_BASE}/speech/start`, { method: "POST" });
-      const json = await res.json();
-      if (!json.success) {
-        throw new Error(json.error || "Impossibile attivare il microfono");
-      }
-    } catch (err) {
-      isVoiceRecording = false;
-      if (btn) btn.classList.remove("recording");
-      if (statusEl) statusEl.textContent = `⚠️ Errore microfono: ${err.message}`;
-      showToast(`Errore microfono: ${err.message}`);
-    }
-  } else {
-    // 2° Clic: Arresta registrazione e trascrivi con Gemini
-    isVoiceRecording = false;
-    if (btn) btn.classList.remove("recording");
+      await fetch(`${API_BASE}/speech/stop`, { method: "POST" });
+    } catch (_) {}
+    return;
+  }
+
+  // Se la registrazione è già attiva, il secondo clic la arresta e avvia la trascrizione con Gemini
+  if (isVoiceRecording) {
+    resetVoiceRecordingState();
     if (statusEl) statusEl.textContent = "Elaborazione audio e trascrizione con Gemini in corso...";
 
     try {
       const res = await fetch(`${API_BASE}/speech/stop`, { method: "POST" });
       const json = await res.json();
       if (json.success && json.text) {
-        if (statusEl) statusEl.textContent = "Trascrizione vocale completata con successo!";
+        if (statusEl) statusEl.textContent = "Trascrizione vocale completata.";
         const current = promptEl.value.trim();
         promptEl.value = current ? `${current} ${json.text}` : json.text;
-        showToast("Audio trascritto con successo!");
       } else {
         const errMsg = json.error || "Nessun parlato rilevato";
-        if (statusEl) statusEl.textContent = `⚠️ ${errMsg}`;
-        showToast(`Trascrizione: ${errMsg}`);
+        if (statusEl) statusEl.textContent = errMsg;
       }
     } catch (err) {
-      if (statusEl) statusEl.textContent = `⚠️ Errore trascrizione: ${err.message}`;
-      showToast(`Errore: ${err.message}`);
+      if (statusEl) statusEl.textContent = `Errore trascrizione: ${err.message}`;
     }
+    return;
   }
+
+  // 1° Clic: Avvia countdown di 3 secondi per riscaldare buffer e microfono prima di parlare
+  isVoiceCountdown = true;
+  if (btn) {
+    btn.classList.remove("recording");
+    btn.classList.add("countdown");
+  }
+
+  // Avviamo già l'acquisizione nel thread Python così i driver audio e lo stream si stabilizzano
+  try {
+    const res = await fetch(`${API_BASE}/speech/start`, { method: "POST" });
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.error || "Impossibile attivare il microfono");
+    }
+  } catch (err) {
+    resetVoiceRecordingState();
+    if (statusEl) statusEl.textContent = `Errore microfono: ${err.message}`;
+    return;
+  }
+
+  // Countdown visivo 3... 2... 1... calmo e pulito
+  let secondsLeft = 3;
+  if (statusEl) {
+    statusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 11.5px;">In ascolto tra ${secondsLeft}s...</span>`;
+  }
+
+  voiceCountdownTimer = setInterval(() => {
+    secondsLeft--;
+    if (secondsLeft > 0) {
+      if (statusEl) {
+        statusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 11.5px;">In ascolto tra ${secondsLeft}s...</span>`;
+      }
+    } else {
+      clearInterval(voiceCountdownTimer);
+      voiceCountdownTimer = null;
+      isVoiceCountdown = false;
+      isVoiceRecording = true;
+      if (btn) {
+        btn.classList.remove("countdown");
+        btn.classList.add("recording");
+      }
+      if (statusEl) {
+        statusEl.innerHTML = `<span style="color: #34d399; font-size: 11.5px;">In ascolto, puoi parlare. Clicca di nuovo sul microfono per elaborare.</span>`;
+      }
+    }
+  }, 1000);
 }
 
 async function handleAIAnalyze() {
@@ -2722,11 +2925,11 @@ async function handleAIAnalyze() {
     aiExtractedProducts.forEach((p) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><strong>${p.name || "Sconosciuto"}</strong></td>
-        <td>${p.size || "UNI"}</td>
-        <td>${p.quantity || 1} pz</td>
-        <td>${formatMoney(p.purchased_price || 0)}</td>
-        <td style="color:var(--text-muted);">${p.purchased_place || "-"}</td>
+        <td style="font-weight: 600; color: #fff;">${escapeHtml(p.name || "Sconosciuto")}</td>
+        <td class="col-center"><span class="table-size-pill">${escapeHtml(p.size || "UNI")}</span></td>
+        <td class="col-center" style="color: var(--text-muted);">${p.quantity || 1} pz</td>
+        <td class="col-center" style="font-weight: 700; color: #34d399;">${formatMoney(p.purchased_price || 0)}</td>
+        <td style="color: var(--text-muted); font-size: 11px;">${escapeHtml(p.purchased_place || "-")}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -2918,12 +3121,12 @@ async function startEmailScan() {
     emailScannedItems.forEach((item) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><strong>${item.name}</strong></td>
-        <td class="col-center"><strong>${item.size || "UNI"}</strong></td>
-        <td class="col-center">${item.quantity || 1} pz</td>
-        <td class="col-center">${formatMoney(item.price || 0)}</td>
-        <td>${item.store || "Email"}</td>
-        <td class="col-center" style="color:var(--text-muted);">${item.date || "-"}</td>
+        <td style="font-weight: 600; color: #fff;">${escapeHtml(item.name || "Sconosciuto")}</td>
+        <td class="col-center"><span class="table-size-pill">${escapeHtml(item.size || "UNI")}</span></td>
+        <td class="col-center" style="color: var(--text-muted);">${item.quantity || 1} pz</td>
+        <td class="col-center" style="font-weight: 700; color: #34d399;">${formatMoney(item.price || 0)}</td>
+        <td style="color: var(--text-main); font-size: 11px;">${escapeHtml(item.store || "Email")}</td>
+        <td class="col-center" style="color: var(--text-muted); font-size: 11px;">${escapeHtml(item.date || "-")}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -3268,7 +3471,7 @@ function openExcelPreviewModal() {
 
   excelExtractedProducts.forEach((p) => {
     const rawStatus = (p.status || "").trim();
-    let labelStatus = "In Magazzino";
+    let labelStatus = "Magazzino";
     let statusClass = "stock";
     if (rawStatus === "Venduto" || rawStatus === "Vendite Attive" || rawStatus === "completed" || rawStatus === "active-sale") {
       labelStatus = "Vendite Attive";
@@ -3285,11 +3488,16 @@ function openExcelPreviewModal() {
     tr.innerHTML = `
       <td style="font-weight: 600; color: #fff;">${escapeHtml(p.name || "-")}</td>
       <td class="col-center"><span class="table-size-pill">${escapeHtml(p.size || "UNI")}</span></td>
-      <td class="col-center">${parseInt(p.quantity, 10) || 1}</td>
+      <td class="col-center" style="color: var(--text-muted);">${parseInt(p.quantity, 10) || 1} pz</td>
       <td class="col-center" style="font-weight: 700; color: #34d399;">${formattedPrice}</td>
-      <td>${escapeHtml(p.purchased_place || "-")}</td>
-      <td>${escapeHtml(p.selling_place || "-")}</td>
-      <td class="col-center"><span class="status-badge ${statusClass}">${labelStatus}</span></td>
+      <td style="color: var(--text-muted); font-size: 11px;">${escapeHtml(p.purchased_place || "-")}</td>
+      <td style="color: var(--text-muted); font-size: 11px;">${escapeHtml(p.selling_place || "-")}</td>
+      <td class="col-center">
+        <span class="status-badge ${statusClass}">
+          <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
+          ${labelStatus}
+        </span>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -3340,9 +3548,53 @@ function showToast(message) {
 }
 
 // ==========================================================================
+// MONITORAGGIO DINAMICO LATENZA BRIDGE SQLITE LOCALE
+// ==========================================================================
+async function pingBridgeLatency() {
+  const latencyEl = document.getElementById("bridge-latency-val");
+  const indicatorEl = document.getElementById("bridge-status-indicator");
+  if (!latencyEl) return;
+  try {
+    const t0 = performance.now();
+    const res = await fetch(`${API_BASE}/version`, { cache: "no-store" });
+    const ms = Math.max(1, Math.round(performance.now() - t0));
+    if (res.ok) {
+      latencyEl.textContent = `${ms}ms`;
+      if (indicatorEl) {
+        indicatorEl.style.background = "#10b981";
+        indicatorEl.style.boxShadow = "0 0 6px rgba(16, 185, 129, 0.6)";
+      }
+    } else {
+      latencyEl.textContent = "Offline";
+      if (indicatorEl) {
+        indicatorEl.style.background = "#ef4444";
+        indicatorEl.style.boxShadow = "0 0 6px rgba(239, 68, 68, 0.6)";
+      }
+    }
+  } catch (_) {
+    latencyEl.textContent = "Offline";
+    if (indicatorEl) {
+      indicatorEl.style.background = "#ef4444";
+      indicatorEl.style.boxShadow = "0 0 6px rgba(239, 68, 68, 0.6)";
+    }
+  }
+}
+
+// ==========================================================================
 // EVENT LISTENERS & INIZIALIZZAZIONE
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
+  // Disabilita il menu contestuale predefinito del browser (Microsoft Edge / WebView2)
+  window.addEventListener("contextmenu", (e) => {
+    const tag = e.target.tagName ? e.target.tagName.toLowerCase() : "";
+    const isTextInput = tag === "input" || tag === "textarea" || e.target.isContentEditable;
+    if (!isTextInput) {
+      e.preventDefault();
+    }
+  });
+
+  pingBridgeLatency();
+  setInterval(pingBridgeLatency, 10000);
   loadProductsFromBackend();
   loadPlacesFromBackend();
   initAllAutocompletes();

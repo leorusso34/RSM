@@ -1,1 +1,0 @@
-"""Modulo UI per RSM."""

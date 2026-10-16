@@ -2,15 +2,12 @@
 
 import csv
 import re
-import sys
-import tkinter as tk
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 from .config import (
     MONTHS_SHORT_IT,
-    PROJECT_DIR,
 )
 
 
@@ -241,102 +238,4 @@ def export_to_csv(filepath: str, products: list[dict]) -> int:
             ])
     return len(products)
 
-def apply_window_icon(window: Any) -> None:
-    """Imposta l'icona personalizzata ad alta definizione su qualsiasi finestra (CTk o CTkToplevel)."""
-    try:
-        from pathlib import Path
-
-        from PIL import Image, ImageTk
-
-        ico_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_icon.ico"
-        if not ico_path.exists():
-            ico_path = PROJECT_DIR / "assets" / "app_icon.ico"
-        if not ico_path.exists():
-            ico_path = PROJECT_DIR / "app_icon.ico"
-
-        logo_path = Path(getattr(sys, "_MEIPASS", PROJECT_DIR)) / "assets" / "app_logo.png"
-        if not logo_path.exists():
-            logo_path = PROJECT_DIR / "assets" / "app_logo.png"
-
-        # 1. Fallback Tkinter standard iconbitmap (supportato nativamente su Windows)
-        if ico_path.exists() and sys.platform == "win32":
-            try:
-                window.iconbitmap(str(ico_path))
-            except (tk.TclError, OSError):
-                pass
-
-        # 2. Registra le icone multi-risoluzione native (16, 24, 32, 48, 64, 128, 256) per Tkinter
-        source_img_path = logo_path if logo_path.exists() else ico_path
-        if source_img_path.exists():
-            try:
-                base_img = Image.open(source_img_path).convert("RGBA")
-                photos = []
-                for sz in (16, 24, 32, 48, 64, 128, 256):
-                    resized = base_img.resize((sz, sz), Image.Resampling.LANCZOS)
-                    photos.append(ImageTk.PhotoImage(resized))
-                window._icon_photos_keepalive = photos
-                window.iconphoto(False, *photos)
-            except (tk.TclError, OSError, ValueError, RuntimeError):
-                pass
-
-        # 3. Chiamata Win32 diretta WM_SETICON per rendere la barra delle applicazioni perfettamente nitida
-        if ico_path.exists() and sys.platform == "win32":
-            try:
-                import ctypes
-                window.update_idletasks()
-                hwnd = ctypes.windll.user32.GetAncestor(window.winfo_id(), 2)  # GA_ROOT = 2
-                h_icon_big = ctypes.windll.user32.LoadImageW(None, str(ico_path), 1, 0, 0, 0x0010 | 0x0040)
-                h_icon_small = ctypes.windll.user32.LoadImageW(None, str(ico_path), 1, 16, 16, 0x0010)
-                WM_SETICON = 0x0080
-                if h_icon_big:
-                    ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 1, h_icon_big)
-                if h_icon_small:
-                    ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 0, h_icon_small)
-            except (AttributeError, OSError):
-                pass
-    except (AttributeError, OSError, tk.TclError, RuntimeError):
-        pass
-
-
-def apply_dark_titlebar(window) -> None:
-    """Forza la titlebar di Windows 10/11 in modalità scura per matchare il tema."""
-    if sys.platform != "win32":
-        return
-    try:
-        import ctypes
-        window.update_idletasks()
-        hwnd = ctypes.windll.user32.GetAncestor(window.winfo_id(), 2)  # GA_ROOT = 2
-        value = ctypes.c_int(1)
-        # Try Windows 11
-        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
-        # Try Windows 10
-        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
-    except (AttributeError, OSError):
-        pass
-
-
-def center_window(window: Any, width: int, height: int) -> None:
-    """Centra una finestra (CTkToplevel o CTk) perfettamente allo schermo, gestendo correttamente il DPI scaling su Windows."""
-    if sys.platform == "win32":
-        try:
-            import ctypes
-            screen_w = ctypes.windll.user32.GetSystemMetrics(0)
-            screen_h = ctypes.windll.user32.GetSystemMetrics(1)
-        except (AttributeError, OSError):
-            screen_w = window.winfo_screenwidth()
-            screen_h = window.winfo_screenheight()
-    else:
-        screen_w = window.winfo_screenwidth()
-        screen_h = window.winfo_screenheight()
-
-    scaling = getattr(window, "_get_window_scaling", lambda: 1.0)()
-    w_physical = round(width * scaling)
-    h_physical = round(height * scaling)
-
-    x = max(0, (screen_w - w_physical) // 2)
-    y = max(0, (screen_h - h_physical) // 2)
-
-    window.geometry(f"{width}x{height}+{x}+{y}")
-    apply_window_icon(window)
-    apply_dark_titlebar(window)
 
