@@ -1329,6 +1329,9 @@ function closeModal() {
   document.querySelectorAll(".modal-backdrop").forEach((el) => {
     el.classList.remove("open");
   });
+  document.querySelectorAll(".autocomplete-dropdown.open").forEach((dd) => {
+    dd.classList.remove("open");
+  });
   const excelStatus = document.getElementById("excel-parse-status");
   if (excelStatus) excelStatus.textContent = "";
   const excelInput = document.getElementById("excelFileInput");
@@ -2201,6 +2204,9 @@ function openBulkSaleModal() {
 function closeBulkSaleModal() {
   const modal = document.getElementById("bulkSaleModal");
   if (modal) modal.classList.remove("open");
+  document.querySelectorAll(".autocomplete-dropdown.open").forEach((dd) => {
+    dd.classList.remove("open");
+  });
   if (!isSelectionModeActive && selectedProductIds.size > 0) {
     selectedProductIds.clear();
     updateSelectionBadge();
@@ -2309,6 +2315,159 @@ function updateDatalistsPlaces() {
       .join("");
   }
 }
+
+// ==========================================================================
+// AUTOCOMPLETE FLOATING PILL DROPDOWN (OPZIONE 1: BADGE & PILL)
+// ==========================================================================
+function highlightMatch(text, query) {
+  if (!query) return escapeHtml(text);
+  const index = text.toLowerCase().indexOf(query.toLowerCase());
+  if (index === -1) return escapeHtml(text);
+  const before = text.slice(0, index);
+  const match = text.slice(index, index + query.length);
+  const after = text.slice(index + query.length);
+  return `${escapeHtml(before)}<span class="autocomplete-highlight">${escapeHtml(match)}</span>${escapeHtml(after)}`;
+}
+
+function setupFloatingPillAutocomplete(inputId, dropdownId, getItemsFn, typeBadge = "Marketplace") {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  if (!input || !dropdown) return;
+
+  let activeIndex = -1;
+
+  function renderDropdown(filterText = "") {
+    const items = getItemsFn() || [];
+    const q = filterText.trim().toLowerCase();
+    const filtered = q
+      ? items.filter((item) => item.toLowerCase().includes(q))
+      : items;
+
+    activeIndex = -1;
+
+    if (filtered.length === 0) {
+      dropdown.innerHTML = `<div class="autocomplete-empty">Nessun suggerimento corrispondente</div>`;
+      dropdown.classList.add("open");
+      return;
+    }
+
+    const isPurchased = typeBadge.toLowerCase().includes("acquisto") || typeBadge.toLowerCase().includes("store");
+    const iconSvg = isPurchased
+      ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>`
+      : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><circle cx="7" cy="7" r="1.5"/></svg>`;
+
+    dropdown.innerHTML = filtered
+      .map((item, idx) => {
+        return `
+          <div class="autocomplete-item" data-index="${idx}" data-val="${escapeHtml(item)}">
+            <div class="autocomplete-item-left">
+              <span class="autocomplete-item-icon ${isPurchased ? "purchased" : ""}">${iconSvg}</span>
+              <span>${highlightMatch(item, q)}</span>
+            </div>
+            <span class="autocomplete-badge ${isPurchased ? "purchased" : ""}">${escapeHtml(typeBadge)}</span>
+          </div>
+        `;
+      })
+      .join("");
+
+    dropdown.querySelectorAll(".autocomplete-item").forEach((el) => {
+      el.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        const val = el.getAttribute("data-val");
+        if (val) {
+          input.value = val;
+          dropdown.classList.remove("open");
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      });
+    });
+
+    dropdown.classList.add("open");
+  }
+
+  input.addEventListener("input", () => {
+    renderDropdown(input.value);
+  });
+
+  input.addEventListener("focus", () => {
+    renderDropdown(input.value);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (!dropdown.classList.contains("open")) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        renderDropdown(input.value);
+        return;
+      }
+    }
+
+    const items = dropdown.querySelectorAll(".autocomplete-item");
+    if (items.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+      updateActiveItem(items);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      updateActiveItem(items);
+    } else if (e.key === "Enter") {
+      if (activeIndex >= 0 && activeIndex < items.length) {
+        e.preventDefault();
+        const val = items[activeIndex].getAttribute("data-val");
+        if (val) {
+          input.value = val;
+          dropdown.classList.remove("open");
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      } else {
+        dropdown.classList.remove("open");
+      }
+    } else if (e.key === "Escape") {
+      dropdown.classList.remove("open");
+    }
+  });
+
+  function updateActiveItem(items) {
+    items.forEach((item, idx) => {
+      item.classList.toggle("active", idx === activeIndex);
+      if (idx === activeIndex) {
+        item.scrollIntoView({ block: "nearest" });
+      }
+    });
+  }
+}
+
+function initAllAutocompletes() {
+  setupFloatingPillAutocomplete(
+    "prod-buy-place",
+    "dropdown-prod-buy-place",
+    () => availablePurchasedPlaces,
+    "Store"
+  );
+  setupFloatingPillAutocomplete(
+    "prod-sell-place",
+    "dropdown-prod-sell-place",
+    () => availableSellingPlaces,
+    "Marketplace"
+  );
+  setupFloatingPillAutocomplete(
+    "bulk-sale-place",
+    "dropdown-bulk-sale-place",
+    () => availableSellingPlaces,
+    "Marketplace"
+  );
+}
+
+// Chiusura automatica al click fuori
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".autocomplete-wrap")) {
+    document.querySelectorAll(".autocomplete-dropdown.open").forEach((dd) => {
+      dd.classList.remove("open");
+    });
+  }
+});
 
 function openManagePlacesModal() {
   closeDrawer();
@@ -2989,6 +3148,7 @@ function showToast(message) {
 document.addEventListener("DOMContentLoaded", () => {
   loadProductsFromBackend();
   loadPlacesFromBackend();
+  initAllAutocompletes();
   initCharts();
   updateDashboardMetrics();
   renderTable();

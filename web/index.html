@@ -417,7 +417,10 @@
             </div>
             <div class="form-group">
               <label class="form-label">Luogo di Acquisto</label>
-              <input type="text" id="prod-buy-place" class="form-input" list="purchased-places-list" placeholder="es. Nike, SNKRS, Foot Locker..." />
+              <div class="autocomplete-wrap">
+                <input type="text" id="prod-buy-place" class="form-input" placeholder="es. Nike, SNKRS, Foot Locker..." autocomplete="off" />
+                <div id="dropdown-prod-buy-place" class="autocomplete-dropdown"></div>
+              </div>
             </div>
           </div>
 
@@ -427,7 +430,10 @@
                 <label class="form-label" style="margin-bottom: 0;">Canale di Vendita</label>
                 <button type="button" class="btn-input-action" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi">Gestisci</button>
               </div>
-              <input type="text" id="prod-sell-place" class="form-input" list="selling-places-list" placeholder="es. StockX, Vinted, eBay, Privato..." />
+              <div class="autocomplete-wrap">
+                <input type="text" id="prod-sell-place" class="form-input" placeholder="es. StockX, Vinted, eBay, Privato..." autocomplete="off" />
+                <div id="dropdown-prod-sell-place" class="autocomplete-dropdown"></div>
+              </div>
             </div>
             <div class="form-group" style="flex: 1;">
               <label class="form-label">Prezzo di Vendita (€)</label>
@@ -937,7 +943,10 @@
               <label class="form-label" style="margin-bottom: 0;">Canale di Vendita</label>
               <button type="button" class="btn-input-action" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi">Gestisci</button>
             </div>
-            <input type="text" id="bulk-sale-place" class="form-input" placeholder="es. Vinted, StockX, Wallapop..." list="selling-places-list" />
+            <div class="autocomplete-wrap">
+              <input type="text" id="bulk-sale-place" class="form-input" placeholder="es. Vinted, StockX, Wallapop..." autocomplete="off" />
+              <div id="dropdown-bulk-sale-place" class="autocomplete-dropdown"></div>
+            </div>
           </div>
         </div>
         <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
