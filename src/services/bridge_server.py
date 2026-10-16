@@ -189,8 +189,27 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
     def db(self) -> InventoryDatabase:
         return get_thread_db()
 
+    def _is_allowed_origin(self, origin: str) -> bool:
+        """Verifica che la richiesta provenga da Tauri WebView o da localhost."""
+        if not origin:
+            return True
+        o = origin.lower()
+        return o.startswith((
+            "https://tauri.localhost",
+            "http://tauri.localhost",
+            "tauri://localhost",
+            "http://localhost",
+            "https://localhost",
+            "http://127.0.0.1",
+            "https://127.0.0.1",
+        ))
+
     def _set_cors_headers(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin", "")
+        if self._is_allowed_origin(origin):
+            self.send_header("Access-Control-Allow-Origin", origin if origin else "*")
+        else:
+            self.send_header("Access-Control-Allow-Origin", "null")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "*")
         self.send_header("Access-Control-Allow-Private-Network", "true")

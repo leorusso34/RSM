@@ -3168,7 +3168,7 @@ async function saveEmailPreorders() {
 // ==========================================================================
 // AUTO-UPDATER & VERIFICA AGGIORNAMENTI (PUNTO 8)
 // ==========================================================================
-let currentAppVersion = "1.5.0";
+let currentAppVersion = "1.6.0";
 let pendingUpdateInfo = null;
 let updatePollingTimer = null;
 let isApplyingUpdate = false;
