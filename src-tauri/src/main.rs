@@ -87,6 +87,11 @@ fn find_python_executable(work_dir: &Path) -> PathBuf {
     return PathBuf::from("python3");
 }
 
+use std::sync::Mutex;
+use std::process::Child;
+
+static CHILD_PROCESS: Mutex<Option<Child>> = Mutex::new(None);
+
 fn ensure_bridge_server() {
     if is_bridge_running() {
         return;
@@ -94,32 +99,32 @@ fn ensure_bridge_server() {
 
     if let Some((script, work_dir)) = find_bridge_script() {
         let py_bin = find_python_executable(&work_dir);
-        thread::spawn(move || {
-            let mut cmd = Command::new(py_bin);
-            cmd.arg(&script);
-            cmd.current_dir(&work_dir);
+        let mut cmd = Command::new(py_bin);
+        cmd.arg(&script);
+        cmd.current_dir(&work_dir);
 
-            #[cfg(target_os = "windows")]
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        #[cfg(target_os = "windows")]
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
-            if let Ok(mut child) = cmd.spawn() {
-                let _ = child.wait();
+        if let Ok(child) = cmd.spawn() {
+            if let Ok(mut lock) = CHILD_PROCESS.lock() {
+                *lock = Some(child);
             }
-        });
+        }
     } else {
         // Fallback generico
         let py_bin = find_python_executable(Path::new("."));
-        thread::spawn(move || {
-            let mut cmd = Command::new(py_bin);
-            cmd.arg("src/services/bridge_server.py");
+        let mut cmd = Command::new(py_bin);
+        cmd.arg("src/services/bridge_server.py");
 
-            #[cfg(target_os = "windows")]
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        #[cfg(target_os = "windows")]
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
-            if let Ok(mut child) = cmd.spawn() {
-                let _ = child.wait();
+        if let Ok(child) = cmd.spawn() {
+            if let Ok(mut lock) = CHILD_PROCESS.lock() {
+                *lock = Some(child);
             }
-        });
+        }
     }
 
     // Attendi fino a 2 secondi per l'avvio del server
@@ -143,6 +148,21 @@ fn main() {
             }
             Ok(())
         })
+        .on_window_event(|event| {
+            if let tauri::WindowEvent::Destroyed = event.event() {
+                if let Ok(mut lock) = CHILD_PROCESS.lock() {
+                    if let Some(mut child) = lock.take() {
+                        let _ = child.kill();
+                    }
+                }
+            }
+        })
         .run(tauri::generate_context!())
         .expect("Errore durante l'esecuzione dell'applicazione Tauri");
+
+    if let Ok(mut lock) = CHILD_PROCESS.lock() {
+        if let Some(mut child) = lock.take() {
+            let _ = child.kill();
+        }
+    }
 }

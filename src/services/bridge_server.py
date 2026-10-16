@@ -393,7 +393,10 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         # Verifica disponibilità aggiornamenti (Punto 8)
         if path == "/api/updates/check":
             try:
-                curr_ver = params.get("current_version", [APP_VERSION])[0]
+                import importlib
+                import src.config
+                importlib.reload(src.config)
+                curr_ver = params.get("current_version", [src.config.APP_VERSION])[0]
                 update_info = check_for_updates(current_version=curr_ver)
                 with _updater_lock:
                     _update_state["latest_info"] = update_info
