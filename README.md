@@ -16,10 +16,11 @@ Applicazione desktop moderna ad altissime prestazioni (**Tauri + Rust & Python**
   <img src="https://img.shields.io/badge/AI-Google%20Gemini-8E75C4?logo=googlegemini&logoColor=white" alt="Google Gemini">
   <img src="https://img.shields.io/badge/Proxy-Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers">
   <img src="https://img.shields.io/badge/Market-eBay%20API-E53238?logo=ebay&logoColor=white" alt="eBay API">
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="Licenza MIT">
 </p>
 
 <p align="center">
-  <img src="assets/graphs.gif" alt="RSM Preview - Dashboard & Grafici" width="100%">
+  <strong>Sito Web Ufficiale & Showcase Live:</strong> <a href="https://leorusso34.github.io/RSM/">https://leorusso34.github.io/RSM/</a>
 </p>
 
 </div>
