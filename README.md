@@ -16,7 +16,6 @@ Applicazione desktop moderna ad altissime prestazioni (**Tauri + Rust & Python**
   <img src="https://img.shields.io/badge/AI-Google%20Gemini-8E75C4?logo=googlegemini&logoColor=white" alt="Google Gemini">
   <img src="https://img.shields.io/badge/Proxy-Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers">
   <img src="https://img.shields.io/badge/Market-eBay%20API-E53238?logo=ebay&logoColor=white" alt="eBay API">
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="Licenza MIT">
 </p>
 
 <p align="center">
@@ -27,7 +26,7 @@ Applicazione desktop moderna ad altissime prestazioni (**Tauri + Rust & Python**
 
 ---
 
-## 🚀 Caratteristiche Principali
+## Caratteristiche Principali
 
 - **📦 Magazzino & Pre-ordini**: Tracciamento completo di prodotti, taglie, quantità, luoghi di acquisto con tendina a scorrimento rapido e date di rilascio.
 - **🏷️ Gestione Vendite & Vendite Multiple**: Conversione rapida, supporto per vendite singole o in blocco (bundle) e drag & drop tra schede.
@@ -46,7 +45,7 @@ Applicazione desktop moderna ad altissime prestazioni (**Tauri + Rust & Python**
 
 ---
 
-## ⚙️ Configurazione Credenziali (`config.json`)
+## Configurazione Credenziali (`config.json`)
 
 Tutte le integrazioni esterne (prezzi di mercato eBay, Google Gemini per inserimento rapido ed Excel, e download degli aggiornamenti da GitHub Releases) sono gestite e protette direttamente sul cloud tramite **Cloudflare Worker**.
 
@@ -69,7 +68,7 @@ Nel file `config.json` nella cartella principale puoi configurare le tue credenz
 
 ---
 
-## 💻 Requisiti e Avvio in Sviluppo
+## Requisiti e Avvio in Sviluppo
 
 ```powershell
 # 1. Clona il repository
@@ -85,7 +84,7 @@ python rsm.py
 
 ---
 
-## 🧪 Esecuzione dei Test e Controllo Qualità
+## Esecuzione dei Test e Controllo Qualità
 
 Il progetto integra una suite di test completa con **Pytest** e controlli automatici di formattazione e linting con **Ruff** (attivi anche nella CI di GitHub Actions):
 
@@ -102,7 +101,7 @@ ruff check .
 
 ---
 
-## 📦 Compilazione Eseguibile Standalone
+## Compilazione Eseguibile Standalone
 
 Per compilare l'applicazione in una cartella autonoma (Zero-Lag Engine con Tauri e Rust):
 
@@ -114,7 +113,7 @@ L'eseguibile completo e pronto all'uso verrà generato nella cartella `dist/RSM/
 
 ---
 
-## 🗂️ Struttura del Progetto
+## Struttura del Progetto
 
 ```text
 RUSSO STOCK/
@@ -147,6 +146,6 @@ RUSSO STOCK/
 
 ---
 
-## 📄 Licenza
+## Licenza
 
 Distribuito sotto licenza [MIT](LICENSE).
