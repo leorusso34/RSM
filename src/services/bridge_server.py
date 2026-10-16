@@ -337,6 +337,16 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             })
             return
 
+        # Luoghi e Marketplace per Autocompletamento (Punto 7)
+        if path == "/api/places":
+            purchased, selling = self.db.get_distinct_places()
+            self._send_json({
+                "success": True,
+                "purchased": purchased,
+                "selling": selling,
+            })
+            return
+
         self._send_error("Endpoint non trovato", status=HTTPStatus.NOT_FOUND)
 
     # --------------------------------------------------------------------------
@@ -874,6 +884,38 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             self._send_json({"success": True, "restored_count": restored_count})
             return
 
+        # Aggiunta Luogo/Marketplace Personalizzato (Punto 7)
+        if path == "/api/places":
+            name = body.get("name", "").strip()
+            if not name:
+                self._send_error("Il nome del luogo non può essere vuoto.")
+                return
+            self.db.add_custom_place(name)
+            purchased, selling = self.db.get_distinct_places()
+            self._send_json({
+                "success": True,
+                "name": name,
+                "purchased": purchased,
+                "selling": selling,
+            })
+            return
+
+        # Eliminazione Luogo/Marketplace Personalizzato (Punto 7)
+        if path == "/api/places/delete":
+            name = body.get("name", "").strip()
+            if not name:
+                self._send_error("Il nome del luogo non può essere vuoto.")
+                return
+            self.db.delete_custom_place(name)
+            purchased, selling = self.db.get_distinct_places()
+            self._send_json({
+                "success": True,
+                "name": name,
+                "purchased": purchased,
+                "selling": selling,
+            })
+            return
+
         self._send_error("Endpoint POST non trovato", status=HTTPStatus.NOT_FOUND)
 
     # --------------------------------------------------------------------------
@@ -971,6 +1013,23 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self._send_json({"success": True, "message": f"Prodotto #{prod_id} eliminato con successo."})
             except Exception as e:  # noqa: BLE001
                 self._send_error(f"Errore eliminazione: {e}")
+            return
+
+        # Eliminazione Luogo/Marketplace Personalizzato (Punto 7)
+        if path == "/api/places":
+            body = self._read_body_json()
+            name = body.get("name", "").strip()
+            if not name:
+                self._send_error("Il nome del luogo non può essere vuoto.")
+                return
+            self.db.delete_custom_place(name)
+            purchased, selling = self.db.get_distinct_places()
+            self._send_json({
+                "success": True,
+                "name": name,
+                "purchased": purchased,
+                "selling": selling,
+            })
             return
 
         self._send_error("Endpoint DELETE non trovato", status=HTTPStatus.NOT_FOUND)

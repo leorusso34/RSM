@@ -106,6 +106,12 @@
               <span>Importa Excel / CSV</span>
             </div>
           </li>
+          <li class="nav-item" onclick="openManagePlacesModal()">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><circle cx="7" cy="7" r="1.5"/></svg>
+              <span>Canali & Luoghi</span>
+            </div>
+          </li>
         </ul>
         <input type="file" id="excelFileInput" accept=".xlsx,.xlsm,.xls,.csv" style="display:none;" onchange="handleExcelFileSelected(event)" />
       </div>
@@ -411,14 +417,17 @@
             </div>
             <div class="form-group">
               <label class="form-label">Luogo di Acquisto</label>
-              <input type="text" id="prod-buy-place" class="form-input" />
+              <input type="text" id="prod-buy-place" class="form-input" list="purchased-places-list" placeholder="es. Nike, SNKRS, Foot Locker..." />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group" style="flex: 1;">
-              <label class="form-label">Canale di Vendita</label>
-              <input type="text" id="prod-sell-place" class="form-input" />
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                <label class="form-label" style="margin-bottom: 0;">Canale di Vendita</label>
+                <button type="button" class="btn-input-action" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi">Gestisci</button>
+              </div>
+              <input type="text" id="prod-sell-place" class="form-input" list="selling-places-list" placeholder="es. StockX, Vinted, eBay, Privato..." />
             </div>
             <div class="form-group" style="flex: 1;">
               <label class="form-label">Prezzo di Vendita (€)</label>
@@ -924,9 +933,11 @@
           </div>
 
           <div class="form-group" style="margin-bottom: 12px;">
-            <label class="form-label">Canale di Vendita</label>
-            <input type="text" id="bulk-sale-place" class="form-input" placeholder="es. Vinted, StockX, Wallapop..." list="bulk-selling-places-list" />
-            <datalist id="bulk-selling-places-list"></datalist>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+              <label class="form-label" style="margin-bottom: 0;">Canale di Vendita</label>
+              <button type="button" class="btn-input-action" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi">Gestisci</button>
+            </div>
+            <input type="text" id="bulk-sale-place" class="form-input" placeholder="es. Vinted, StockX, Wallapop..." list="selling-places-list" />
           </div>
         </div>
         <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
@@ -936,6 +947,67 @@
       </form>
     </div>
   </div>
+
+  <!-- ====================================================================
+       MODALE: GESTIONE CANALI E LUOGHI DINAMICI (CUSTOM PLACES MANAGER)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="managePlacesModal">
+    <div class="modal-card" style="width: 520px; max-width: 94vw;">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Gestione Canali e Luoghi</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+            Personalizza i marketplace e visualizza i canali di vendita e acquisto disponibili.
+          </p>
+        </div>
+        <button class="modal-close-btn" onclick="closeManagePlacesModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- Form Aggiunta Nuovo Canale -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px;">
+          <label class="form-label" for="new-place-input" style="font-size: 11px; margin-bottom: 6px;">AGGIUNGI NUOVO CANALE DI VENDITA</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="new-place-input" class="form-input" placeholder="es. Vestiaire Collective, Subito..." style="flex: 1;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitAddCustomPlace();}" />
+            <button type="button" class="btn btn-primary" onclick="submitAddCustomPlace()" style="white-space: nowrap;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Aggiungi</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sezione Canali di Vendita Attivi -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px;">Canali di Vendita & Marketplace</span>
+            <span style="font-size: 10.5px; color: var(--text-dim);" id="selling-places-count">0 canali</span>
+          </div>
+          <div class="places-grid" id="selling-places-chips">
+            <!-- Popolato dinamicamente da app.js -->
+          </div>
+        </div>
+
+        <!-- Sezione Luoghi di Acquisto -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px;">Luoghi di Acquisto Registrati</span>
+            <span style="font-size: 10.5px; color: var(--text-dim);" id="purchased-places-count">0 luoghi</span>
+          </div>
+          <div class="places-grid" id="purchased-places-chips">
+            <!-- Popolato dinamicamente da app.js -->
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="closeManagePlacesModal()">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Datalist Globali per Autocompletamento Dinamico -->
+  <datalist id="purchased-places-list"></datalist>
+  <datalist id="selling-places-list"></datalist>
 
   <!-- Toast Notifiche -->
   <div class="toast" id="toastNotification"></div>

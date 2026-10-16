@@ -418,6 +418,51 @@ def test_bridge_bulk_operations(tmp_path):
         assert restored_row["quantity"] == 3
         assert restored_row["status"] == STATUS_STOCK
 
+        # 7. Test Places endpoints (/api/places - GET, POST, DELETE)
+        req_places_get = request.Request(f"http://127.0.0.1:{port}/api/places")
+        with request.urlopen(req_places_get) as resp:
+            places_data = json.loads(resp.read().decode("utf-8"))
+            assert places_data["success"] is True
+            assert "purchased" in places_data
+            assert "selling" in places_data
+            assert "StockX" in places_data["selling"] or "stockx" in [s.lower() for s in places_data["selling"]]
+
+        # Add custom place
+        req_places_add = request.Request(
+            f"http://127.0.0.1:{port}/api/places",
+            data=json.dumps({"name": "Wallapop"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req_places_add) as resp:
+            add_data = json.loads(resp.read().decode("utf-8"))
+            assert add_data["success"] is True
+            assert "Wallapop" in add_data["selling"]
+
+        # Delete custom place via DELETE
+        req_places_del = request.Request(
+            f"http://127.0.0.1:{port}/api/places",
+            data=json.dumps({"name": "Wallapop"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="DELETE",
+        )
+        with request.urlopen(req_places_del) as resp:
+            del_data = json.loads(resp.read().decode("utf-8"))
+            assert del_data["success"] is True
+            assert "Wallapop" not in del_data["selling"]
+
+        # Delete default place via POST /api/places/delete
+        req_places_del_post = request.Request(
+            f"http://127.0.0.1:{port}/api/places/delete",
+            data=json.dumps({"name": "wethenew"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req_places_del_post) as resp:
+            del_post_data = json.loads(resp.read().decode("utf-8"))
+            assert del_post_data["success"] is True
+            assert "wethenew" not in del_post_data["selling"]
+
     finally:
         server.shutdown()
         server.server_close()

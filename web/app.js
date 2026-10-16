@@ -64,6 +64,7 @@ async function loadProductsFromBackend(retries = 6, delay = 500) {
         renderTable();
         updateDashboardMetrics();
         initCharts();
+        loadPlacesFromBackend();
         return true;
       }
     } catch (err) {
@@ -2186,19 +2187,7 @@ function openBulkSaleModal() {
     if (qtyGroup) qtyGroup.style.display = "none";
   }
 
-  const datalist = document.getElementById("bulk-selling-places-list");
-  if (datalist) {
-    const placesSet = new Set();
-    inventoryData.forEach((i) => {
-      if (i.sellingPlace && i.sellingPlace.trim()) placesSet.add(i.sellingPlace.trim());
-    });
-    datalist.innerHTML = "";
-    Array.from(placesSet).sort().forEach((p) => {
-      const opt = document.createElement("option");
-      opt.value = p;
-      datalist.appendChild(opt);
-    });
-  }
+  updateDatalistsPlaces();
 
   document.getElementById("bulk-sale-total-price").value = "";
   document.getElementById("bulk-sale-total-fees").value = "0.00";
@@ -2275,6 +2264,171 @@ async function handleBulkSaleSubmit(e) {
       showToast(`${ids.length === 1 ? "Prodotto messo" : ids.length + " prodotti messi"} in vendita con successo!`);
     } else {
       showToast(`Errore vendita: ${json.error}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  }
+}
+
+// ==========================================================================
+// GESTIONE CANALI E LUOGHI DINAMICI (PUNTO 7)
+// ==========================================================================
+let availableSellingPlaces = [];
+let availablePurchasedPlaces = [];
+
+async function loadPlacesFromBackend() {
+  try {
+    const res = await fetch(`${API_BASE}/places`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success) {
+        availablePurchasedPlaces = Array.isArray(json.purchased) ? json.purchased : [];
+        availableSellingPlaces = Array.isArray(json.selling) ? json.selling : [];
+        updateDatalistsPlaces();
+        renderManagePlacesModal();
+      }
+    }
+  } catch (err) {
+    console.warn("Impossibile caricare canali/luoghi dal bridge:", err);
+  }
+}
+
+function updateDatalistsPlaces() {
+  const pListEl = document.getElementById("purchased-places-list");
+  const sListEl = document.getElementById("selling-places-list");
+
+  if (pListEl) {
+    pListEl.innerHTML = availablePurchasedPlaces
+      .map((p) => `<option value="${escapeHtml(p)}"></option>`)
+      .join("");
+  }
+
+  if (sListEl) {
+    sListEl.innerHTML = availableSellingPlaces
+      .map((s) => `<option value="${escapeHtml(s)}"></option>`)
+      .join("");
+  }
+}
+
+function openManagePlacesModal() {
+  closeDrawer();
+  const modal = document.getElementById("managePlacesModal");
+  if (!modal) return;
+  modal.classList.add("open");
+
+  const input = document.getElementById("new-place-input");
+  if (input) {
+    input.value = "";
+    setTimeout(() => input.focus(), 80);
+  }
+
+  renderManagePlacesModal();
+  loadPlacesFromBackend();
+}
+
+function closeManagePlacesModal() {
+  const modal = document.getElementById("managePlacesModal");
+  if (modal) modal.classList.remove("open");
+}
+
+function renderManagePlacesModal() {
+  const sellingContainer = document.getElementById("selling-places-chips");
+  const purchasedContainer = document.getElementById("purchased-places-chips");
+  const sellingCount = document.getElementById("selling-places-count");
+  const purchasedCount = document.getElementById("purchased-places-count");
+
+  if (sellingCount) {
+    sellingCount.textContent = `${availableSellingPlaces.length} canal${availableSellingPlaces.length === 1 ? "e" : "i"}`;
+  }
+  if (purchasedCount) {
+    purchasedCount.textContent = `${availablePurchasedPlaces.length} luog${availablePurchasedPlaces.length === 1 ? "o" : "hi"}`;
+  }
+
+  if (sellingContainer) {
+    if (availableSellingPlaces.length === 0) {
+      sellingContainer.innerHTML = '<span style="font-size:11px; color:var(--text-dim); padding:6px;">Nessun canale di vendita configurato.</span>';
+    } else {
+      sellingContainer.innerHTML = availableSellingPlaces
+        .map((place) => {
+          const safePlace = escapeHtml(place);
+          return `<div class="place-chip">
+            <span>${safePlace}</span>
+            <button type="button" class="place-chip-del" title="Elimina canale" data-place="${safePlace}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>`;
+        })
+        .join("");
+
+      sellingContainer.querySelectorAll(".place-chip-del").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const p = btn.getAttribute("data-place");
+          if (p) deleteCustomPlace(p);
+        });
+      });
+    }
+  }
+
+  if (purchasedContainer) {
+    if (availablePurchasedPlaces.length === 0) {
+      purchasedContainer.innerHTML = '<span style="font-size:11px; color:var(--text-dim); padding:6px;">Nessun luogo di acquisto registrato.</span>';
+    } else {
+      purchasedContainer.innerHTML = availablePurchasedPlaces
+        .map((place) => {
+          return `<div class="place-chip" style="background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.2);">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" style="margin-right: 2px;"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
+            <span>${escapeHtml(place)}</span>
+          </div>`;
+        })
+        .join("");
+    }
+  }
+}
+
+async function submitAddCustomPlace() {
+  const input = document.getElementById("new-place-input");
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) {
+    showToast("Inserisci il nome del canale da aggiungere.");
+    input.focus();
+    return;
+  }
+
+  try {
+    const res = await callApi("/places", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      input.value = "";
+      showToast(`Canale "${name}" aggiunto con successo!`);
+      await loadPlacesFromBackend();
+    } else {
+      showToast(`Errore: ${json.error || "Operazione non riuscita"}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  }
+}
+
+async function deleteCustomPlace(name) {
+  if (!confirm(`Vuoi rimuovere il canale "${name}" dai suggerimenti?`)) return;
+
+  try {
+    const res = await callApi("/places/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(`Canale "${name}" rimosso!`);
+      await loadPlacesFromBackend();
+    } else {
+      showToast(`Errore: ${json.error || "Operazione non riuscita"}`);
     }
   } catch (err) {
     showToast(`Errore di rete: ${err.message}`);
@@ -2834,6 +2988,7 @@ function showToast(message) {
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
   loadProductsFromBackend();
+  loadPlacesFromBackend();
   initCharts();
   updateDashboardMetrics();
   renderTable();
