@@ -39,7 +39,6 @@ Applicazione desktop moderna ad altissime prestazioni (**Tauri + Rust & Python**
 - **🔑 Configurazione Flessibile via `config.json`**: Possibilità di impostare credenziali personali direttamente dal file esterno `config.json` nella cartella principale (con precedenza sui dati salvati in app).
 - **📁 Import / Export & Backup**:
   - Importazione automatica da fogli **Excel** (`.xlsx`).
-  - Esportazione **CSV** formattata per Excel italiano con intestazioni dettagliate.
   - Backup istantaneo e sicuro del database SQLite locale.
 - **⚡ Architettura Zero-Lag & Dark Theme Flat-Minimal**: Interfaccia ultra-reattiva nativa in Tauri (Rust + WebView2), dark theme flat-minimal ad alto contrasto, animazioni fluide a 60 FPS, supporto High-DPI e navigazione istantanea senza latenza.
 
