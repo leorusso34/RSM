@@ -326,6 +326,13 @@ def apply_update_and_restart(
                 '    echo ATTENZIONE: Robocopy ha riportato errori ^(codice !RC!^). >> "!LOG!"\r\n'
                 ")\r\n"
                 "\r\n"
+                ":: Pulizia automatica vecchi residui PyInstaller (_internal) e archivi zip\r\n"
+                'if exist "!TARGET!\\_internal" (\r\n'
+                '    echo Rimozione vecchia cartella _internal... >> "!LOG!"\r\n'
+                '    rmdir /s /q "!TARGET!\\_internal" 2>nul\r\n'
+                ")\r\n"
+                'del /q "!TARGET!\\*.zip" 2>nul\r\n'
+                "\r\n"
                 ":: Riavvia RSM impostando esplicitamente la cartella di lavoro corretta\r\n"
                 'if exist "!TARGET!\\RSM.exe" (\r\n'
                 '    echo Riavvio RSM: !TARGET!\\RSM.exe >> "!LOG!"\r\n'
