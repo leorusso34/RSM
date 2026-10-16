@@ -25,6 +25,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri"
+
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:

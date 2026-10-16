@@ -64,12 +64,16 @@ def main() -> None:
         # 3. Compilazione nativa con Cargo in modalità Release ottimizzata
         print("Compilazione in corso con Cargo Release (Zero-Lag Engine)...")
         cmd = [cargo_bin, "build", "--release"]
-        try:
-            # Prova prima con flag offline per massima velocità
-            subprocess.check_call(cmd + ["--offline"], cwd=build_cwd)
-        except subprocess.CalledProcessError:
-            # Fallback con accesso rete se necessario
+        is_ci = os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
+        if is_ci:
             subprocess.check_call(cmd, cwd=build_cwd)
+        else:
+            try:
+                # Prova prima con flag offline per massima velocità locale
+                subprocess.check_call(cmd + ["--offline"], cwd=build_cwd)
+            except subprocess.CalledProcessError:
+                # Fallback con accesso rete se necessario
+                subprocess.check_call(cmd, cwd=build_cwd)
     finally:
         # Smonta sempre l'unità virtuale temporanea
         if subst_drive:
