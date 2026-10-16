@@ -2,6 +2,7 @@ import json
 import threading
 from decimal import Decimal
 from http.server import ThreadingHTTPServer
+from unittest.mock import patch
 from urllib import request
 from urllib.error import HTTPError
 
@@ -462,6 +463,55 @@ def test_bridge_bulk_operations(tmp_path):
             del_post_data = json.loads(resp.read().decode("utf-8"))
             assert del_post_data["success"] is True
             assert "wethenew" not in del_post_data["selling"]
+
+        # 16. Step 8: Update endpoints
+        # Check updates when no update exists
+        with (
+            patch("src.services.bridge_server.check_for_updates", return_value=None),
+            request.urlopen(f"http://127.0.0.1:{port}/api/updates/check") as resp,
+        ):
+            upd_check = json.loads(resp.read().decode("utf-8"))
+            assert upd_check["success"] is True
+            assert upd_check["has_update"] is False
+
+        # Check updates when update is found
+        fake_update = {
+            "version": "v2.1.0",
+            "title": "RSM v2.1.0",
+            "changelog": "New features",
+            "download_url": "https://rsm-proxy.test/download/123",
+            "asset_name": "RSM.zip",
+            "size_bytes": 1000,
+        }
+        with (
+            patch("src.services.bridge_server.check_for_updates", return_value=fake_update),
+            request.urlopen(f"http://127.0.0.1:{port}/api/updates/check") as resp,
+        ):
+            upd_check2 = json.loads(resp.read().decode("utf-8"))
+            assert upd_check2["success"] is True
+            assert upd_check2["has_update"] is True
+            assert upd_check2["update"]["version"] == "v2.1.0"
+
+        # Check progress endpoint
+        with request.urlopen(f"http://127.0.0.1:{port}/api/updates/progress") as resp:
+            prog = json.loads(resp.read().decode("utf-8"))
+            assert prog["success"] is True
+            assert "status" in prog
+            assert "progress" in prog
+
+        # Trigger apply update with mock worker
+        req_apply = request.Request(
+            f"http://127.0.0.1:{port}/api/updates/apply",
+            data=json.dumps({"download_url": "https://rsm-proxy.test/download/123"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with (
+            patch("src.services.bridge_server._run_update_worker"),
+            request.urlopen(req_apply) as resp,
+        ):
+            apply_res = json.loads(resp.read().decode("utf-8"))
+            assert apply_res["success"] is True
 
     finally:
         server.shutdown()

@@ -1327,6 +1327,7 @@ function onModalStatusChange(_val) {
 
 function closeModal() {
   document.querySelectorAll(".modal-backdrop").forEach((el) => {
+    if (el.id === "updateModal" && isApplyingUpdate) return;
     el.classList.remove("open");
   });
   document.querySelectorAll(".autocomplete-dropdown.open").forEach((dd) => {
@@ -2962,6 +2963,189 @@ async function saveEmailPreorders() {
 }
 
 // ==========================================================================
+// AUTO-UPDATER & VERIFICA AGGIORNAMENTI (PUNTO 8)
+// ==========================================================================
+let currentAppVersion = "1.5.0";
+let pendingUpdateInfo = null;
+let updatePollingTimer = null;
+let isApplyingUpdate = false;
+
+async function checkForUpdates(isUserInitiated = false) {
+  try {
+    if (isUserInitiated) {
+      showToast("Verifica aggiornamenti in corso...");
+    }
+    const res = await callApi("/updates/check");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.success) {
+      if (json.current_version) {
+        currentAppVersion = json.current_version;
+        const verEl = document.getElementById("app-version-label");
+        if (verEl) verEl.textContent = currentAppVersion;
+      }
+
+      if (json.has_update && json.update) {
+        pendingUpdateInfo = json.update;
+        const badge = document.getElementById("update-badge");
+        if (badge) {
+          badge.textContent = json.update.version || "NEW";
+          badge.style.display = "inline-flex";
+        }
+        openUpdateModal(json.update);
+      } else {
+        pendingUpdateInfo = null;
+        const badge = document.getElementById("update-badge");
+        if (badge) badge.style.display = "none";
+        if (isUserInitiated) {
+          showToast(`RSM è già aggiornato all'ultima versione (v${currentAppVersion})!`);
+        }
+      }
+    } else if (isUserInitiated) {
+      showToast(`Errore verifica: ${json.error || "Impossibile verificare"}`);
+    }
+  } catch (err) {
+    if (isUserInitiated) {
+      showToast(`Errore verifica aggiornamenti: ${err.message}`);
+    }
+  }
+}
+
+function openUpdateModal(updateInfo) {
+  if (!updateInfo) return;
+  closeDrawer();
+  closeModal();
+
+  const modal = document.getElementById("updateModal");
+  if (!modal) return;
+
+  const targetVerEl = document.getElementById("update-target-version");
+  const currVerEl = document.getElementById("update-current-version");
+  const changelogEl = document.getElementById("update-changelog-box");
+  const progressWrap = document.getElementById("update-progress-wrap");
+  const progressBar = document.getElementById("update-progress-bar");
+  const statusLabel = document.getElementById("update-status-label");
+  const btnStart = document.getElementById("btn-update-start");
+  const btnCancel = document.getElementById("btn-update-cancel");
+  const closeX = document.getElementById("update-close-x");
+
+  if (targetVerEl) targetVerEl.textContent = updateInfo.version || "Nuova";
+  if (currVerEl) currVerEl.textContent = `v${currentAppVersion}`;
+  if (changelogEl) changelogEl.textContent = updateInfo.changelog || "Nessuna nota di rilascio specificata.";
+
+  if (progressWrap) progressWrap.style.display = "none";
+  if (progressBar) progressBar.style.width = "0%";
+  if (statusLabel) statusLabel.textContent = "Download dell'aggiornamento in corso...";
+  if (btnStart) {
+    btnStart.disabled = false;
+    btnStart.style.display = "inline-flex";
+    btnStart.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg><span>Aggiorna Ora</span>`;
+  }
+  if (btnCancel) {
+    btnCancel.disabled = false;
+    btnCancel.textContent = "Più Tardi";
+  }
+  if (closeX) closeX.style.display = "block";
+
+  isApplyingUpdate = false;
+  modal.classList.add("open");
+}
+
+function closeUpdateModal() {
+  if (isApplyingUpdate) {
+    showToast("Aggiornamento in corso, attendere il completamento...");
+    return;
+  }
+  const modal = document.getElementById("updateModal");
+  if (modal) modal.classList.remove("open");
+  if (updatePollingTimer) {
+    clearInterval(updatePollingTimer);
+    updatePollingTimer = null;
+  }
+}
+
+async function startAppUpdate() {
+  if (isApplyingUpdate || !pendingUpdateInfo) return;
+  isApplyingUpdate = true;
+
+  const btnStart = document.getElementById("btn-update-start");
+  const btnCancel = document.getElementById("btn-update-cancel");
+  const closeX = document.getElementById("update-close-x");
+  const progressWrap = document.getElementById("update-progress-wrap");
+  const progressBar = document.getElementById("update-progress-bar");
+  const statusLabel = document.getElementById("update-status-label");
+
+  if (btnStart) btnStart.disabled = true;
+  if (btnCancel) btnCancel.disabled = true;
+  if (closeX) closeX.style.display = "none";
+  if (progressWrap) progressWrap.style.display = "block";
+
+  try {
+    const res = await callApi("/updates/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ download_url: pendingUpdateInfo.download_url }),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.error || "Impossibile avviare il download");
+    }
+
+    // Polling stato avanzamento
+    updatePollingTimer = setInterval(async () => {
+      try {
+        const progRes = await fetch(`${API_BASE}/updates/progress`);
+        if (!progRes.ok) return;
+        const progJson = await progRes.json();
+        if (progJson.success) {
+          const pct = Math.round((progJson.progress || 0) * 100);
+          if (progressBar) progressBar.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+
+          if (progJson.message && statusLabel) {
+            statusLabel.textContent = progJson.message;
+          }
+
+          if (progJson.status === "applying") {
+            if (statusLabel) {
+              statusLabel.innerHTML = '<span style="color:#10b981; font-weight:700;">Estrazione completata! Applicazione aggiornamento e riavvio di RSM in corso...</span>';
+            }
+            if (progressBar) progressBar.style.width = "100%";
+            clearInterval(updatePollingTimer);
+            updatePollingTimer = null;
+          } else if (progJson.status === "error") {
+            clearInterval(updatePollingTimer);
+            updatePollingTimer = null;
+            isApplyingUpdate = false;
+            if (statusLabel) {
+              statusLabel.innerHTML = `<span style="color:#ef4444;">Errore: ${escapeHtml(progJson.error || "Operazione non riuscita")}</span>`;
+            }
+            if (btnCancel) {
+              btnCancel.disabled = false;
+              btnCancel.textContent = "Chiudi";
+            }
+          }
+        }
+      } catch (_) {
+        if (statusLabel) {
+          statusLabel.innerHTML = '<span style="color:#10b981; font-weight:700;">Riavvio di RSM in corso...</span>';
+        }
+        clearInterval(updatePollingTimer);
+        updatePollingTimer = null;
+      }
+    }, 250);
+  } catch (err) {
+    isApplyingUpdate = false;
+    if (statusLabel) {
+      statusLabel.innerHTML = `<span style="color:#ef4444;">Errore: ${escapeHtml(err.message)}</span>`;
+    }
+    if (btnCancel) {
+      btnCancel.disabled = false;
+      btnCancel.textContent = "Chiudi";
+    }
+  }
+}
+
+// ==========================================================================
 // IMPORTAZIONE EXCEL / SPREADSHEET CON AI & MAPPER (IDENTICO AD EXCELIMPORTDIALOG)
 // ==========================================================================
 let pendingExcelFile = null;
@@ -3166,6 +3350,11 @@ document.addEventListener("DOMContentLoaded", () => {
   updateDashboardMetrics();
   renderTable();
 
+  // Controllo automatico aggiornamenti in background (Punto 8)
+  setTimeout(() => {
+    checkForUpdates(false);
+  }, 1000);
+
   // Resize automatico al termine animazione apertura/chiusura sidebar
   const sidebar = document.getElementById("appSidebar");
   if (sidebar) {
@@ -3287,8 +3476,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
     backdrop.addEventListener("click", (e) => {
       if (e.target === backdrop) {
+        if (backdrop.id === "updateModal" && isApplyingUpdate) return;
         closeModal();
         closeBulkSaleModal();
+        closeUpdateModal();
       }
     });
   });
@@ -3326,9 +3517,11 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("keydown", async (e) => {
     // Chiusura rapida con tasto ESC
     if (e.key === "Escape") {
+      if (isApplyingUpdate) return;
       closeDrawer();
       closeModal();
       closeBulkSaleModal();
+      closeUpdateModal();
       hideContextMenu();
       if (!isSelectionModeActive && selectedProductIds.size > 0) {
         selectedProductIds.clear();

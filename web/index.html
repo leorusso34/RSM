@@ -112,6 +112,13 @@
               <span>Canali & Luoghi</span>
             </div>
           </li>
+          <li class="nav-item" id="nav-item-updater" onclick="checkForUpdates(true)">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              <span>Aggiornamenti</span>
+            </div>
+            <span id="update-badge" class="nav-badge" style="display: none; background: #10b981; color: #fff; font-weight: 700;">NEW</span>
+          </li>
         </ul>
         <input type="file" id="excelFileInput" accept=".xlsx,.xlsm,.xls,.csv" style="display:none;" onchange="handleExcelFileSelected(event)" />
       </div>
@@ -124,6 +131,9 @@
             <div style="font-weight: 600; color: #fff;">Database Locale SQLite</div>
             <div style="font-size: 10px; color: var(--text-dim);">Sincronizzato • Latenza 0ms</div>
           </div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-dim); margin-top: 6px; text-align: center; letter-spacing: 0.3px;">
+          RSM v<span id="app-version-label">1.5.0</span>
         </div>
       </div>
     </aside>
@@ -1014,9 +1024,57 @@
     </div>
   </div>
 
-  <!-- Datalist Globali per Autocompletamento Dinamico -->
-  <datalist id="purchased-places-list"></datalist>
-  <datalist id="selling-places-list"></datalist>
+  <!-- ====================================================================
+       MODALE: AGGIORNAMENTO DISPONIBILE (IDENTICO AD UPDATEDIALOG)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="updateModal">
+    <div class="modal-card" style="width: 540px; max-width: 94vw;">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Nuova Versione Disponibile</h3>
+          <p id="update-subtitle" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+            Versione <strong id="update-target-version" style="color: #10b981;">v...</strong> disponibile (versione attuale: <span id="update-current-version">v1.5.0</span>)
+          </p>
+        </div>
+        <button class="modal-close-btn" id="update-close-x" onclick="closeUpdateModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+        
+        <div>
+          <span style="font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">NOVITÀ DELL'AGGIORNAMENTO:</span>
+          <div id="update-changelog-box" style="margin-top: 6px; background: #0b101c; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; font-size: 11.5px; line-height: 1.6; color: #cbd5e1; max-height: 180px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; scrollbar-width: thin; scrollbar-color: #334155 #0b101c;">
+            <!-- Popolato dinamicamente -->
+          </div>
+        </div>
+
+        <!-- Garanzia sicurezza dati e configurazione locale -->
+        <div style="display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); padding: 8px 12px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="flex-shrink: 0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span style="font-size: 11px; color: #34d399; font-weight: 500;">
+            I tuoi dati locali (database SQLite e configurazioni) sono protetti e non verranno toccati.
+          </span>
+        </div>
+
+        <!-- Barra di avanzamento (visibile durante il download) -->
+        <div id="update-progress-wrap" style="display: none; margin-top: 4px;">
+          <div style="background: #1e293b; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
+            <div id="update-progress-bar" style="background: #10b981; height: 100%; width: 0%; transition: width 0.15s ease;"></div>
+          </div>
+          <div id="update-status-label" style="font-size: 11.5px; color: #cbd5e1; font-weight: 500;">
+            Download dell'aggiornamento in corso...
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-secondary" id="btn-update-cancel" onclick="closeUpdateModal()">Più Tardi</button>
+        <button type="button" class="btn btn-primary" id="btn-update-start" style="background: #059669;" onclick="startAppUpdate()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          <span>Aggiorna Ora</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast Notifiche -->
   <div class="toast" id="toastNotification"></div>

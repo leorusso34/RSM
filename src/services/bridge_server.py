@@ -139,6 +139,49 @@ def _stop_voice_recording() -> tuple[bool, str]:
     return False, "Tempo di elaborazione trascrizione scaduto."
 
 
+# --------------------------------------------------------------------------
+# GESTIONE AGGIORNAMENTI BACKGROUND (Cloudflare Worker Proxy + GitHub Releases)
+# --------------------------------------------------------------------------
+from src.updater import apply_update_and_restart, check_for_updates
+
+_updater_lock = threading.Lock()
+_update_state: dict[str, Any] = {
+    "status": "idle",  # "idle", "checking", "downloading", "extracting", "applying", "error", "done"
+    "progress": 0.0,
+    "message": "",
+    "error": None,
+    "latest_info": None,
+}
+
+
+def _run_update_worker(download_url: str) -> None:
+    try:
+        def on_progress(fraction: float) -> None:
+            with _updater_lock:
+                _update_state["status"] = "downloading"
+                _update_state["progress"] = fraction
+                _update_state["message"] = f"Download in corso: {int(fraction * 100)}%"
+
+        def on_status(msg: str) -> None:
+            with _updater_lock:
+                _update_state["message"] = msg
+                if "Estrazione" in msg:
+                    _update_state["status"] = "extracting"
+                elif "Avvio" in msg or "Riavvio" in msg:
+                    _update_state["status"] = "applying"
+
+        apply_update_and_restart(
+            download_url=download_url,
+            progress_callback=on_progress,
+            status_callback=on_status,
+        )
+    except Exception as e:  # noqa: BLE001
+        with _updater_lock:
+            _update_state["status"] = "error"
+            _update_state["error"] = str(e)
+            _update_state["message"] = f"Errore aggiornamento: {e}"
+
+
 class RSMBridgeHandler(BaseHTTPRequestHandler):
     """Gestore richieste HTTP per le API REST locali di RSM."""
 
@@ -345,6 +388,37 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 "purchased": purchased,
                 "selling": selling,
             })
+            return
+
+        # Verifica disponibilità aggiornamenti (Punto 8)
+        if path == "/api/updates/check":
+            try:
+                curr_ver = params.get("current_version", [APP_VERSION])[0]
+                update_info = check_for_updates(current_version=curr_ver)
+                with _updater_lock:
+                    _update_state["latest_info"] = update_info
+                self._send_json({
+                    "success": True,
+                    "has_update": update_info is not None,
+                    "current_version": curr_ver,
+                    "update": update_info,
+                })
+            except Exception as e:  # noqa: BLE001
+                self._send_error(f"Errore verifica aggiornamenti: {e}")
+            return
+
+        # Stato avanzamento download/installazione aggiornamento (Punto 8)
+        if path == "/api/updates/progress":
+            with _updater_lock:
+                self._send_json({
+                    "success": True,
+                    "status": _update_state["status"],
+                    "progress": _update_state["progress"],
+                    "message": _update_state["message"],
+                    "error": _update_state["error"],
+                    "has_update": _update_state["latest_info"] is not None,
+                    "update": _update_state["latest_info"],
+                })
             return
 
         self._send_error("Endpoint non trovato", status=HTTPStatus.NOT_FOUND)
@@ -914,6 +988,32 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 "purchased": purchased,
                 "selling": selling,
             })
+            return
+
+        # Avvio download e applicazione aggiornamento (Punto 8)
+        if path == "/api/updates/apply":
+            with _updater_lock:
+                if _update_state["status"] in ("downloading", "extracting", "applying"):
+                    self._send_json({"success": True, "message": "Aggiornamento già in corso", "already_running": True})
+                    return
+
+                download_url = (body or {}).get("download_url")
+                if not download_url and _update_state.get("latest_info"):
+                    download_url = _update_state["latest_info"].get("download_url")
+
+                if not download_url:
+                    self._send_error("URL di download non fornito o non valido.")
+                    return
+
+                _update_state["status"] = "downloading"
+                _update_state["progress"] = 0.0
+                _update_state["message"] = "Avvio download dell'aggiornamento..."
+                _update_state["error"] = None
+
+                thread = threading.Thread(target=_run_update_worker, args=(download_url,), daemon=True)
+                thread.start()
+
+                self._send_json({"success": True, "message": "Aggiornamento avviato con successo."})
             return
 
         self._send_error("Endpoint POST non trovato", status=HTTPStatus.NOT_FOUND)

@@ -251,9 +251,14 @@ def apply_update_and_restart(
                 source_root = subfolders[0] if len(subfolders) == 1 else extract_dir
 
         # Determina la directory di destinazione corretta:
-        # - Se gira come exe/app compilata (PyInstaller): cartella dell'applicazione
-        # - Se gira come script Python (sviluppo/testing): dist/RSM/ nella root del progetto
-        if getattr(sys, "frozen", False):
+        # - Se RSM.exe/RSM si trova direttamente in PROJECT_DIR (es. dist/RSM in produzione)
+        # - Se RSM.exe si trova in dist/RSM (es. root di sviluppo)
+        # - Altrimenti fallback sull'eseguibile corrente
+        if (PROJECT_DIR / "RSM.exe").exists() or (PROJECT_DIR / "RSM.app").exists() or (PROJECT_DIR / "RSM").exists():
+            target_app_dir = PROJECT_DIR.resolve()
+        elif (PROJECT_DIR / "dist" / "RSM" / "RSM.exe").exists():
+            target_app_dir = (PROJECT_DIR / "dist" / "RSM").resolve()
+        elif getattr(sys, "frozen", False):
             exe_path = Path(sys.executable).resolve()
             if sys.platform == "darwin" and ".app/Contents/MacOS" in exe_path.as_posix():
                 target_app_dir = exe_path.parents[2].parent
@@ -298,7 +303,7 @@ def apply_update_and_restart(
                 ":: Copia tutti i file aggiornati preservando config.json e data/\r\n"
                 ":: robocopy exit code 0-7 = successo, 8+ = errori\r\n"
                 'echo Copia file aggiornati ^(robocopy^)... >> "!LOG!"\r\n'
-                'robocopy "!SOURCE!" "!TARGET!" /E /XD data /XF config.json /IS /IT /IM /R:5 /W:2 >> "!LOG!" 2>&1\r\n'
+                'robocopy "!SOURCE!" "!TARGET!" /E /XD data /XF config.json .env /IS /IT /IM /R:5 /W:2 >> "!LOG!" 2>&1\r\n'
                 'set "RC=!ERRORLEVEL!"\r\n'
                 'echo Robocopy exit code: !RC! >> "!LOG!"\r\n'
                 "\r\n"
@@ -355,11 +360,11 @@ def apply_update_and_restart(
                 "sleep 3\n"
                 'pkill -f "RSM" 2>/dev/null || true\n\n'
                 "if command -v rsync >/dev/null 2>&1; then\n"
-                '    rsync -a --exclude="data" --exclude="data/" --exclude="config.json" "$SOURCE/" "$TARGET/" >> "$LOG" 2>&1\n'
+                '    rsync -a --exclude="data" --exclude="data/" --exclude="config.json" --exclude=".env" "$SOURCE/" "$TARGET/" >> "$LOG" 2>&1\n'
                 "else\n"
                 '    for item in "$SOURCE"/*; do\n'
                 '        base=$(basename "$item")\n'
-                '        if [ "$base" != "data" ] && [ "$base" != "config.json" ]; then\n'
+                '        if [ "$base" != "data" ] && [ "$base" != "config.json" ] && [ "$base" != ".env" ]; then\n'
                 '            cp -R "$item" "$TARGET/" >> "$LOG" 2>&1\n'
                 "        fi\n"
                 "    done\n"
