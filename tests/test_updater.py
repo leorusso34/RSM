@@ -160,3 +160,35 @@ def test_ai_parse_product_proxy(monkeypatch):
         assert res[0]["name"] == "Jordan 4"
         assert res[0]["purchased_price"] == 200.0
 
+
+def test_source_root_extraction_resolution(tmp_path):
+    # Caso 1: archivio zip con cartella radice 'RSM'
+    extract_dir1 = tmp_path / "extract1"
+    rsm_folder = extract_dir1 / "RSM"
+    rsm_folder.mkdir(parents=True)
+    exe_file = rsm_folder / "RSM.exe"
+    exe_file.write_text("dummy")
+
+    candidates = (
+        [p for p in extract_dir1.rglob("RSM.exe") if p.is_file()]
+        + [p for p in extract_dir1.rglob("RSM.app") if p.is_dir()]
+        + [p for p in extract_dir1.rglob("RSM") if p.is_file()]
+    )
+    assert len(candidates) == 1
+    assert candidates[0].parent == rsm_folder
+
+    # Caso 2: archivio zip flat (eseguibile direttamente nella radice)
+    extract_dir2 = tmp_path / "extract2"
+    extract_dir2.mkdir()
+    flat_exe = extract_dir2 / "RSM.exe"
+    flat_exe.write_text("dummy")
+
+    candidates2 = (
+        [p for p in extract_dir2.rglob("RSM.exe") if p.is_file()]
+        + [p for p in extract_dir2.rglob("RSM.app") if p.is_dir()]
+        + [p for p in extract_dir2.rglob("RSM") if p.is_file()]
+    )
+    assert len(candidates2) == 1
+    assert candidates2[0].parent == extract_dir2
+
+

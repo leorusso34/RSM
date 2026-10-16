@@ -394,6 +394,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if path == "/api/updates/check":
             try:
                 import importlib
+
                 import src.config
                 importlib.reload(src.config)
                 curr_ver = params.get("current_version", [src.config.APP_VERSION])[0]

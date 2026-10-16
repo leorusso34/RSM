@@ -226,16 +226,15 @@ def apply_update_and_restart(
             z.extractall(extract_dir)
 
         # Individua in modo robusto la cartella sorgente contenente l'applicazione:
-        # Se 'RSM.exe' si trova direttamente in extract_dir, usiamo quella.
-        # Altrimenti cerchiamo la cartella che contiene 'RSM.exe' (es. dentro 'RSM/').
-        # Individua in modo robusto la cartella sorgente contenente l'applicazione:
-        # Su Windows cerca 'RSM.exe', su macOS cerca 'RSM.app' o binario 'RSM'
-        if (extract_dir / "RSM.exe").exists() or (extract_dir / "RSM.app").exists() or (extract_dir / "RSM").exists():
+        # Se 'RSM.exe' o 'RSM.app' si trova direttamente in extract_dir, usiamo quella.
+        # Altrimenti cerchiamo il file eseguibile nei sotto-percorsi (es. dentro 'RSM/').
+        source_root = None
+        if (extract_dir / "RSM.exe").is_file() or (extract_dir / "RSM.app").is_dir() or ((extract_dir / "RSM").is_file()):
             source_root = extract_dir
         else:
             candidates = (
-                list(extract_dir.rglob("RSM.exe"))
-                + list(extract_dir.rglob("RSM.app"))
+                [p for p in extract_dir.rglob("RSM.exe") if p.is_file()]
+                + [p for p in extract_dir.rglob("RSM.app") if p.is_dir()]
                 + [p for p in extract_dir.rglob("RSM") if p.is_file()]
             )
             if candidates:
@@ -250,13 +249,20 @@ def apply_update_and_restart(
                 subfolders = [f for f in extract_dir.iterdir() if f.is_dir()]
                 source_root = subfolders[0] if len(subfolders) == 1 else extract_dir
 
+        if not source_root or not source_root.exists():
+            source_root = extract_dir
+
         # Determina la directory di destinazione corretta:
-        # - Se RSM.exe/RSM si trova direttamente in PROJECT_DIR (es. dist/RSM in produzione)
-        # - Se RSM.exe si trova in dist/RSM (es. root di sviluppo)
-        # - Altrimenti fallback sull'eseguibile corrente
-        if (PROJECT_DIR / "RSM.exe").exists() or (PROJECT_DIR / "RSM.app").exists() or (PROJECT_DIR / "RSM").exists():
+        # 1. Variabile d'ambiente esplicita passata da Tauri (RSM_APP_DIR)
+        # 2. Se RSM.exe si trova direttamente in PROJECT_DIR (es. cartella di installazione)
+        # 3. Se RSM.exe si trova in dist/RSM (es. root di sviluppo)
+        # 4. Fallback sull'eseguibile corrente
+        target_env = os.environ.get("RSM_APP_DIR")
+        if target_env and Path(target_env).is_dir():
+            target_app_dir = Path(target_env).resolve()
+        elif (PROJECT_DIR / "RSM.exe").is_file() or (PROJECT_DIR / "RSM.app").is_dir() or (PROJECT_DIR / "RSM").is_file():
             target_app_dir = PROJECT_DIR.resolve()
-        elif (PROJECT_DIR / "dist" / "RSM" / "RSM.exe").exists():
+        elif (PROJECT_DIR / "dist" / "RSM" / "RSM.exe").is_file():
             target_app_dir = (PROJECT_DIR / "dist" / "RSM").resolve()
         elif getattr(sys, "frozen", False):
             exe_path = Path(sys.executable).resolve()

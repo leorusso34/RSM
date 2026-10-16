@@ -16,7 +16,7 @@ fn is_bridge_running() -> bool {
 }
 
 fn find_bridge_script() -> Option<(PathBuf, PathBuf)> {
-    let mut bases = vec![PathBuf::from(".")];
+    let mut bases = Vec::new();
 
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(p) = exe_path.parent() {
@@ -32,6 +32,7 @@ fn find_bridge_script() -> Option<(PathBuf, PathBuf)> {
             }
         }
     }
+    bases.push(PathBuf::from("."));
 
     for base in &bases {
         let script = base.join("src").join("services").join("bridge_server.py");
@@ -102,6 +103,7 @@ fn ensure_bridge_server() {
         let mut cmd = Command::new(py_bin);
         cmd.arg(&script);
         cmd.current_dir(&work_dir);
+        cmd.env("RSM_APP_DIR", &work_dir);
 
         #[cfg(target_os = "windows")]
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
@@ -116,6 +118,7 @@ fn ensure_bridge_server() {
         let py_bin = find_python_executable(Path::new("."));
         let mut cmd = Command::new(py_bin);
         cmd.arg("src/services/bridge_server.py");
+        cmd.env("RSM_APP_DIR", Path::new("."));
 
         #[cfg(target_os = "windows")]
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
