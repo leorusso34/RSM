@@ -1,6 +1,7 @@
 """Script per la build dell'eseguibile Windows nativo tramite Tauri e Rust per RSM."""
 
 import json
+import os
 import shutil
 import subprocess
 import sys
