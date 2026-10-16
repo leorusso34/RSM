@@ -2382,6 +2382,19 @@ function setupFloatingPillAutocomplete(inputId, dropdownId, getItemsFn, typeBadg
       });
     });
 
+    // Calcolo dinamico dello spazio verticale per allungare la tendina senza tagliarla
+    const rect = input.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom - 20;
+    if (spaceBelow < 220 && rect.top > 250) {
+      dropdown.style.top = "auto";
+      dropdown.style.bottom = "calc(100% + 4px)";
+      dropdown.style.maxHeight = `${Math.min(320, Math.floor(rect.top - 20))}px`;
+    } else {
+      dropdown.style.top = "calc(100% + 4px)";
+      dropdown.style.bottom = "auto";
+      dropdown.style.maxHeight = `${Math.min(320, Math.max(220, Math.floor(spaceBelow)))}px`;
+    }
+
     dropdown.classList.add("open");
   }
 

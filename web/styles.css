@@ -1224,12 +1224,19 @@ body {
   overflow: hidden;
 }
 
+#bulkSaleModal .modal-card,
+#productModal .modal-card {
+  overflow: visible !important;
+}
+
 .modal-header {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-top-left-radius: var(--radius-md);
+  border-top-right-radius: var(--radius-md);
 }
 
 .modal-header h3 {
@@ -1310,6 +1317,8 @@ body {
   justify-content: flex-end;
   gap: 8px;
   background: #0c1017;
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
 }
 
 .btn {
@@ -1704,7 +1713,7 @@ body {
   border: 1px solid #334155;
   border-radius: var(--radius-sm);
   box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.75), 0 4px 12px rgba(99, 102, 241, 0.12);
-  max-height: 190px;
+  max-height: 280px;
   overflow-y: auto;
   z-index: 1050;
   display: none;
