@@ -64,16 +64,27 @@ fn find_python_executable(work_dir: &Path) -> PathBuf {
     }
 
     for dir in &check_dirs {
-        let venv_py = dir.join(".venv").join("Scripts").join("python.exe");
-        if venv_py.exists() {
-            return venv_py;
+        // Windows venv
+        let venv_win = dir.join(".venv").join("Scripts").join("python.exe");
+        if venv_win.exists() {
+            return venv_win;
         }
-        let local_py = dir.join("python.exe");
+        // Unix / macOS venv
+        let venv_unix = dir.join(".venv").join("bin").join("python3");
+        if venv_unix.exists() {
+            return venv_unix;
+        }
+        let venv_unix_py = dir.join(".venv").join("bin").join("python");
+        if venv_unix_py.exists() {
+            return venv_unix_py;
+        }
+        let local_py = dir.join(if cfg!(target_os = "windows") { "python.exe" } else { "python3" });
         if local_py.exists() {
             return local_py;
         }
     }
 
+    #[cfg(target_os = "windows")]
     if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
         let p1 = PathBuf::from(&local_app_data).join("Python").join("bin").join("python.exe");
         if p1.exists() {
@@ -85,7 +96,22 @@ fn find_python_executable(work_dir: &Path) -> PathBuf {
     return PathBuf::from("python.exe");
 
     #[cfg(not(target_os = "windows"))]
-    return PathBuf::from("python3");
+    {
+        // Percorsi standard Python per macOS (Homebrew Apple Silicon M1-M4, Homebrew Intel, Frameworks, System)
+        let mac_paths = [
+            "/opt/homebrew/bin/python3",
+            "/usr/local/bin/python3",
+            "/usr/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/Current/bin/python3",
+        ];
+        for p in &mac_paths {
+            let pb = PathBuf::from(p);
+            if pb.exists() {
+                return pb;
+            }
+        }
+        PathBuf::from("python3")
+    }
 }
 
 use std::sync::Mutex;

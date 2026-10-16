@@ -95,6 +95,11 @@ def main() -> None:
     for _ in range(8):
         try:
             shutil.copy2(compiled_exe, target_exe)
+            if sys.platform != "win32":
+                try:
+                    target_exe.chmod(0o755)
+                except OSError:
+                    pass
             copied = True
             break
         except PermissionError:

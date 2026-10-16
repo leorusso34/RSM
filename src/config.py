@@ -1,10 +1,11 @@
 """Configurazione e costanti per RSM."""
 
+import os
 import sys
 from pathlib import Path
 
 APP_NAME = "RSM"
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.4.0"
 GITHUB_REPO = "leorusso34/RSM"
 
 # Cloudflare Worker Proxy per API sicure (eBay, Gemini AI, GitHub Updates)
@@ -43,7 +44,12 @@ DEFAULT_SELLING_PLACES = [
 ]
 
 def app_directory() -> Path:
-    """Restituisce la cartella del file .py o dell'eseguibile PyInstaller."""
+    """Restituisce la cartella dell'applicazione o del server bridge."""
+    env_dir = os.environ.get("RSM_APP_DIR")
+    if env_dir:
+        p = Path(env_dir).resolve()
+        if p.exists():
+            return p
     if getattr(sys, "frozen", False):
         exe_path = Path(sys.executable).resolve()
         # Su macOS con bundle .app (es. RSM.app/Contents/MacOS/RSM),
