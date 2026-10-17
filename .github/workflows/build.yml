@@ -44,6 +44,10 @@ jobs:
         run: |
           python build.py
 
+      - name: Bundle Embedded Python & Runtime Libraries (Windows & macOS Zero-Setup)
+        run: |
+          python scripts/bundle_python.py
+
       - name: Package Release (Windows)
         if: runner.os == 'Windows'
         run: |

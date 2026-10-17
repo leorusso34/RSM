@@ -93,6 +93,7 @@ let filterMaxPrice = null;
 let isSelectionModeActive = false;
 let selectedProductIds = new Set();
 let expandedBundles = new Set();
+let bulkSaleTargetIds = [];
 
 // Storico Annulla (Undo Stack - Punto 6)
 let undoStack = []; // Max 20 azioni
@@ -2101,8 +2102,9 @@ async function ctxActionDuplicate() {
 }
 
 function ctxActionSell() {
+  const ids = Array.from(selectedProductIds);
   hideContextMenu();
-  openBulkSaleModal();
+  openBulkSaleModal(ids);
 }
 
 async function ctxActionStock() {
@@ -2286,10 +2288,19 @@ async function ctxActionDelete() {
 }
 
 // Modale Vendita Multipla / Metti in Vendita (Bulk Status & Partial Move)
-function openBulkSaleModal() {
+function openBulkSaleModal(targetIds = null) {
   const modal = document.getElementById("bulkSaleModal");
   if (!modal) return;
-  const count = selectedProductIds.size;
+
+  if (Array.isArray(targetIds) && targetIds.length > 0) {
+    bulkSaleTargetIds = Array.from(targetIds);
+  } else if (selectedProductIds.size > 0) {
+    bulkSaleTargetIds = Array.from(selectedProductIds);
+  } else {
+    bulkSaleTargetIds = [];
+  }
+
+  const count = bulkSaleTargetIds.length;
   if (count === 0) return;
 
   const titleEl = document.getElementById("bulkSaleModalTitle");
@@ -2299,8 +2310,8 @@ function openBulkSaleModal() {
   const qtyHint = document.getElementById("bulk-sale-qty-hint");
   const priceLabel = document.getElementById("bulk-sale-price-label");
 
-  if (count === 1) {
-    const singleId = Array.from(selectedProductIds)[0];
+  if (bulkSaleTargetIds.length === 1) {
+    const singleId = bulkSaleTargetIds[0];
     const item = inventoryData.find((p) => p.id === singleId);
     if (titleEl) titleEl.textContent = "Metti in Vendita";
     if (subtitleEl) subtitleEl.textContent = `Configura la vendita per "${item ? item.name : "il prodotto selezionato"}".`;
@@ -2335,7 +2346,7 @@ function openBulkSaleModal() {
       if (qtyGroup) qtyGroup.style.display = "none";
     }
   } else {
-    if (titleEl) titleEl.textContent = `Metti in Vendita (${count} Prodotti)`;
+    if (titleEl) titleEl.textContent = `Metti in Vendita (${bulkSaleTargetIds.length} Prodotti)`;
     if (subtitleEl) subtitleEl.textContent = "Stai per mettere in vendita i prodotti selezionati insieme come bundle. Il prezzo totale e le commissioni verranno ripartiti equamente e verrà visualizzato un unico gruppo di vendita.";
     if (priceLabel) priceLabel.textContent = "Prezzo di Vendita TOTALE (€) *";
     if (qtyGroup) qtyGroup.style.display = "none";
@@ -2363,15 +2374,21 @@ function closeBulkSaleModal() {
     updateSelectionBadge();
     renderTable();
   }
+  bulkSaleTargetIds = [];
 }
 
 async function handleBulkSaleSubmit(e) {
-  e.preventDefault();
-  const ids = Array.from(selectedProductIds);
-  if (ids.length === 0) return;
+  if (e && typeof e.preventDefault === "function") {
+    e.preventDefault();
+  }
+  const ids = bulkSaleTargetIds.length > 0 ? Array.from(bulkSaleTargetIds) : Array.from(selectedProductIds);
+  if (ids.length === 0) {
+    showToast("Nessun prodotto selezionato per la vendita.");
+    return;
+  }
 
-  const priceVal = parseFloat(document.getElementById("bulk-sale-total-price").value) || 0;
-  const feesVal = parseFloat(document.getElementById("bulk-sale-total-fees").value) || 0;
+  const priceVal = parseFloat(String(document.getElementById("bulk-sale-total-price").value || "").replace(",", ".")) || 0;
+  const feesVal = parseFloat(String(document.getElementById("bulk-sale-total-fees").value || "").replace(",", ".")) || 0;
   const placeVal = document.getElementById("bulk-sale-place").value.trim();
 
   if (priceVal <= 0) {
@@ -2394,7 +2411,7 @@ async function handleBulkSaleSubmit(e) {
   }
 
   const snapshots = inventoryData
-    .filter((i) => selectedProductIds.has(i.id))
+    .filter((i) => ids.includes(i.id))
     .map((i) => JSON.parse(JSON.stringify(i)));
 
   try {
@@ -2410,6 +2427,7 @@ async function handleBulkSaleSubmit(e) {
         desc: `Messa in vendita (${snapshots.length} prodotti)`,
         records: snapshots,
       });
+      bulkSaleTargetIds = [];
       closeBulkSaleModal();
       selectedProductIds.clear();
       updateSelectionBadge();
@@ -3736,9 +3754,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Chiusura al click fuori dal menu contestuale
+  // Chiusura al click fuori dal menu contestuale (solo se il menu è effettivamente aperto)
   document.addEventListener("click", (e) => {
-    if (!e.target.closest("#tableContextMenu")) {
+    const menu = document.getElementById("tableContextMenu");
+    const isMenuOpen = menu && menu.style.display !== "none" && menu.style.display !== "";
+    if (isMenuOpen && !e.target.closest("#tableContextMenu")) {
       hideContextMenu();
       if (!isSelectionModeActive && selectedProductIds.size > 0) {
         selectedProductIds.clear();

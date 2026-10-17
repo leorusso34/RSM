@@ -64,6 +64,20 @@ fn find_python_executable(work_dir: &Path) -> PathBuf {
     }
 
     for dir in &check_dirs {
+        // Runtime Python incorporato distribuito con l'applicazione (Zero-Setup)
+        let embed_win = dir.join("python").join("python.exe");
+        if embed_win.exists() {
+            return embed_win;
+        }
+        let embed_unix = dir.join("python").join("bin").join("python3");
+        if embed_unix.exists() {
+            return embed_unix;
+        }
+        let embed_unix_flat = dir.join("python").join("python3");
+        if embed_unix_flat.exists() {
+            return embed_unix_flat;
+        }
+
         // Windows venv
         let venv_win = dir.join(".venv").join("Scripts").join("python.exe");
         if venv_win.exists() {
