@@ -421,20 +421,13 @@
           </div>
 
           <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Prezzo Acquisto (€)</label>
-              <input type="number" step="0.01" id="prod-buy-price" class="form-input" required />
-            </div>
-            <div class="form-group">
+            <div class="form-group" style="flex: 1;">
               <label class="form-label">Luogo di Acquisto</label>
               <div class="autocomplete-wrap">
                 <input type="text" id="prod-buy-place" class="form-input" placeholder="es. Nike, SNKRS, Foot Locker..." autocomplete="off" />
                 <div id="dropdown-prod-buy-place" class="autocomplete-dropdown"></div>
               </div>
             </div>
-          </div>
-
-          <div class="form-row">
             <div class="form-group" style="flex: 1;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                 <label class="form-label" style="margin-bottom: 0;">Canale di Vendita</label>
@@ -445,9 +438,29 @@
                 <div id="dropdown-prod-sell-place" class="autocomplete-dropdown"></div>
               </div>
             </div>
-            <div class="form-group" style="flex: 1;">
-              <label class="form-label">Prezzo di Vendita (€)</label>
-              <input type="number" step="0.01" id="prod-sold-price" class="form-input" />
+          </div>
+
+          <!-- Blocco Finanziario con Calcolo Utile in Tempo Reale (Opzione A) -->
+          <div style="background: rgba(14, 19, 31, 0.7); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 11px; font-weight: 700; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.05em;">Dati Economici</span>
+              <span id="prod-modal-profit-badge" style="font-size: 11px; font-weight: 700; color: #8b9bb4; background: rgba(139, 155, 180, 0.1); border: 1px solid rgba(139, 155, 180, 0.2); padding: 2px 8px; border-radius: 6px;">
+                In Stock (Nessuna vendita)
+              </span>
+            </div>
+            <div class="form-row" style="margin-bottom: 0;">
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label class="form-label" style="font-size: 11px;">Prezzo Acquisto (€) *</label>
+                <input type="number" step="0.01" id="prod-buy-price" class="form-input" style="background: #151b2b;" required oninput="updateModalProfitPreview()" />
+              </div>
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label class="form-label" style="font-size: 11px;">Prezzo Vendita (€)</label>
+                <input type="number" step="0.01" id="prod-sold-price" class="form-input" style="background: #151b2b;" oninput="updateModalProfitPreview()" />
+              </div>
+              <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label class="form-label" style="font-size: 11px; color: #93c5fd;">Commissioni / Spese (€)</label>
+                <input type="number" step="0.01" id="prod-fees" class="form-input" style="background: #151b2b; border-color: rgba(59, 130, 246, 0.35);" placeholder="0.00" oninput="updateModalProfitPreview()" />
+              </div>
             </div>
           </div>
 

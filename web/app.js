@@ -1446,9 +1446,12 @@ function openAddProductModal() {
   document.getElementById("prod-buy-place").value = "";
   document.getElementById("prod-sell-place").value = "";
   document.getElementById("prod-sold-price").value = "";
+  const feesEl = document.getElementById("prod-fees");
+  if (feesEl) feesEl.value = "";
   document.getElementById("prod-status").value = "stock";
   const notesEl = document.getElementById("prod-notes");
   if (notesEl) notesEl.value = "";
+  updateModalProfitPreview();
 }
 
 function onModalStatusChange(_val) {
@@ -1663,20 +1666,54 @@ function closeDrawer() {
   currentDrawerItem = null;
 }
 
-function updateModalProfitPreview() {}
+function updateModalProfitPreview() {
+  const buyEl = document.getElementById("prod-buy-price");
+  const sellEl = document.getElementById("prod-sold-price");
+  const feesEl = document.getElementById("prod-fees");
+  const qtyEl = document.getElementById("prod-qty");
+  const badge = document.getElementById("prod-modal-profit-badge");
+  if (!badge) return;
+
+  const buy = parseFloat((buyEl && buyEl.value) ? buyEl.value.replace(",", ".") : 0) || 0;
+  const sell = parseFloat((sellEl && sellEl.value) ? sellEl.value.replace(",", ".") : 0) || 0;
+  const fees = parseFloat((feesEl && feesEl.value) ? feesEl.value.replace(",", ".") : 0) || 0;
+  const qty = parseInt(qtyEl && qtyEl.value ? qtyEl.value : 1, 10) || 1;
+
+  if (sell > 0) {
+    const netProfit = (sell - buy - fees) * qty;
+    const sign = netProfit >= 0 ? "+" : "";
+    badge.textContent = `Utile Netto: ${sign}${formatMoney(netProfit)}`;
+    if (netProfit >= 0) {
+      badge.style.color = "#10b981";
+      badge.style.background = "rgba(16, 185, 129, 0.12)";
+      badge.style.borderColor = "rgba(16, 185, 129, 0.25)";
+    } else {
+      badge.style.color = "#f43f5e";
+      badge.style.background = "rgba(244, 63, 94, 0.12)";
+      badge.style.borderColor = "rgba(244, 63, 94, 0.25)";
+    }
+  } else {
+    badge.textContent = "In Stock (Nessuna vendita)";
+    badge.style.color = "#8b9bb4";
+    badge.style.background = "rgba(139, 155, 180, 0.1)";
+    badge.style.borderColor = "rgba(139, 155, 180, 0.2)";
+  }
+}
 
 async function handleSaveProduct(e) {
   e.preventDefault();
   const name = document.getElementById("prod-name").value.trim();
   const size = document.getElementById("prod-size").value.trim();
   const quantity = parseInt(document.getElementById("prod-qty").value, 10) || 1;
-  const purchasedPrice = parseFloat(document.getElementById("prod-buy-price").value) || 0;
+  const purchasedPrice = parseFloat(String(document.getElementById("prod-buy-price").value || "").replace(",", ".")) || 0;
   const purchasedPlace = document.getElementById("prod-buy-place").value.trim();
   const sellingPlace = document.getElementById("prod-sell-place").value.trim();
   const status = document.getElementById("prod-status").value;
 
   const soldPriceEl = document.getElementById("prod-sold-price");
-  const salePrice = soldPriceEl && soldPriceEl.value !== "" ? (parseFloat(soldPriceEl.value) || null) : null;
+  const salePrice = soldPriceEl && soldPriceEl.value !== "" ? (parseFloat(String(soldPriceEl.value).replace(",", ".")) || null) : null;
+  const feesEl = document.getElementById("prod-fees");
+  const fees = feesEl && feesEl.value !== "" ? (parseFloat(String(feesEl.value).replace(",", ".")) || 0) : 0;
   const notesEl = document.getElementById("prod-notes");
   const notes = notesEl ? notesEl.value.trim() : "";
 
@@ -1695,7 +1732,7 @@ async function handleSaveProduct(e) {
     purchasedPlace,
     sellingPlace,
     salePrice,
-    fees: salePrice ? salePrice * 0.08 : 0,
+    fees,
     status,
     notes,
     date: (existingItem && existingItem.date) ? existingItem.date : new Date().toISOString().split("T")[0]
@@ -1797,9 +1834,14 @@ function editProduct(id) {
   document.getElementById("prod-buy-place").value = item.purchasedPlace || "";
   document.getElementById("prod-sell-place").value = item.sellingPlace || "";
   document.getElementById("prod-sold-price").value = (item.salePrice !== null && item.salePrice !== undefined) ? item.salePrice : "";
+  const feesEl = document.getElementById("prod-fees");
+  if (feesEl) {
+    feesEl.value = (item.fees !== null && item.fees !== undefined && item.fees > 0) ? item.fees : "";
+  }
   document.getElementById("prod-status").value = item.status || "stock";
   const notesEl = document.getElementById("prod-notes");
   if (notesEl) notesEl.value = item.notes || "";
+  updateModalProfitPreview();
 }
 
 // ==========================================================================
