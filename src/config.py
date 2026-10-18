@@ -63,7 +63,24 @@ BASE_DIR = app_directory()
 PROJECT_DIR = BASE_DIR.parent if BASE_DIR.name == "src" else BASE_DIR
 DATA_DIR = PROJECT_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
-DB_PATH = DATA_DIR / "russo_stock.db"
+
+# Gestione sicura del database SQLite con retrocompatibilità e migrazione automatica
+DB_NAME = "rsm_inventory.db"
+LEGACY_DB_NAME = "russo_stock.db"
+LEGACY_DB_PATH = DATA_DIR / LEGACY_DB_NAME
+DB_PATH = DATA_DIR / DB_NAME
+
+# Se esiste il vecchio database russo_stock.db e non ancora rsm_inventory.db, effettua la migrazione automatica
+if LEGACY_DB_PATH.is_file() and not DB_PATH.is_file():
+    try:
+        LEGACY_DB_PATH.rename(DB_PATH)
+        for suffix in ["-wal", "-shm", "-journal"]:
+            legacy_extra = DATA_DIR / f"{LEGACY_DB_NAME}{suffix}"
+            if legacy_extra.is_file():
+                legacy_extra.rename(DATA_DIR / f"{DB_NAME}{suffix}")
+    except OSError:
+        DB_PATH = LEGACY_DB_PATH
+
 CONFIG_JSON_PATH = PROJECT_DIR / "config.json"
 
 # Palette colori - Tema scuro moderno

@@ -47,7 +47,9 @@ def main() -> None:
     dist_config = dist_dir / "config.json"
 
     # 1. Rilevamento database di produzione
-    dist_db = dist_data / "russo_stock.db"
+    dist_db = dist_data / "rsm_inventory.db"
+    if not dist_db.exists() and (dist_data / "russo_stock.db").exists():
+        dist_db = dist_data / "russo_stock.db"
     if dist_db.exists() and dist_db.stat().st_size > 0:
         print(f"Database di produzione rilevato in dist/RSM/data ({dist_db.stat().st_size} byte).")
 
@@ -143,12 +145,14 @@ def main() -> None:
 
     # 7. Garanzia presenza database SQLite in dist/RSM/data
     dist_data.mkdir(parents=True, exist_ok=True)
-    dist_db = dist_data / "russo_stock.db"
-    source_db = project_root / "data" / "russo_stock.db"
+    dist_db = dist_data / "rsm_inventory.db"
+    source_db = project_root / "data" / "rsm_inventory.db"
+    if not source_db.exists() and (project_root / "data" / "russo_stock.db").exists():
+        source_db = project_root / "data" / "russo_stock.db"
 
     if not dist_db.exists() or dist_db.stat().st_size == 0:
         if source_db.exists():
-            print("Copia del database iniziale (data/russo_stock.db) in dist/RSM/data...")
+            print(f"Copia del database iniziale ({source_db.name}) in dist/RSM/data...")
             shutil.copy2(source_db, dist_db)
     else:
         print(f"Database SQLite di produzione preservato ({dist_db.name}).")
