@@ -1425,6 +1425,49 @@ function initCharts() {
 // ==========================================================================
 // MODAL CONTROLLERS & ACTIONS
 // ==========================================================================
+function applyActiveSaleFieldLocks(isActiveSale) {
+  const lockedInputIds = [
+    "prod-name",
+    "prod-size",
+    "prod-qty",
+    "prod-buy-place",
+    "prod-sell-place",
+    "prod-notes"
+  ];
+  const lockedLabelIds = [
+    "lbl-prod-name",
+    "lbl-prod-size",
+    "lbl-prod-qty",
+    "lbl-prod-buy-place",
+    "lbl-prod-sell-place",
+    "lbl-prod-notes"
+  ];
+
+  lockedInputIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = isActiveSale;
+    el.classList.toggle("input-locked", isActiveSale);
+  });
+
+  lockedLabelIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle("label-locked", isActiveSale);
+  });
+
+  const manageBtn = document.getElementById("btn-manage-places");
+  if (manageBtn) {
+    manageBtn.disabled = isActiveSale;
+    manageBtn.classList.toggle("btn-locked", isActiveSale);
+  }
+
+  const noticeEl = document.getElementById("active-sale-lock-notice");
+  if (noticeEl) {
+    noticeEl.style.display = isActiveSale ? "flex" : "none";
+  }
+}
+
 function openAddProductModal() {
   currentEditingId = null;
   closeDrawer();
@@ -1437,6 +1480,8 @@ function openAddProductModal() {
   if (modalTitle) modalTitle.textContent = "Aggiungi Nuovo Prodotto";
   const submitBtn = document.querySelector("#productModal .modal-footer button[type='submit']");
   if (submitBtn) submitBtn.textContent = "Salva nel Database";
+
+  applyActiveSaleFieldLocks(false);
 
   // Reset form pulito al 100% (senza dati fittizi)
   document.getElementById("prod-name").value = "";
@@ -1454,8 +1499,11 @@ function openAddProductModal() {
   updateModalProfitPreview();
 }
 
-function onModalStatusChange(_val) {
-  // Prezzo di Vendita è ora un campo permanente del layout
+function onModalStatusChange(val) {
+  if (currentEditingId !== null) {
+    applyActiveSaleFieldLocks(val === "active-sale");
+  }
+  updateModalProfitPreview();
 }
 
 function closeModal() {
@@ -1702,27 +1750,40 @@ function updateModalProfitPreview() {
 
 async function handleSaveProduct(e) {
   e.preventDefault();
-  const name = document.getElementById("prod-name").value.trim();
-  const size = document.getElementById("prod-size").value.trim();
-  const quantity = parseInt(document.getElementById("prod-qty").value, 10) || 1;
-  const purchasedPrice = parseFloat(String(document.getElementById("prod-buy-price").value || "").replace(",", ".")) || 0;
-  const purchasedPlace = document.getElementById("prod-buy-place").value.trim();
-  const sellingPlace = document.getElementById("prod-sell-place").value.trim();
   const status = document.getElementById("prod-status").value;
+  const existingItem = currentEditingId ? inventoryData.find((i) => i.id === currentEditingId) : null;
+  const isLocked = existingItem && existingItem.status === "active-sale" && status === "active-sale";
+
+  const rawName = document.getElementById("prod-name").value;
+  const name = ((isLocked && existingItem.name) ? existingItem.name : rawName).trim();
+
+  const rawSize = document.getElementById("prod-size").value;
+  const size = ((isLocked && existingItem.size) ? existingItem.size : rawSize).trim();
+
+  const rawQty = parseInt(document.getElementById("prod-qty").value, 10);
+  const quantity = (isLocked && existingItem.quantity) ? existingItem.quantity : (rawQty || 1);
+
+  const purchasedPrice = parseFloat(String(document.getElementById("prod-buy-price").value || "").replace(",", ".")) || 0;
+
+  const rawBuyPlace = document.getElementById("prod-buy-place").value;
+  const purchasedPlace = ((isLocked && existingItem.purchasedPlace !== undefined) ? existingItem.purchasedPlace : rawBuyPlace).trim();
+
+  const rawSellPlace = document.getElementById("prod-sell-place").value;
+  const sellingPlace = ((isLocked && existingItem.sellingPlace !== undefined) ? existingItem.sellingPlace : rawSellPlace).trim();
 
   const soldPriceEl = document.getElementById("prod-sold-price");
   const salePrice = soldPriceEl && soldPriceEl.value !== "" ? (parseFloat(String(soldPriceEl.value).replace(",", ".")) || null) : null;
   const feesEl = document.getElementById("prod-fees");
   const fees = feesEl && feesEl.value !== "" ? (parseFloat(String(feesEl.value).replace(",", ".")) || 0) : 0;
   const notesEl = document.getElementById("prod-notes");
-  const notes = notesEl ? notesEl.value.trim() : "";
+  const rawNotes = notesEl ? notesEl.value : "";
+  const notes = ((isLocked && existingItem.notes !== undefined) ? existingItem.notes : rawNotes).trim();
 
   if (!name) {
     showToast("Inserisci un nome per il prodotto!");
     return;
   }
 
-  const existingItem = currentEditingId ? inventoryData.find((i) => i.id === currentEditingId) : null;
   const prevSnapshot = existingItem ? JSON.parse(JSON.stringify(existingItem)) : null;
   const payload = {
     name,
@@ -1841,6 +1902,7 @@ function editProduct(id) {
   document.getElementById("prod-status").value = item.status || "stock";
   const notesEl = document.getElementById("prod-notes");
   if (notesEl) notesEl.value = item.notes || "";
+  applyActiveSaleFieldLocks(item.status === "active-sale");
   updateModalProfitPreview();
 }
 

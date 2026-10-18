@@ -1377,6 +1377,46 @@ body {
   border-color: var(--accent-blue);
 }
 
+.form-input:disabled,
+.form-input.input-locked {
+  background: #0a0e18 !important;
+  border-color: #1a2233 !important;
+  color: #52617a !important;
+  -webkit-text-fill-color: #52617a !important;
+  cursor: not-allowed !important;
+  user-select: none;
+}
+
+.form-label.label-locked {
+  color: #434f64 !important;
+}
+
+.btn-input-action:disabled,
+.btn-input-action.btn-locked {
+  color: #3b465a !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.active-sale-lock-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.active-sale-lock-notice svg {
+  color: #818cf8;
+  flex-shrink: 0;
+}
+
 .modal-preview-box {
   background: #0f1523;
   border: 1px solid var(--border-color);

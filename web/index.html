@@ -404,25 +404,34 @@
       </div>
       <form id="productForm">
         <div class="modal-body">
+          <!-- Banner Informativo Blocco Campi su Vendita Attiva -->
+          <div id="active-sale-lock-notice" class="active-sale-lock-notice" style="display: none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span>Vendita attiva: anagrafica prodotto bloccata. Puoi modificare solo prezzi, spese e stato.</span>
+          </div>
+
           <div class="form-group">
-            <label class="form-label">Nome Prodotto / Modello</label>
+            <label class="form-label" id="lbl-prod-name">Nome Prodotto / Modello</label>
             <input type="text" id="prod-name" class="form-input" required />
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Taglia</label>
+              <label class="form-label" id="lbl-prod-size">Taglia</label>
               <input type="text" id="prod-size" class="form-input" required />
             </div>
             <div class="form-group">
-              <label class="form-label">Quantità</label>
+              <label class="form-label" id="lbl-prod-qty">Quantità</label>
               <input type="number" id="prod-qty" class="form-input" value="1" min="1" />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group" style="flex: 1;">
-              <label class="form-label">Luogo di Acquisto</label>
+              <label class="form-label" id="lbl-prod-buy-place">Luogo di Acquisto</label>
               <div class="autocomplete-wrap">
                 <input type="text" id="prod-buy-place" class="form-input" placeholder="es. Nike, SNKRS, Foot Locker..." autocomplete="off" />
                 <div id="dropdown-prod-buy-place" class="autocomplete-dropdown"></div>
@@ -430,8 +439,8 @@
             </div>
             <div class="form-group" style="flex: 1;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                <label class="form-label" style="margin-bottom: 0;">Canale di Vendita</label>
-                <button type="button" class="btn-input-action" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi">Gestisci</button>
+                <label class="form-label" id="lbl-prod-sell-place" style="margin-bottom: 0;">Canale di Vendita</label>
+                <button type="button" class="btn-input-action" id="btn-manage-places" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi">Gestisci</button>
               </div>
               <div class="autocomplete-wrap">
                 <input type="text" id="prod-sell-place" class="form-input" placeholder="es. StockX, Vinted, eBay, Privato..." autocomplete="off" />
@@ -475,7 +484,7 @@
           </div>
 
           <div class="form-group" style="margin-top: 6px;">
-            <label class="form-label">Note</label>
+            <label class="form-label" id="lbl-prod-notes">Note</label>
             <input type="text" id="prod-notes" class="form-input" />
           </div>
 
