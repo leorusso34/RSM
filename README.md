@@ -9,7 +9,7 @@ Applicazione desktop moderna ad altissime prestazioni (**Tauri + Rust & Python**
 <!-- Badges -->
 <p align="center">
   <a href="https://leorusso34.github.io/RSM/"><img src="https://img.shields.io/badge/Showcase-Live%20Website-4f46e5?logo=githubpages&logoColor=white" alt="Showcase Website"></a>
-  <img src="https://img.shields.io/badge/version-v1.6.0-2563eb" alt="Versione RSM">
+  <img src="https://img.shields.io/badge/version-v1.6.1-2563eb" alt="Versione RSM">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white" alt="Windows 10/11">
   <img src="https://img.shields.io/badge/UI-Tauri%20%7C%20Rust-FFC131?logo=tauri&logoColor=black" alt="Tauri">
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
