@@ -304,8 +304,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     status_label = "In Stock"
 
                 has_sale_data = (is_completed or is_active_sale)
-                profit = (sale_price - cost - fees) * qty if has_sale_data else 0.0
-                roi = (profit / (cost * qty) * 100) if (cost > 0 and has_sale_data) else 0.0
+                total_cost = cost * qty
+                profit = (sale_price - total_cost - fees) if has_sale_data else 0.0
+                roi = (profit / total_cost * 100) if (total_cost > 0 and has_sale_data) else 0.0
 
                 formatted.append({
                     "id": p.get("id"),

@@ -517,3 +517,59 @@ def test_bridge_bulk_operations(tmp_path):
         server.shutdown()
         server.server_close()
 
+
+def test_bridge_multi_quantity_profit_and_roi(tmp_path):
+    """Verifica che /api/products calcoli correttamente profitto e ROI moltiplicando il prezzo unitario di acquisto per la quantità."""
+    test_db = tmp_path / "test_inventory_multi_qty.db"
+    db = InventoryDatabase(test_db)
+
+    # 2 pezzi comprati a 50€ ciascuno (costo totale = 100€)
+    # Venduti a 160€ totali con 10€ di commissioni totali
+    # Profitto atteso = 160 - (50 * 2) - 10 = 50€
+    # ROI atteso = (50 / 100) * 100 = 50.0%
+    db.save({
+        "name": "Maglie Nike (2 pz)",
+        "size": "L",
+        "quantity": 2,
+        "purchased_price": Decimal("50.00"),
+        "purchased_place": "Nike Store",
+        "selling_place": "eBay",
+        "selling_price": Decimal("160.00"),
+        "sold_price": Decimal("160.00"),
+        "fees": Decimal("10.00"),
+        "sold_date": "2026-10-18",
+        "status": STATUS_SOLD,
+        "is_completed": 1,
+    })
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        req_get = request.Request(f"http://127.0.0.1:{port}/api/products")
+        with request.urlopen(req_get) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            items = data["data"]
+            assert len(items) == 1
+            prod = items[0]
+            assert prod["quantity"] == 2
+            assert prod["purchasedPrice"] == 50.0
+            assert prod["salePrice"] == 160.0
+            assert prod["fees"] == 10.0
+            assert prod["profit"] == 50.0
+            assert prod["roi"] == 50.0
+    finally:
+        server.shutdown()
+        server.server_close()
+
+

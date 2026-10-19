@@ -437,8 +437,8 @@ function updateDashboardMetrics() {
       } else if (item.status === "completed" || item.status === "active-sale") {
         if (item.status === "active-sale") activeCount += qty;
         if (item.status === "completed") completedCount += qty;
-        const sale = (item.salePrice || 0) * qty;
-        const fees = (item.fees || 0) * qty;
+        const sale = item.salePrice || 0;
+        const fees = item.fees || 0;
         const profit = sale - cost - fees;
         totalProfit += profit;
         if (cost > 0) totalRoiSum += (profit / cost) * 100;
@@ -628,13 +628,19 @@ function getFilteredAndSortedProducts() {
     let valB = b[sortField];
 
     if (sortField === "profit") {
-      valA = (a.salePrice || 0) - a.purchasedPrice - (a.fees || 0);
-      valB = (b.salePrice || 0) - b.purchasedPrice - (b.fees || 0);
+      const qtyA = a.quantity || 1;
+      const qtyB = b.quantity || 1;
+      valA = (a.salePrice || 0) - ((a.purchasedPrice || 0) * qtyA) - (a.fees || 0);
+      valB = (b.salePrice || 0) - ((b.purchasedPrice || 0) * qtyB) - (b.fees || 0);
     } else if (sortField === "roi") {
-      const pA = (a.salePrice || 0) - a.purchasedPrice - (a.fees || 0);
-      const pB = (b.salePrice || 0) - b.purchasedPrice - (b.fees || 0);
-      valA = a.purchasedPrice > 0 ? (pA / a.purchasedPrice) * 100 : 0;
-      valB = b.purchasedPrice > 0 ? (pB / b.purchasedPrice) * 100 : 0;
+      const qtyA = a.quantity || 1;
+      const qtyB = b.quantity || 1;
+      const costA = (a.purchasedPrice || 0) * qtyA;
+      const costB = (b.purchasedPrice || 0) * qtyB;
+      const pA = (a.salePrice || 0) - costA - (a.fees || 0);
+      const pB = (b.salePrice || 0) - costB - (b.fees || 0);
+      valA = costA > 0 ? (pA / costA) * 100 : 0;
+      valB = costB > 0 ? (pB / costB) * 100 : 0;
     } else if (sortField === "date") {
       valA = a.date || "";
       valB = b.date || "";
@@ -1031,8 +1037,10 @@ function renderTable() {
         `;
       } else {
         // Calcolo Utile & ROI
-        const netProfit = (item.salePrice || 0) - item.purchasedPrice - (item.fees || 0);
-        const roi = item.purchasedPrice > 0 ? (netProfit / item.purchasedPrice) * 100 : 0;
+        const qty = item.quantity || 1;
+        const totalCost = (item.purchasedPrice || 0) * qty;
+        const netProfit = (item.salePrice || 0) - totalCost - (item.fees || 0);
+        const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0;
         const hasSaleData = item.status === "completed" || item.status === "active-sale";
         const salePriceHtml = hasSaleData && item.salePrice ? formatMoney(item.salePrice) : `<span style="color:var(--text-dim)">-</span>`;
         const sellingPlaceHtml = hasSaleData && item.sellingPlace ? `<span style="font-size: 11.5px; color: var(--text-muted);">${item.sellingPlace}</span>` : `<span style="color:var(--text-dim)">-</span>`;
@@ -1534,8 +1542,10 @@ function openDrawer(id) {
   if (!item) return;
   currentDrawerItem = item;
 
-  const netProfit = (item.salePrice || 0) - item.purchasedPrice - (item.fees || 0);
-  const roi = item.purchasedPrice > 0 ? (netProfit / item.purchasedPrice) * 100 : 0;
+  const qty = item.quantity || 1;
+  const totalCost = (item.purchasedPrice || 0) * qty;
+  const netProfit = (item.salePrice || 0) - totalCost - (item.fees || 0);
+  const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0;
   const hasSaleData = item.status === "completed" || item.status === "active-sale";
 
   const drawerId = document.getElementById("drawerId");
@@ -1728,9 +1738,11 @@ function updateModalProfitPreview() {
   const qty = parseInt(qtyEl && qtyEl.value ? qtyEl.value : 1, 10) || 1;
 
   if (sell > 0) {
-    const netProfit = (sell - buy - fees) * qty;
+    const totalCost = buy * qty;
+    const netProfit = sell - totalCost - fees;
+    const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0;
     const sign = netProfit >= 0 ? "+" : "";
-    badge.textContent = `Utile Netto: ${sign}${formatMoney(netProfit)}`;
+    badge.textContent = `Utile Netto: ${sign}${formatMoney(netProfit)} (${roi >= 0 ? "+" : ""}${roi.toFixed(1)}% ROI)`;
     if (netProfit >= 0) {
       badge.style.color = "#10b981";
       badge.style.background = "rgba(16, 185, 129, 0.12)";
