@@ -389,60 +389,62 @@
         </section>
 
       </div>
-    </main>
 
-    <!-- ====================================================================
-         PILLOLA FLOTTANTE: RIEPILOGO DATI PRODOTTI SELEZIONATI (ZERO-LAG)
-         ==================================================================== -->
-    <div id="selectionFloatingCapsule" class="selection-floating-capsule" style="display: none;" role="region" aria-label="Riepilogo prodotti selezionati">
-      <div class="capsule-inner">
-        <!-- Indicatore e Conteggio -->
-        <div class="capsule-count">
-          <span class="capsule-pulse-dot" aria-hidden="true"></span>
-          <span id="capsuleSelectedCount">0 sel.</span>
-        </div>
+      <!-- ====================================================================
+           PILLOLA FLOTTANTE: RIEPILOGO DATI PRODOTTI SELEZIONATI (ZERO-LAG)
+           Posizionata all'interno di main-wrapper per ancorarsi al centro della tabella
+           ==================================================================== -->
+      <div id="selectionFloatingCapsule" class="selection-floating-capsule" style="display: none;" role="region" aria-label="Riepilogo prodotti selezionati">
+        <div class="capsule-inner">
+          <!-- Indicatore e Conteggio -->
+          <div class="capsule-count">
+            <span class="capsule-pulse-dot" aria-hidden="true"></span>
+            <span id="capsuleSelectedCount">0 sel.</span>
+          </div>
 
-        <div class="capsule-divider" aria-hidden="true"></div>
-
-        <!-- Spesa / Costo di Acquisto Totale -->
-        <div class="capsule-stat">
-          <span class="capsule-stat-label">Spesa:</span>
-          <span id="capsuleTotalCost" class="capsule-stat-value">€ 0,00</span>
-        </div>
-
-        <!-- Costo Medio di Acquisto -->
-        <div class="capsule-stat">
-          <span class="capsule-stat-label">Media:</span>
-          <span id="capsuleAvgCost" class="capsule-stat-value">€ 0,00</span>
-        </div>
-
-        <!-- Sezione Vendite / Profitti (visibile solo se presenti prodotti venduti) -->
-        <div id="capsuleSalesStats" class="capsule-sales-stats" style="display: none;">
           <div class="capsule-divider" aria-hidden="true"></div>
 
+          <!-- Spesa / Costo di Acquisto Totale -->
           <div class="capsule-stat">
-            <span class="capsule-stat-label">Vendita:</span>
-            <span id="capsuleTotalSale" class="capsule-stat-value capsule-stat-sale">€ 0,00</span>
+            <span class="capsule-stat-label">Spesa:</span>
+            <span id="capsuleTotalCost" class="capsule-stat-value">€ 0,00</span>
           </div>
 
+          <!-- Costo Medio di Acquisto -->
           <div class="capsule-stat">
-            <span class="capsule-stat-label">Utile:</span>
-            <span id="capsuleTotalProfit" class="capsule-stat-value">€ 0,00</span>
-            <span id="capsuleRoiBadge" class="capsule-roi-badge">+0.0% ROI</span>
+            <span class="capsule-stat-label">Media:</span>
+            <span id="capsuleAvgCost" class="capsule-stat-value">€ 0,00</span>
           </div>
+
+          <!-- Sezione Vendite / Profitti (visibile solo se presenti prodotti venduti) -->
+          <div id="capsuleSalesStats" class="capsule-sales-stats" style="display: none;">
+            <div class="capsule-divider" aria-hidden="true"></div>
+
+            <div class="capsule-stat">
+              <span class="capsule-stat-label">Vendita:</span>
+              <span id="capsuleTotalSale" class="capsule-stat-value capsule-stat-sale">€ 0,00</span>
+            </div>
+
+            <div class="capsule-stat">
+              <span class="capsule-stat-label">Utile:</span>
+              <span id="capsuleTotalProfit" class="capsule-stat-value">€ 0,00</span>
+              <span id="capsuleRoiBadge" class="capsule-roi-badge">+0.0% ROI</span>
+            </div>
+          </div>
+
+          <div class="capsule-divider" aria-hidden="true"></div>
+
+          <!-- Pulsante rapido deseleziona tutto -->
+          <button type="button" class="capsule-btn-clear" onclick="clearAllSelections()" title="Deseleziona tutti i prodotti (Esc)" aria-label="Deseleziona tutto">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
-
-        <div class="capsule-divider" aria-hidden="true"></div>
-
-        <!-- Pulsante rapido deseleziona tutto -->
-        <button type="button" class="capsule-btn-clear" onclick="clearAllSelections()" title="Deseleziona tutti i prodotti (Esc)" aria-label="Deseleziona tutto">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
       </div>
-    </div>
+
+    </main>
 
   </div>
 

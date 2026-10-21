@@ -422,6 +422,7 @@ body {
   overflow: hidden;
   background-color: var(--bg-app);
   transition: all 0.22s ease;
+  position: relative;
 }
 
 /* Scroll Container */
@@ -1937,7 +1938,7 @@ body {
    PILLOLA FLOTTANTE: RIEPILOGO STATISTICHE SELEZIONE PRODOTTI (ZERO-LAG)
    ========================================================================== */
 .selection-floating-capsule {
-  position: fixed;
+  position: absolute;
   bottom: 24px;
   left: 50%;
   transform: translate3d(-50%, 24px, 0);
