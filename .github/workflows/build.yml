@@ -19,7 +19,7 @@ jobs:
             zip_name: RSM-Windows.zip
           - os: macos-latest
             artifact_name: RSM-macOS
-            zip_name: macOS-update.zip
+            zip_name: RSM-macOS.zip
 
     steps:
       - name: Checkout repository

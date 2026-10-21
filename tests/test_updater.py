@@ -7,14 +7,51 @@ from src.updater import check_for_updates, parse_version_tuple
 def test_parse_version_tuple():
     assert parse_version_tuple("v1.2.0") == (1, 2, 0)
     assert parse_version_tuple("1.1.0") == (1, 1, 0)
-    assert parse_version_tuple("2.0.0-rc1") == (2, 0, 0, 1)
-    assert parse_version_tuple("") == (0,)
+    assert parse_version_tuple("2.0.0-rc1") == (2, 0, 0)
+    assert parse_version_tuple("") == (0, 0, 0)
+    assert parse_version_tuple("1.6") == (1, 6, 0)
+    assert parse_version_tuple("update_1.6.1") == (1, 6, 1)
     assert parse_version_tuple("v1.10.0") > parse_version_tuple("v1.2.0")
     assert parse_version_tuple("v2.0.0") > parse_version_tuple("v1.9.9")
     assert parse_version_tuple("1.1.0") == parse_version_tuple("v1.1.0")
 
 
+def test_check_for_updates_direct_github(monkeypatch):
+    monkeypatch.setattr("src.updater.GITHUB_REPO", "leorusso34/RSM")
+    monkeypatch.setattr("src.updater.WORKER_URL", "https://rsm-proxy.test.workers.dev")
+    monkeypatch.setattr("src.updater.RSM_AUTH_KEY", "secret123")
+
+    fake_github_release = {
+        "tag_name": "update_1.6.1",
+        "name": "RSM 1.6.1",
+        "body": "Changelog 1.6.1",
+        "assets": [
+            {
+                "id": 12345,
+                "name": "RSM-Windows.zip",
+                "size": 115000000,
+                "browser_download_url": "https://github.com/leorusso34/RSM/releases/download/update_1.6.1/RSM-Windows.zip",
+            }
+        ],
+    }
+
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.read.return_value = json.dumps(fake_github_release).encode("utf-8")
+    mock_conn = MagicMock()
+    mock_conn.getresponse.return_value = mock_resp
+
+    with patch("http.client.HTTPSConnection", return_value=mock_conn):
+        res = check_for_updates(current_version="1.6.0")
+        assert res is not None
+        assert res["version"] == "update_1.6.1"
+        assert res["download_url"] == "https://github.com/leorusso34/RSM/releases/download/update_1.6.1/RSM-Windows.zip"
+        assert res["asset_name"] == "RSM-Windows.zip"
+
+
 def test_check_for_updates_via_worker_proxy(monkeypatch):
+    # Simula GitHub API non disponibile per testare il fallback sul Worker
+    monkeypatch.setattr("src.updater.GITHUB_REPO", "")
     monkeypatch.setattr("src.updater.WORKER_URL", "https://rsm-proxy.test.workers.dev")
     monkeypatch.setattr("src.updater.RSM_AUTH_KEY", "secret123")
     fake_release = {
