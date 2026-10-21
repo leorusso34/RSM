@@ -2024,10 +2024,10 @@ function updateSelectionCapsule() {
   if (!capsule) return;
 
   const count = selectedProductIds.size;
-  if (count === 0) {
+  if (!isSelectionModeActive || count === 0) {
     capsule.classList.remove("visible");
     setTimeout(() => {
-      if (selectedProductIds.size === 0) {
+      if (!isSelectionModeActive || selectedProductIds.size === 0) {
         capsule.style.display = "none";
       }
     }, 220);
