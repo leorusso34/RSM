@@ -54,15 +54,13 @@ Nel file `config.json` nella cartella principale puoi configurare le tue credenz
 ```json
 {
   "email_sync_address": "tuo_indirizzo@gmail.com",
-  "email_sync_app_password": "abcd efgh ijkl mnop",
-  "dashboard_layout": "[\"monthly\", \"top_products\", \"platform_pie\"]"
+  "email_sync_app_password": "abcd efgh ijkl mnop"
 }
 ```
 
 ### Dettaglio dei Parametri:
 * **`email_sync_address`**: Il tuo indirizzo Gmail da cui scansionare le email di conferma ordine.
 * **`email_sync_app_password`**: Password per le App a 16 caratteri generata dal tuo account Google (Sicurezza $\rightarrow$ Verifica in due passaggi $\rightarrow$ Password per le app).
-* **`dashboard_layout`**: Layout e ordinamento dei grafici nella Dashboard.
 
 > **Nota**: I valori inseriti in `config.json` hanno la **precedenza assoluta** su qualsiasi dato salvato nel database locale. Se modifichi le credenziali email all'interno dell'applicazione (tramite la finestra Sincronizzazione Email), anche `config.json` verrà aggiornato automaticamente.
 

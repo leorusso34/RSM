@@ -1,5 +1,4 @@
 {
-  "email_sync_address": "test@gmail.com",
-  "email_sync_app_password": "abcdefghijklmnop",
-  "dashboard_layout": "[\"top_products\", \"platform_pie\", \"dist\", \"volume_monthly\", \"monthly\"]"
+  "email_sync_address": "",
+  "email_sync_app_password": ""
 }

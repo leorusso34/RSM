@@ -165,8 +165,7 @@ def main() -> None:
         with open(dist_config, "w", encoding="utf-8") as f:
             json.dump({
                 "email_sync_address": "",
-                "email_sync_app_password": "",
-                "dashboard_layout": "[\"monthly\", \"top_products\", \"platform_pie\"]"
+                "email_sync_app_password": ""
             }, f, indent=2, ensure_ascii=False)
 
     # 9. Copia del README.md nella cartella di rilascio
