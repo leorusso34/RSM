@@ -37,7 +37,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "",
+        "title": "RSM",
         "url": "index.html",
         "width": 1440,
         "height": 900,
