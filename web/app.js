@@ -2007,14 +2007,115 @@ function toggleSelectionMode() {
 
 function updateSelectionBadge() {
   const badge = document.getElementById("selectedCountBadge");
-  if (!badge) return;
   const count = selectedProductIds.size;
-  if (isSelectionModeActive && count > 0) {
-    badge.textContent = count;
-    badge.style.display = "inline-block";
-  } else {
-    badge.style.display = "none";
+  if (badge) {
+    if (isSelectionModeActive && count > 0) {
+      badge.textContent = count;
+      badge.style.display = "inline-block";
+    } else {
+      badge.style.display = "none";
+    }
   }
+  updateSelectionCapsule();
+}
+
+function updateSelectionCapsule() {
+  const capsule = document.getElementById("selectionFloatingCapsule");
+  if (!capsule) return;
+
+  const count = selectedProductIds.size;
+  if (count === 0) {
+    capsule.classList.remove("visible");
+    setTimeout(() => {
+      if (selectedProductIds.size === 0) {
+        capsule.style.display = "none";
+      }
+    }, 220);
+    return;
+  }
+
+  // Recupera i dati reali dei record selezionati da inventoryData
+  const selectedItems = inventoryData.filter((p) => selectedProductIds.has(p.id));
+
+  let totalQty = 0;
+  let totalCost = 0;
+  let totalSale = 0;
+  let totalProfit = 0;
+  let totalProfitCost = 0;
+  let hasSales = false;
+
+  for (const item of selectedItems) {
+    const qty = Number(item.quantity) || 1;
+    totalQty += qty;
+    const buy = Number(item.purchasedPrice) || 0;
+    totalCost += buy * qty;
+
+    const sell = Number(item.salePrice) || 0;
+    const fees = Number(item.fees) || 0;
+
+    if (sell > 0 || item.status === "active-sale" || item.status === "completed") {
+      hasSales = true;
+      totalSale += sell * qty;
+      const profit = (sell - buy) * qty - fees;
+      totalProfit += profit;
+      totalProfitCost += buy * qty;
+    }
+  }
+
+  const avgCost = totalQty > 0 ? totalCost / totalQty : 0;
+
+  // 1. Conteggio selezionati & pezzi
+  const countEl = document.getElementById("capsuleSelectedCount");
+  if (countEl) {
+    countEl.textContent = totalQty !== count ? `${count} sel. (${totalQty} pz)` : `${count} sel.`;
+  }
+
+  // 2. Costo Totale e Costo Medio
+  const totalCostEl = document.getElementById("capsuleTotalCost");
+  if (totalCostEl) totalCostEl.textContent = formatMoney(totalCost);
+
+  const avgCostEl = document.getElementById("capsuleAvgCost");
+  if (avgCostEl) avgCostEl.textContent = formatMoney(avgCost);
+
+  // 3. Sezione Vendite e Profitti
+  const salesWrap = document.getElementById("capsuleSalesStats");
+  if (salesWrap) {
+    if (hasSales) {
+      salesWrap.style.display = "flex";
+
+      const totalSaleEl = document.getElementById("capsuleTotalSale");
+      if (totalSaleEl) totalSaleEl.textContent = formatMoney(totalSale);
+
+      const totalProfitEl = document.getElementById("capsuleTotalProfit");
+      if (totalProfitEl) {
+        const sign = totalProfit > 0 ? "+" : "";
+        totalProfitEl.textContent = `${sign}${formatMoney(totalProfit)}`;
+        totalProfitEl.className = `capsule-stat-value ${totalProfit >= 0 ? "stat-profit-positive" : "stat-profit-negative"}`;
+      }
+
+      const roiBadge = document.getElementById("capsuleRoiBadge");
+      if (roiBadge) {
+        const roi = totalProfitCost > 0 ? (totalProfit / totalProfitCost) * 100 : 0;
+        const roiSign = roi > 0 ? "+" : "";
+        roiBadge.textContent = `${roiSign}${roi.toFixed(1)}% ROI`;
+        roiBadge.className = `capsule-roi-badge ${roi >= 0 ? "roi-positive" : "roi-negative"}`;
+      }
+    } else {
+      salesWrap.style.display = "none";
+    }
+  }
+
+  // Mostra con animazione
+  capsule.style.display = "block";
+  requestAnimationFrame(() => {
+    capsule.classList.add("visible");
+  });
+}
+
+function clearAllSelections() {
+  selectedProductIds.clear();
+  updateSelectionBadge();
+  renderTable();
 }
 
 function toggleItemSelection(id, explicitState = null) {
@@ -3876,10 +3977,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const isMenuOpen = menu && menu.style.display !== "none" && menu.style.display !== "";
     if (isMenuOpen && !e.target.closest("#tableContextMenu")) {
       hideContextMenu();
-      if (!isSelectionModeActive && selectedProductIds.size > 0) {
-        selectedProductIds.clear();
-        updateSelectionBadge();
-        renderTable();
+      if (selectedProductIds.size > 0) {
+        clearAllSelections();
       }
     }
   });
@@ -3911,10 +4010,8 @@ document.addEventListener("DOMContentLoaded", () => {
       closeBulkSaleModal();
       closeUpdateModal();
       hideContextMenu();
-      if (!isSelectionModeActive && selectedProductIds.size > 0) {
-        selectedProductIds.clear();
-        updateSelectionBadge();
-        renderTable();
+      if (selectedProductIds.size > 0) {
+        clearAllSelections();
       }
       return;
     }
