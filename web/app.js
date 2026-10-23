@@ -3836,6 +3836,40 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Disabilita suggerimenti, cronologia moduli e correttore ortografico Edge / WebView2
+  function disableEdgeAutofillAndSpellcheck() {
+    document.querySelectorAll("input, textarea").forEach((el) => {
+      if (el.type !== "checkbox" && el.type !== "radio" && el.type !== "file") {
+        el.setAttribute("autocomplete", el.type === "password" ? "new-password" : "off");
+        el.setAttribute("autocorrect", "off");
+        el.setAttribute("autocapitalize", "off");
+        el.setAttribute("spellcheck", "false");
+      }
+    });
+  }
+  disableEdgeAutofillAndSpellcheck();
+
+  // Intercetta dinamica al focus su qualsiasi campo per garantire l'assenza di popup Edge
+  document.addEventListener("focusin", (e) => {
+    const target = e.target;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+      if (target.type !== "checkbox" && target.type !== "radio" && target.type !== "file") {
+        if (!target.hasAttribute("autocomplete")) {
+          target.setAttribute("autocomplete", target.type === "password" ? "new-password" : "off");
+        }
+        if (!target.hasAttribute("spellcheck") || target.getAttribute("spellcheck") !== "false") {
+          target.setAttribute("spellcheck", "false");
+        }
+        if (!target.hasAttribute("autocorrect")) {
+          target.setAttribute("autocorrect", "off");
+        }
+        if (!target.hasAttribute("autocapitalize")) {
+          target.setAttribute("autocapitalize", "off");
+        }
+      }
+    }
+  }, true);
+
   pingBridgeLatency();
   setInterval(pingBridgeLatency, 10000);
   loadProductsFromBackend();

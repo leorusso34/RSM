@@ -180,6 +180,12 @@ fn ensure_bridge_server() {
 }
 
 fn main() {
+    #[cfg(target_os = "windows")]
+    std::env::set_var(
+        "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+        "--disable-features=AutofillServerCommunication,AutofillShowTypePredictions,EdgeAutomaticSpellcheck",
+    );
+
     ensure_bridge_server();
 
     tauri::Builder::default()

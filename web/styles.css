@@ -1378,6 +1378,21 @@ body {
   border-color: var(--accent-blue);
 }
 
+/* Disattiva l'alterazione grafica di Edge/WebKit su autofill preservando il Dark Theme */
+.form-input:-webkit-autofill,
+.form-input:-webkit-autofill:hover, 
+.form-input:-webkit-autofill:focus,
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px #0b101c inset !important;
+  box-shadow: 0 0 0px 1000px #0b101c inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: #ffffff !important;
+}
+
 .form-input:disabled,
 .form-input.input-locked {
   background: #0a0e18 !important;

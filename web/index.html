@@ -266,7 +266,7 @@
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
                   </svg>
-                  <input type="text" id="global-search-input" placeholder="Cerca prodotto o luogo..." />
+                  <input type="text" id="global-search-input" placeholder="Cerca prodotto o luogo..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
                 </div>
 
                 <!-- Pulsante Attiva/Disattiva Selezione Multipla -->
@@ -355,13 +355,13 @@
                 <!-- Prezzo Minimo -->
                 <div>
                   <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Prezzo Min (€)</label>
-                  <input type="number" step="0.01" min="0" id="filter-min-price" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" oninput="onFilterChanged()" />
+                  <input type="number" step="0.01" min="0" id="filter-min-price" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" oninput="onFilterChanged()" autocomplete="off" spellcheck="false" />
                 </div>
 
                 <!-- Prezzo Massimo -->
                 <div>
                   <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Prezzo Max (€)</label>
-                  <input type="number" step="0.01" min="0" id="filter-max-price" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" oninput="onFilterChanged()" />
+                  <input type="number" step="0.01" min="0" id="filter-max-price" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" oninput="onFilterChanged()" autocomplete="off" spellcheck="false" />
                 </div>
 
                 <!-- Bottone Reset rapido -->
@@ -457,7 +457,7 @@
         <h3>Aggiungi Prodotto all'Inventario</h3>
         <button class="modal-close-btn" onclick="closeModal()">&times;</button>
       </div>
-      <form id="productForm">
+      <form id="productForm" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         <div class="modal-body">
           <!-- Banner Informativo Blocco Campi su Vendita Attiva -->
           <div id="active-sale-lock-notice" class="active-sale-lock-notice" style="display: none;">
@@ -470,17 +470,17 @@
 
           <div class="form-group">
             <label class="form-label" id="lbl-prod-name">Nome Prodotto / Modello</label>
-            <input type="text" id="prod-name" class="form-input" required />
+            <input type="text" id="prod-name" class="form-input" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label class="form-label" id="lbl-prod-size">Taglia</label>
-              <input type="text" id="prod-size" class="form-input" required />
+              <input type="text" id="prod-size" class="form-input" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
             </div>
             <div class="form-group">
               <label class="form-label" id="lbl-prod-qty">Quantità</label>
-              <input type="number" id="prod-qty" class="form-input" value="1" min="1" />
+              <input type="number" id="prod-qty" class="form-input" value="1" min="1" autocomplete="off" spellcheck="false" />
             </div>
           </div>
 
@@ -488,7 +488,7 @@
             <div class="form-group" style="flex: 1;">
               <label class="form-label" id="lbl-prod-buy-place">Luogo di Acquisto</label>
               <div class="autocomplete-wrap">
-                <input type="text" id="prod-buy-place" class="form-input" placeholder="es. Nike, SNKRS, Foot Locker..." autocomplete="off" />
+                <input type="text" id="prod-buy-place" class="form-input" placeholder="es. Nike, SNKRS, Foot Locker..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
                 <div id="dropdown-prod-buy-place" class="autocomplete-dropdown"></div>
               </div>
             </div>
@@ -498,7 +498,7 @@
                 <button type="button" class="btn-input-action" id="btn-manage-places" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi">Gestisci</button>
               </div>
               <div class="autocomplete-wrap">
-                <input type="text" id="prod-sell-place" class="form-input" placeholder="es. StockX, Vinted, eBay, Privato..." autocomplete="off" />
+                <input type="text" id="prod-sell-place" class="form-input" placeholder="es. StockX, Vinted, eBay, Privato..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
                 <div id="dropdown-prod-sell-place" class="autocomplete-dropdown"></div>
               </div>
             </div>
@@ -515,15 +515,15 @@
             <div class="form-row" style="margin-bottom: 0;">
               <div class="form-group" style="flex: 1; margin-bottom: 0;">
                 <label class="form-label" style="font-size: 11px;">Prezzo Acquisto (€) *</label>
-                <input type="number" step="0.01" id="prod-buy-price" class="form-input" style="background: #151b2b;" required oninput="updateModalProfitPreview()" />
+                <input type="number" step="0.01" id="prod-buy-price" class="form-input" style="background: #151b2b;" required oninput="updateModalProfitPreview()" autocomplete="off" spellcheck="false" />
               </div>
               <div class="form-group" style="flex: 1; margin-bottom: 0;">
                 <label class="form-label" style="font-size: 11px;">Prezzo Vendita (€)</label>
-                <input type="number" step="0.01" id="prod-sold-price" class="form-input" style="background: #151b2b;" oninput="updateModalProfitPreview()" />
+                <input type="number" step="0.01" id="prod-sold-price" class="form-input" style="background: #151b2b;" oninput="updateModalProfitPreview()" autocomplete="off" spellcheck="false" />
               </div>
               <div class="form-group" style="flex: 1; margin-bottom: 0;">
                 <label class="form-label" style="font-size: 11px; color: #93c5fd;">Commissioni / Spese (€)</label>
-                <input type="number" step="0.01" id="prod-fees" class="form-input" style="background: #151b2b; border-color: rgba(59, 130, 246, 0.35);" placeholder="0.00" oninput="updateModalProfitPreview()" />
+                <input type="number" step="0.01" id="prod-fees" class="form-input" style="background: #151b2b; border-color: rgba(59, 130, 246, 0.35);" placeholder="0.00" oninput="updateModalProfitPreview()" autocomplete="off" spellcheck="false" />
               </div>
             </div>
           </div>
@@ -540,7 +540,7 @@
 
           <div class="form-group" style="margin-top: 6px;">
             <label class="form-label" id="lbl-prod-notes">Note</label>
-            <input type="text" id="prod-notes" class="form-input" />
+            <input type="text" id="prod-notes" class="form-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </div>
 
         </div>
@@ -627,7 +627,7 @@
               </svg>
             </button>
           </div>
-          <textarea id="ai-prompt-text" class="form-input" style="height: 110px; resize: vertical; line-height: 1.5; font-family: inherit; width: 100%;"></textarea>
+          <textarea id="ai-prompt-text" class="form-input" style="height: 110px; resize: vertical; line-height: 1.5; font-family: inherit; width: 100%;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
         </div>
 
         <div id="ai-status-msg" style="font-size: 11.5px; color: var(--text-muted); min-height: 16px;"></div>
@@ -683,12 +683,12 @@
           <div style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 4px;">
               <label class="form-label" for="email-sync-address" style="display: block; font-size: 11px; margin-bottom: 2px;">Email Gmail:</label>
-              <input type="email" id="email-sync-address" class="form-input" style="height: 32px; font-size: 12px; width: 100%; box-sizing: border-box;" />
+              <input type="email" id="email-sync-address" class="form-input" style="height: 32px; font-size: 12px; width: 100%; box-sizing: border-box;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
             </div>
             <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 4px;">
               <label class="form-label" for="email-sync-pwd" style="display: block; font-size: 11px; margin-bottom: 2px;">Password App (16 car.):</label>
               <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
-                <input type="password" id="email-sync-pwd" class="form-input" style="height: 32px; font-size: 12px; flex: 1; box-sizing: border-box;" />
+                <input type="password" id="email-sync-pwd" class="form-input" style="height: 32px; font-size: 12px; flex: 1; box-sizing: border-box;" autocomplete="new-password" spellcheck="false" />
                 <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; white-space: nowrap;">
                   <input type="checkbox" id="email-show-pwd" onchange="toggleEmailPwdVisibility(this.checked)" /> Mostra
                 </label>
@@ -771,7 +771,7 @@
         </p>
 
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px;">
-          <textarea id="excel-hint-text" class="form-input" style="height: 100px; resize: vertical; line-height: 1.5; font-family: inherit; width: 100%;" placeholder="Es: Dalla riga 15 in poi sono pre-ordini, oppure il campo Costo corrisponde al prezzo di acquisto..."></textarea>
+          <textarea id="excel-hint-text" class="form-input" style="height: 100px; resize: vertical; line-height: 1.5; font-family: inherit; width: 100%;" placeholder="Es: Dalla riga 15 in poi sono pre-ordini, oppure il campo Costo corrisponde al prezzo di acquisto..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
         </div>
 
         <div id="excel-parse-status" style="font-size: 11.5px; color: #818cf8; min-height: 16px; margin-top: 8px;"></div>
@@ -1002,7 +1002,7 @@
         <h3 id="bulkSaleModalTitle">Metti in Vendita</h3>
         <button class="modal-close-btn" onclick="closeBulkSaleModal()">&times;</button>
       </div>
-      <form id="bulkSaleForm" onsubmit="handleBulkSaleSubmit(event)">
+      <form id="bulkSaleForm" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onsubmit="handleBulkSaleSubmit(event)">
         <div class="modal-body">
           <p id="bulkSaleModalSubtitle" style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
             Stai per mettere in vendita i prodotti selezionati. Il prezzo totale e le commissioni verranno ripartiti equamente e verrà creato un gruppo di vendita unico.
@@ -1016,12 +1016,12 @@
 
           <div class="form-group" style="margin-bottom: 12px;">
             <label class="form-label" id="bulk-sale-price-label">Prezzo di Vendita TOTALE (€) *</label>
-            <input type="number" step="0.01" min="0" id="bulk-sale-total-price" class="form-input" placeholder="0.00" required />
+            <input type="number" step="0.01" min="0" id="bulk-sale-total-price" class="form-input" placeholder="0.00" required autocomplete="off" spellcheck="false" />
           </div>
 
           <div class="form-group" style="margin-bottom: 12px;">
             <label class="form-label">Commissioni / Spese TOTALI (€)</label>
-            <input type="number" step="0.01" min="0" id="bulk-sale-total-fees" class="form-input" value="0.00" />
+            <input type="number" step="0.01" min="0" id="bulk-sale-total-fees" class="form-input" value="0.00" autocomplete="off" spellcheck="false" />
           </div>
 
           <div class="form-group" style="margin-bottom: 12px;">
@@ -1030,7 +1030,7 @@
               <button type="button" class="btn-input-action" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi">Gestisci</button>
             </div>
             <div class="autocomplete-wrap">
-              <input type="text" id="bulk-sale-place" class="form-input" placeholder="es. Vinted, StockX, Wallapop..." autocomplete="off" />
+              <input type="text" id="bulk-sale-place" class="form-input" placeholder="es. Vinted, StockX, Wallapop..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
               <div id="dropdown-bulk-sale-place" class="autocomplete-dropdown"></div>
             </div>
           </div>
@@ -1063,7 +1063,7 @@
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px;">
           <label class="form-label" for="new-place-input" style="font-size: 11px; margin-bottom: 6px;">AGGIUNGI NUOVO CANALE DI VENDITA</label>
           <div style="display: flex; gap: 8px;">
-            <input type="text" id="new-place-input" class="form-input" placeholder="es. Vestiaire Collective, Subito..." style="flex: 1;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitAddCustomPlace();}" />
+            <input type="text" id="new-place-input" class="form-input" placeholder="es. Vestiaire Collective, Subito..." style="flex: 1;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitAddCustomPlace();}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
             <button type="button" class="btn btn-primary" onclick="submitAddCustomPlace()" style="white-space: nowrap;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               <span>Aggiungi</span>
