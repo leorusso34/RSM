@@ -2716,10 +2716,17 @@ function highlightMatch(text, query) {
   return `${escapeHtml(before)}<span class="autocomplete-highlight">${escapeHtml(match)}</span>${escapeHtml(after)}`;
 }
 
+let lastAutocompleteSelectionTime = 0;
+
 function setupFloatingPillAutocomplete(inputId, dropdownId, getItemsFn, typeBadge = "Marketplace") {
   const input = document.getElementById(inputId);
   const dropdown = document.getElementById(dropdownId);
   if (!input || !dropdown) return;
+
+  // Scudo anti-propagazione: impedisce a click, mousedown e tocchi di bucare la modale
+  dropdown.addEventListener("pointerdown", (e) => e.stopPropagation());
+  dropdown.addEventListener("mousedown", (e) => e.stopPropagation());
+  dropdown.addEventListener("click", (e) => e.stopPropagation());
 
   let activeIndex = -1;
 
@@ -2758,29 +2765,29 @@ function setupFloatingPillAutocomplete(inputId, dropdownId, getItemsFn, typeBadg
       .join("");
 
     dropdown.querySelectorAll(".autocomplete-item").forEach((el) => {
-      el.addEventListener("mousedown", (e) => {
+      const handleSelect = (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        lastAutocompleteSelectionTime = Date.now();
         const val = el.getAttribute("data-val");
         if (val) {
           input.value = val;
-          dropdown.classList.remove("open");
+          setTimeout(() => {
+            dropdown.classList.remove("open");
+          }, 20);
           input.dispatchEvent(new Event("change", { bubbles: true }));
         }
-      });
+      };
+
+      el.addEventListener("mousedown", handleSelect);
+      el.addEventListener("pointerdown", (e) => e.stopPropagation());
+      el.addEventListener("click", handleSelect);
     });
 
-    // Calcolo dinamico dello spazio verticale per allungare la tendina senza tagliarla
-    const rect = input.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom - 20;
-    if (spaceBelow < 220 && rect.top > 250) {
-      dropdown.style.top = "auto";
-      dropdown.style.bottom = "calc(100% + 4px)";
-      dropdown.style.maxHeight = `${Math.min(320, Math.floor(rect.top - 20))}px`;
-    } else {
-      dropdown.style.top = "calc(100% + 4px)";
-      dropdown.style.bottom = "auto";
-      dropdown.style.maxHeight = `${Math.min(320, Math.max(220, Math.floor(spaceBelow)))}px`;
-    }
+    // Apertura costante verso il basso con altezza massima controllata
+    dropdown.style.top = "calc(100% + 4px)";
+    dropdown.style.bottom = "auto";
+    dropdown.style.maxHeight = "240px";
 
     dropdown.classList.add("open");
   }
@@ -3963,6 +3970,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // Chiusura al clic sullo sfondo scuro dei modali
   document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
     backdrop.addEventListener("click", (e) => {
+      // Scudo protettivo: non chiudere se il clic è caduto su una tendina autocomplete
+      // o subito dopo aver selezionato una voce
+      if (Date.now() - lastAutocompleteSelectionTime < 400) return;
+      if (e.target.closest && (e.target.closest(".autocomplete-dropdown") || e.target.closest(".autocomplete-wrap"))) {
+        return;
+      }
       if (e.target === backdrop) {
         if (backdrop.id === "updateModal" && isApplyingUpdate) return;
         closeModal();

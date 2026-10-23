@@ -1837,12 +1837,14 @@ body {
   border: 1px solid #334155;
   border-radius: var(--radius-sm);
   box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.75), 0 4px 12px rgba(99, 102, 241, 0.12);
-  max-height: 280px;
+  max-height: 240px;
   overflow-y: auto;
   z-index: 1050;
   display: none;
   scrollbar-width: thin;
   scrollbar-color: #334155 #0b101c;
+  touch-action: pan-y;
+  pointer-events: auto;
 }
 
 .autocomplete-dropdown.open {
@@ -1860,6 +1862,8 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   transition: all 0.12s ease;
   user-select: none;
+  touch-action: manipulation;
+  pointer-events: auto;
 }
 
 .autocomplete-item:last-child {
