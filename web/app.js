@@ -2048,17 +2048,18 @@ function updateSelectionCapsule() {
     const qty = Number(item.quantity) || 1;
     totalQty += qty;
     const buy = Number(item.purchasedPrice) || 0;
-    totalCost += buy * qty;
+    const itemCost = buy * qty;
+    totalCost += itemCost;
 
     const sell = Number(item.salePrice) || 0;
     const fees = Number(item.fees) || 0;
 
     if (sell > 0 || item.status === "active-sale" || item.status === "completed") {
       hasSales = true;
-      totalSale += sell * qty;
-      const profit = (sell - buy) * qty - fees;
+      totalSale += sell;
+      const profit = sell - itemCost - fees;
       totalProfit += profit;
-      totalProfitCost += buy * qty;
+      totalProfitCost += itemCost;
     }
   }
 
