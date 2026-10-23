@@ -34,7 +34,7 @@ def _safe_parse_json_products(raw_content: str) -> list[dict[str, Any]]:
     # 2. Riparazione JSON troncato: trova l'ultimo oggetto chiuso '}' e sigilla l'array
     idx = cleaned.rfind("}")
     while idx > 0:
-        candidate = cleaned[:idx + 1] + "]}"
+        candidate = cleaned[: idx + 1] + "]}"
         try:
             data = json.loads(candidate)
             if isinstance(data, dict):
@@ -74,39 +74,53 @@ def parse_product_with_ai(prompt: str) -> list[dict[str, Any]]:
         "type": "OBJECT",
         "properties": {
             "name": {"type": "STRING"},
-            "size": {"type": "STRING", "description": "A meno che non venga scritto diversamente metti rigorosamente UNI come valore di default."},
-            "quantity": {"type": "INTEGER", "description": "Non ci sono limiti di quantità, e il valore di default è sempre 1, ma se viene scritto un numero subito dopo una x, allora la quantità sarà quel numero."},
-            "purchased_price": {"type": "NUMBER", "description": "Prezzo di acquisto UNITARIO per singolo pezzo. Se viene indicato un prezzo totale per più pezzi, dividi per la quantità."},
+            "size": {
+                "type": "STRING",
+                "description": "A meno che non venga scritto diversamente metti rigorosamente UNI come valore di default.",
+            },
+            "quantity": {
+                "type": "INTEGER",
+                "description": "Non ci sono limiti di quantità, e il valore di default è sempre 1, ma se viene scritto un numero subito dopo una x, allora la quantità sarà quel numero.",
+            },
+            "purchased_price": {
+                "type": "NUMBER",
+                "description": "Prezzo di acquisto UNITARIO per singolo pezzo. Se viene indicato un prezzo totale per più pezzi, dividi per la quantità.",
+            },
             "purchased_place": {"type": "STRING"},
-            "status": {"type": "STRING", "description": "Scegli rigorosamente tra: 'In Stock', 'Pre-ordine', 'Venduto', o 'Completato'. Default: 'In Stock'."},
-            "release_date": {"type": "STRING", "description": "Se non inserita la data inserire la data di oggi. Formato: YYYY-MM-DD."}
+            "status": {
+                "type": "STRING",
+                "description": "Scegli rigorosamente tra: 'In Stock', 'Pre-ordine', 'Venduto', o 'Completato'. Default: 'In Stock'.",
+            },
+            "release_date": {
+                "type": "STRING",
+                "description": "Se non inserita la data inserire la data di oggi. Formato: YYYY-MM-DD.",
+            },
         },
-        "required": ["name", "quantity", "purchased_price", "status"]
+        "required": ["name", "quantity", "purchased_price", "status"],
     }
 
     # Schema radice: un oggetto con una lista di prodotti
     response_schema = {
         "type": "OBJECT",
-        "properties": {
-            "products": {
-                "type": "ARRAY",
-                "items": product_schema
-            }
-        },
-        "required": ["products"]
+        "properties": {"products": {"type": "ARRAY", "items": product_schema}},
+        "required": ["products"],
     }
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "systemInstruction": {
-            "parts": [{"text": "Sei un assistente per l'inventario. Estrai TUTTI i prodotti menzionati nel testo. Restituisci sempre una lista 'products', anche se c'è un solo prodotto. I prezzi devono essere SEMPRE UNITARI per singolo pezzo (se il prezzo indicato è totale per più pezzi, dividilo per la quantità). Mappa i dati nello schema JSON, senza commenti o markdown. Formato date: YYYY-MM-DD."}]
+            "parts": [
+                {
+                    "text": "Sei un assistente per l'inventario. Estrai TUTTI i prodotti menzionati nel testo. Restituisci sempre una lista 'products', anche se c'è un solo prodotto. I prezzi devono essere SEMPRE UNITARI per singolo pezzo (se il prezzo indicato è totale per più pezzi, dividilo per la quantità). Mappa i dati nello schema JSON, senza commenti o markdown. Formato date: YYYY-MM-DD."
+                }
+            ]
         },
         "generationConfig": {
             "temperature": 0.1,
             "maxOutputTokens": 65536,
             "responseMimeType": "application/json",
-            "responseSchema": response_schema
-        }
+            "responseSchema": response_schema,
+        },
     }
 
     data = json.dumps(payload).encode("utf-8")
@@ -159,7 +173,7 @@ def parse_excel_with_ai(raw_text: str, user_hint: str = "") -> list[dict[str, An
     if not WORKER_URL:
         raise RuntimeError("WORKER_URL non è configurato.")
 
-    hint_clause = f"\nNOTA DELL'UTENTE SULLA STRUTTURA DEL FILE:\n\"{user_hint.strip()}\"\n" if user_hint.strip() else ""
+    hint_clause = f'\nNOTA DELL\'UTENTE SULLA STRUTTURA DEL FILE:\n"{user_hint.strip()}"\n' if user_hint.strip() else ""
 
     system_instruction = (
         "Sei un assistente specializzato nell'estrazione ed importazione dati per un software gestionale di magazzino (RSM).\n"
@@ -205,41 +219,26 @@ def parse_excel_with_ai(raw_text: str, user_hint: str = "") -> list[dict[str, An
             "sold_price": {"type": "NUMBER"},
             "fees": {"type": "NUMBER"},
             "release_date": {"type": "STRING"},
-            "notes": {"type": "STRING"}
+            "notes": {"type": "STRING"},
         },
-        "required": ["name", "quantity", "purchased_price", "status"]
+        "required": ["name", "quantity", "purchased_price", "status"],
     }
 
     response_schema = {
         "type": "OBJECT",
-        "properties": {
-            "products": {
-                "type": "ARRAY",
-                "items": product_schema
-            }
-        },
-        "required": ["products"]
+        "properties": {"products": {"type": "ARRAY", "items": product_schema}},
+        "required": ["products"],
     }
 
     payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "text": f"Ecco il contenuto del foglio di calcolo da importare:\n\n{raw_text}"
-                    }
-                ]
-            }
-        ],
-        "systemInstruction": {
-            "parts": [{"text": system_instruction}]
-        },
+        "contents": [{"parts": [{"text": f"Ecco il contenuto del foglio di calcolo da importare:\n\n{raw_text}"}]}],
+        "systemInstruction": {"parts": [{"text": system_instruction}]},
         "generationConfig": {
             "temperature": 0.1,
             "maxOutputTokens": 65536,
             "responseMimeType": "application/json",
-            "responseSchema": response_schema
-        }
+            "responseSchema": response_schema,
+        },
     }
 
     data = json.dumps(payload).encode("utf-8")

@@ -113,7 +113,10 @@ def test_gmail_connection(email_addr: str, app_password: str) -> tuple[bool, str
     except imaplib.IMAP4.error as exc:
         msg = str(exc)
         if "Application-specific password required" in msg or "Invalid credentials" in msg:
-            return False, "Credenziali non valide: assicurati di usare la Password per le App a 16 caratteri creata su Google."
+            return (
+                False,
+                "Credenziali non valide: assicurati di usare la Password per le App a 16 caratteri creata su Google.",
+            )
         return False, f"Errore autenticazione IMAP: {msg}"
     except OSError as exc:
         return False, f"Errore di connessione: {exc}"
@@ -162,14 +165,16 @@ def fetch_unread_order_emails(email_addr: str, app_password: str, max_emails: in
             except (ValueError, OverflowError, TypeError, OSError):
                 pass
 
-            results.append({
-                "uid": uid_str,
-                "subject": subject,
-                "sender": sender,
-                "date": date_formatted,
-                "date_raw": date_raw,
-                "body": body[:6000],  # Limite per prompt compatto
-            })
+            results.append(
+                {
+                    "uid": uid_str,
+                    "subject": subject,
+                    "sender": sender,
+                    "date": date_formatted,
+                    "date_raw": date_raw,
+                    "body": body[:6000],  # Limite per prompt compatto
+                }
+            )
 
     finally:
         try:
@@ -221,25 +226,35 @@ def parse_order_email_with_gemini(email_item: dict[str, Any]) -> list[dict[str, 
         "type": "OBJECT",
         "properties": {
             "name": {"type": "STRING", "description": "Nome completo e modello del prodotto ordinato."},
-            "size": {"type": "STRING", "description": "Taglia del prodotto (es. 42, 43, M, L). Se non specificata usa 'UNI'."},
-            "quantity": {"type": "INTEGER", "description": "Quantità di pezzi ordinati per questo articolo (default: 1)."},
-            "purchased_price": {"type": "NUMBER", "description": "Prezzo unitario o totale pagato per il prodotto (in euro)."},
-            "purchased_place": {"type": "STRING", "description": "Negozio, brand o sito dove è stato effettuato l'ordine (es. Nike, SNKRS, StockX, Amazon, Vinted, Zalando, ecc.)."},
+            "size": {
+                "type": "STRING",
+                "description": "Taglia del prodotto (es. 42, 43, M, L). Se non specificata usa 'UNI'.",
+            },
+            "quantity": {
+                "type": "INTEGER",
+                "description": "Quantità di pezzi ordinati per questo articolo (default: 1).",
+            },
+            "purchased_price": {
+                "type": "NUMBER",
+                "description": "Prezzo unitario o totale pagato per il prodotto (in euro).",
+            },
+            "purchased_place": {
+                "type": "STRING",
+                "description": "Negozio, brand o sito dove è stato effettuato l'ordine (es. Nike, SNKRS, StockX, Amazon, Vinted, Zalando, ecc.).",
+            },
             "status": {"type": "STRING", "description": "Imposta sempre rigorosamente 'Pre-ordine'."},
-            "release_date": {"type": "STRING", "description": "Data presunta di uscita/spedizione o data dell'ordine in formato AAAA-MM-GG."}
+            "release_date": {
+                "type": "STRING",
+                "description": "Data presunta di uscita/spedizione o data dell'ordine in formato AAAA-MM-GG.",
+            },
         },
-        "required": ["name", "quantity", "purchased_price", "purchased_place"]
+        "required": ["name", "quantity", "purchased_price", "purchased_place"],
     }
 
     response_schema = {
         "type": "OBJECT",
-        "properties": {
-            "products": {
-                "type": "ARRAY",
-                "items": product_schema
-            }
-        },
-        "required": ["products"]
+        "properties": {"products": {"type": "ARRAY", "items": product_schema}},
+        "required": ["products"],
     }
 
     prompt_text = (
@@ -253,21 +268,23 @@ def parse_order_email_with_gemini(email_item: dict[str, Any]) -> list[dict[str, 
     payload = {
         "contents": [{"parts": [{"text": prompt_text}]}],
         "systemInstruction": {
-            "parts": [{
-                "text": (
-                    "Sei un assistente per l'inventario. Analizza questa email di conferma ordine ed estrai "
-                    "TUTTI i prodotti acquistati/ordinati. "
-                    "Imposta SEMPRE lo stato ('status') su 'Pre-ordine'. "
-                    "Identifica il negozio/piattaforma di acquisto dal mittente o dal corpo dell'email. "
-                    "Restituisci sempre una lista 'products' conforme allo schema JSON, senza markdown."
-                )
-            }]
+            "parts": [
+                {
+                    "text": (
+                        "Sei un assistente per l'inventario. Analizza questa email di conferma ordine ed estrai "
+                        "TUTTI i prodotti acquistati/ordinati. "
+                        "Imposta SEMPRE lo stato ('status') su 'Pre-ordine'. "
+                        "Identifica il negozio/piattaforma di acquisto dal mittente o dal corpo dell'email. "
+                        "Restituisci sempre una lista 'products' conforme allo schema JSON, senza markdown."
+                    )
+                }
+            ]
         },
         "generationConfig": {
             "temperature": 0.1,
             "responseMimeType": "application/json",
-            "responseSchema": response_schema
-        }
+            "responseSchema": response_schema,
+        },
     }
 
     data = json.dumps(payload).encode("utf-8")
@@ -295,10 +312,20 @@ def parse_order_email_with_gemini(email_item: dict[str, Any]) -> list[dict[str, 
             for p in products:
                 p["status"] = STATUS_PREORDER
                 if not p.get("release_date"):
-                    p["release_date"] = email_item.get("date", datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d"))
+                    p["release_date"] = email_item.get(
+                        "date", datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d")
+                    )
             return products
         return []
-    except (http.client.HTTPException, OSError, json.JSONDecodeError, ValueError, KeyError, IndexError, TypeError) as exc:
+    except (
+        http.client.HTTPException,
+        OSError,
+        json.JSONDecodeError,
+        ValueError,
+        KeyError,
+        IndexError,
+        TypeError,
+    ) as exc:
         raise RuntimeError(f"Errore Proxy AI Gemini: {exc}") from exc
     finally:
         conn.close()

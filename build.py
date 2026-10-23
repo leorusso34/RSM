@@ -83,7 +83,9 @@ def main() -> None:
             subprocess.run(["subst", subst_drive, "/D"], capture_output=True, check=False)
 
     # 4. Individua il binario compilato
-    compiled_exe = tauri_project_dir / "target" / "release" / ("rsm-desktop.exe" if sys.platform == "win32" else "rsm-desktop")
+    compiled_exe = (
+        tauri_project_dir / "target" / "release" / ("rsm-desktop.exe" if sys.platform == "win32" else "rsm-desktop")
+    )
     if not compiled_exe.exists():
         print(f"Errore: Binario compilato non trovato in {compiled_exe}")
         sys.exit(1)
@@ -122,7 +124,9 @@ def main() -> None:
             target_exe.rename(old_exe)
             shutil.copy2(compiled_exe, target_exe)
         except Exception as e:
-            raise PermissionError(f"Impossibile accedere a {target_exe}: chiudi l'applicazione prima di compilare.") from e
+            raise PermissionError(
+                f"Impossibile accedere a {target_exe}: chiudi l'applicazione prima di compilare."
+            ) from e
 
     # Copia delle librerie dinamiche necessarie (es. WebView2Loader.dll per il runtime WebView2 su Windows)
     for dll in compiled_exe.parent.glob("*.dll"):
@@ -163,10 +167,7 @@ def main() -> None:
         shutil.copy2(source_config, dist_config)
     elif not dist_config.exists():
         with open(dist_config, "w", encoding="utf-8") as f:
-            json.dump({
-                "email_sync_address": "",
-                "email_sync_app_password": ""
-            }, f, indent=2, ensure_ascii=False)
+            json.dump({"email_sync_address": "", "email_sync_app_password": ""}, f, indent=2, ensure_ascii=False)
 
     # 9. Copia del README.md nella cartella di rilascio
     source_readme = project_root / "README.md"

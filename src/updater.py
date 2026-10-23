@@ -277,7 +277,9 @@ def apply_update_and_restart(
         target_env = os.environ.get("RSM_APP_DIR")
         if target_env and Path(target_env).is_dir():
             target_app_dir = Path(target_env).resolve()
-        elif (PROJECT_DIR / "RSM.exe").is_file() or (PROJECT_DIR / "RSM.app").is_dir() or (PROJECT_DIR / "RSM").is_file():
+        elif (
+            (PROJECT_DIR / "RSM.exe").is_file() or (PROJECT_DIR / "RSM.app").is_dir() or (PROJECT_DIR / "RSM").is_file()
+        ):
             target_app_dir = PROJECT_DIR.resolve()
         elif (PROJECT_DIR / "dist" / "RSM" / "RSM.exe").is_file():
             target_app_dir = (PROJECT_DIR / "dist" / "RSM").resolve()
@@ -329,7 +331,7 @@ def apply_update_and_restart(
                 "    )\r\n"
                 ") else (\r\n"
                 '    echo ERRORE: Fallimento Robocopy con codice !RC! >> "!LOG!"\r\n'
-                '    mshta "javascript:alert(\'Impossibile completare l aggiornamento automatico. Controlla il file di log: %TEMP%\\\\rsm_update.log\');close();"\r\n'
+                "    mshta \"javascript:alert('Impossibile completare l aggiornamento automatico. Controlla il file di log: %TEMP%\\\\rsm_update.log');close();\"\r\n"
                 ")\r\n\r\n"
                 'rmdir /s /q "!TMPDIR!" 2>> "!LOG!"\r\n'
                 'echo === Fine Update Helper === >> "!LOG!"\r\n'
@@ -371,8 +373,8 @@ def apply_update_and_restart(
                 '        base=$(basename "$item")\n'
                 '        if [ "$base" != "data" ] && [ "$base" != "config.json" ] && [ "$base" != ".env" ]; then\n'
                 '            cp -R "$item" "$TARGET/" >> "$LOG" 2>&1\n'
-                '        fi\n'
-                '    done\n'
+                "        fi\n"
+                "    done\n"
                 "fi\n\n"
                 "# Ripristino fondamentale permessi di esecuzione POSIX\n"
                 'if [ -d "$TARGET/RSM.app" ]; then\n'

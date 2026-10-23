@@ -72,7 +72,13 @@ def main() -> None:
 
     # 3. Cerca l'eseguibile nativo di Tauri
     dist_exe = root_dir / "dist" / "RSM" / ("RSM.exe" if sys.platform == "win32" else "RSM")
-    release_exe = root_dir / "src-tauri" / "target" / "release" / ("rsm-desktop.exe" if sys.platform == "win32" else "rsm-desktop")
+    release_exe = (
+        root_dir
+        / "src-tauri"
+        / "target"
+        / "release"
+        / ("rsm-desktop.exe" if sys.platform == "win32" else "rsm-desktop")
+    )
 
     target_exe = None
     if dist_exe.exists():

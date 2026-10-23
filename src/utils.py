@@ -67,6 +67,7 @@ def cents_to_money(value: int | None) -> Decimal | None:
         return None
     return (Decimal(value) / Decimal(100)).quantize(Decimal("0.01"))
 
+
 def money(value: Any) -> str:
     """Formatta un numero come importo monetario in Euro (€ 1.234,56)."""
     if value is None:
@@ -77,6 +78,7 @@ def money(value: Any) -> str:
         return f"€ {formatted}"
     except (ValueError, TypeError, InvalidOperation):
         return "€ 0,00"
+
 
 def parse_int(value: Any, default: int = 1) -> int:
     """Converte un valore in intero strettamente positivo."""
@@ -96,23 +98,18 @@ def parse_date(value: Any, allow_empty: bool = True) -> str:
     text = str(value or "").strip()
     if not text and allow_empty:
         return ""
-    
-    formats = [
-        "%Y-%m-%d",
-        "%d/%m/%Y",
-        "%d-%m-%Y",
-        "%Y/%m/%d",
-        "%d.%m.%Y"
-    ]
-    
+
+    formats = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%d.%m.%Y"]
+
     for fmt in formats:
         try:
             return datetime.strptime(text, fmt).replace(tzinfo=timezone.utc).strftime("%Y-%m-%d")
         except ValueError:
             continue
-            
+
     raise ValueError(f"Formato data non supportato: {text}")
-            
+
+
 def format_month_label(month_key: Any) -> str:
     """Formatta una stringa mese ISO (YYYY-MM) o data nel formato abbreviato compatto (es. 'SET \\'26')."""
     text = str(month_key or "").strip()
@@ -125,7 +122,10 @@ def format_month_label(month_key: Any) -> str:
         return f"{short_name} '{year_part[2:]}"
     return text
 
-def calculate_profit(purchased_price: Any, sold_price: Any | None, fees: Any = Decimal(0), quantity: int = 1) -> tuple[Decimal, Decimal]:
+
+def calculate_profit(
+    purchased_price: Any, sold_price: Any | None, fees: Any = Decimal(0), quantity: int = 1
+) -> tuple[Decimal, Decimal]:
     """
     Calcola il profitto totale netto e il ROI % per un articolo venduto.
 
@@ -138,7 +138,11 @@ def calculate_profit(purchased_price: Any, sold_price: Any | None, fees: Any = D
     ROI % = (Profitto totale / (purchased_price * quantity)) * 100
     """
     purchased = purchased_price if isinstance(purchased_price, Decimal) else Decimal(str(purchased_price))
-    sold = sold_price if isinstance(sold_price, Decimal) else (Decimal(str(sold_price)) if sold_price is not None else None)
+    sold = (
+        sold_price
+        if isinstance(sold_price, Decimal)
+        else (Decimal(str(sold_price)) if sold_price is not None else None)
+    )
     fee_amount = fees if isinstance(fees, Decimal) else Decimal(str(fees))
     qty = Decimal(str(quantity)) if quantity and quantity > 0 else Decimal(1)
 
@@ -149,6 +153,7 @@ def calculate_profit(purchased_price: Any, sold_price: Any | None, fees: Any = D
     total_profit = sold - total_cost - fee_amount
     roi = (total_profit / total_cost) * 100 if total_cost > 0 else Decimal(0)
     return total_profit.quantize(Decimal("0.01")), roi.quantize(Decimal("0.01"))
+
 
 def normalize_header(value: Any) -> str:
     """Normalizza le intestazioni di tabelle o fogli Excel."""
@@ -184,6 +189,7 @@ def read_spreadsheet_raw(filepath: str) -> str:
     else:
         # Lettura XLSX/XLSM con openpyxl
         from openpyxl import load_workbook
+
         wb = load_workbook(path, data_only=True, read_only=True)
         for sheet in wb.worksheets:
             sheet_title = sheet.title.strip()
@@ -203,9 +209,20 @@ def read_spreadsheet_raw(filepath: str) -> str:
 def export_to_csv(filepath: str, products: list[dict]) -> int:
     """Esporta una lista di prodotti in un file CSV formattato per Excel."""
     headers = [
-        "ID", "NOME", "TAGLIA", "QUANTITÀ", "PREZZO ACQUISTO", "LUOGO ACQUISTO",
-        "LUOGO VENDITA", "PREZZO VENDITA TOTALE (PREVISTO)", "PREZZO VENDITA TOTALE (EFFETTIVO)",
-        "COMMISSIONI/SPESE", "DATA VENDITA", "STATO", "DATA USCITA", "NOTE"
+        "ID",
+        "NOME",
+        "TAGLIA",
+        "QUANTITÀ",
+        "PREZZO ACQUISTO",
+        "LUOGO ACQUISTO",
+        "LUOGO VENDITA",
+        "PREZZO VENDITA TOTALE (PREVISTO)",
+        "PREZZO VENDITA TOTALE (EFFETTIVO)",
+        "COMMISSIONI/SPESE",
+        "DATA VENDITA",
+        "STATO",
+        "DATA USCITA",
+        "NOTE",
     ]
     with open(filepath, "w", newline="", encoding="utf-8-sig") as handle:
         writer = csv.writer(handle, delimiter=";")
@@ -220,22 +237,22 @@ def export_to_csv(filepath: str, products: list[dict]) -> int:
             fees = row.get("fees", 0.0)
             fees_str = f"{fees:.2f}".replace(".", ",") if fees is not None else "0,00"
 
-            writer.writerow([
-                row.get("id", ""),
-                row.get("name", ""),
-                row.get("size", ""),
-                row.get("quantity", 1),
-                p_str,
-                row.get("purchased_place", ""),
-                row.get("selling_place", ""),
-                s_str,
-                sold_str,
-                fees_str,
-                row.get("sold_date", ""),
-                row.get("status", ""),
-                row.get("release_date", ""),
-                row.get("notes", "")
-            ])
+            writer.writerow(
+                [
+                    row.get("id", ""),
+                    row.get("name", ""),
+                    row.get("size", ""),
+                    row.get("quantity", 1),
+                    p_str,
+                    row.get("purchased_place", ""),
+                    row.get("selling_place", ""),
+                    s_str,
+                    sold_str,
+                    fees_str,
+                    row.get("sold_date", ""),
+                    row.get("status", ""),
+                    row.get("release_date", ""),
+                    row.get("notes", ""),
+                ]
+            )
     return len(products)
-
-

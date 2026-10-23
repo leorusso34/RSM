@@ -17,31 +17,35 @@ def test_bridge_completed_sale_cannot_be_modified(tmp_path):
     db = InventoryDatabase(test_db)
 
     # Crea un prodotto venduto e completato
-    completed_id = db.save({
-        "name": "Nike Dunk Low Completata",
-        "size": "42",
-        "quantity": 1,
-        "purchased_price": Decimal("100.00"),
-        "purchased_place": "SNKRS",
-        "selling_place": "StockX",
-        "selling_price": Decimal("180.00"),
-        "sold_price": Decimal("180.00"),
-        "fees": Decimal("15.00"),
-        "sold_date": "2026-10-01",
-        "status": STATUS_SOLD,
-        "is_completed": 1,
-    })
+    completed_id = db.save(
+        {
+            "name": "Nike Dunk Low Completata",
+            "size": "42",
+            "quantity": 1,
+            "purchased_price": Decimal("100.00"),
+            "purchased_place": "SNKRS",
+            "selling_place": "StockX",
+            "selling_price": Decimal("180.00"),
+            "sold_price": Decimal("180.00"),
+            "fees": Decimal("15.00"),
+            "sold_date": "2026-10-01",
+            "status": STATUS_SOLD,
+            "is_completed": 1,
+        }
+    )
 
     # Prodotto normale in stock
-    stock_id = db.save({
-        "name": "Jordan 4 In Stock",
-        "size": "43",
-        "quantity": 1,
-        "purchased_price": Decimal("200.00"),
-        "purchased_place": "Nike",
-        "status": STATUS_STOCK,
-        "is_completed": 0,
-    })
+    stock_id = db.save(
+        {
+            "name": "Jordan 4 In Stock",
+            "size": "43",
+            "quantity": 1,
+            "purchased_price": Decimal("200.00"),
+            "purchased_place": "Nike",
+            "status": STATUS_STOCK,
+            "is_completed": 0,
+        }
+    )
 
     class TestBridgeHandler(RSMBridgeHandler):
         @property
@@ -68,10 +72,12 @@ def test_bridge_completed_sale_cannot_be_modified(tmp_path):
                 assert "purchasedPlace" in item
 
         # 2. Tentativo di modifica su vendita completata -> deve restituire 403 Forbidden
-        put_payload = json.dumps({
-            "name": "Tentativo Modifica Non Consentita",
-            "purchasedPrice": 120.00,
-        }).encode("utf-8")
+        put_payload = json.dumps(
+            {
+                "name": "Tentativo Modifica Non Consentita",
+                "purchasedPrice": 120.00,
+            }
+        ).encode("utf-8")
         req_forbidden = request.Request(
             f"http://127.0.0.1:{port}/api/products/{completed_id}",
             data=put_payload,
@@ -87,11 +93,13 @@ def test_bridge_completed_sale_cannot_be_modified(tmp_path):
             assert "Le vendite completate non possono essere modificate" in err_body["error"]
 
         # 3. Modifica consentita su prodotto in stock
-        put_allowed = json.dumps({
-            "name": "Jordan 4 Aggiornata",
-            "purchasedPrice": 210.00,
-            "purchasedPlace": "Nike Store Milano",
-        }).encode("utf-8")
+        put_allowed = json.dumps(
+            {
+                "name": "Jordan 4 Aggiornata",
+                "purchasedPrice": 210.00,
+                "purchasedPlace": "Nike Store Milano",
+            }
+        ).encode("utf-8")
         req_ok = request.Request(
             f"http://127.0.0.1:{port}/api/products/{stock_id}",
             data=put_allowed,
@@ -135,41 +143,43 @@ def test_bridge_excel_endpoints(tmp_path):
 
     try:
         # 1. Test /api/save-excel-products con prodotti estratti
-        excel_payload = json.dumps({
-            "products": [
-                {
-                    "name": "Nike Dunk Low Retro",
-                    "size": "42.5",
-                    "quantity": 2,
-                    "purchased_price": 110.0,
-                    "purchased_place": "SNKRS",
-                    "status": "In Stock",
-                    "notes": "Taglia popolare",
-                },
-                {
-                    "name": "Jordan 1 High Lost & Found",
-                    "size": "44",
-                    "quantity": 1,
-                    "purchased_price": 180.0,
-                    "purchased_place": "Foot Locker",
-                    "status": "Pre-ordine",
-                    "release_date": "2026-11-01",
-                    "notes": "Consegna programmata",
-                },
-                {
-                    "name": "Yeezy Slide Onyx",
-                    "size": "43",
-                    "quantity": 1,
-                    "purchased_price": 70.0,
-                    "purchased_place": "Confirmed",
-                    "selling_place": "Vinted",
-                    "sold_price": 120.0,
-                    "fees": 5.0,
-                    "status": "Venduto",
-                    "notes": "Vendita conclusa",
-                },
-            ]
-        }).encode("utf-8")
+        excel_payload = json.dumps(
+            {
+                "products": [
+                    {
+                        "name": "Nike Dunk Low Retro",
+                        "size": "42.5",
+                        "quantity": 2,
+                        "purchased_price": 110.0,
+                        "purchased_place": "SNKRS",
+                        "status": "In Stock",
+                        "notes": "Taglia popolare",
+                    },
+                    {
+                        "name": "Jordan 1 High Lost & Found",
+                        "size": "44",
+                        "quantity": 1,
+                        "purchased_price": 180.0,
+                        "purchased_place": "Foot Locker",
+                        "status": "Pre-ordine",
+                        "release_date": "2026-11-01",
+                        "notes": "Consegna programmata",
+                    },
+                    {
+                        "name": "Yeezy Slide Onyx",
+                        "size": "43",
+                        "quantity": 1,
+                        "purchased_price": 70.0,
+                        "purchased_place": "Confirmed",
+                        "selling_place": "Vinted",
+                        "sold_price": 120.0,
+                        "fees": 5.0,
+                        "status": "Venduto",
+                        "notes": "Vendita conclusa",
+                    },
+                ]
+            }
+        ).encode("utf-8")
 
         req = request.Request(
             f"http://127.0.0.1:{port}/api/save-excel-products",
@@ -240,22 +250,26 @@ def test_bridge_bulk_operations(tmp_path):
     test_db = tmp_path / "test_bulk_ops.db"
     db = InventoryDatabase(test_db)
 
-    id1 = db.save({
-        "name": "Jordan 1 High Chicago",
-        "size": "42",
-        "quantity": 1,
-        "purchased_price": Decimal("180.00"),
-        "purchased_place": "Nike SNKRS",
-        "status": STATUS_STOCK,
-    })
-    id2 = db.save({
-        "name": "Jordan 1 Low Travis",
-        "size": "43",
-        "quantity": 1,
-        "purchased_price": Decimal("150.00"),
-        "purchased_place": "Nike SNKRS",
-        "status": STATUS_STOCK,
-    })
+    id1 = db.save(
+        {
+            "name": "Jordan 1 High Chicago",
+            "size": "42",
+            "quantity": 1,
+            "purchased_price": Decimal("180.00"),
+            "purchased_place": "Nike SNKRS",
+            "status": STATUS_STOCK,
+        }
+    )
+    id2 = db.save(
+        {
+            "name": "Jordan 1 Low Travis",
+            "size": "43",
+            "quantity": 1,
+            "purchased_price": Decimal("150.00"),
+            "purchased_place": "Nike SNKRS",
+            "status": STATUS_STOCK,
+        }
+    )
 
     class TestBridgeHandler(RSMBridgeHandler):
         @property
@@ -273,13 +287,15 @@ def test_bridge_bulk_operations(tmp_path):
         # 1. Bulk Status: Metti in vendita multipla (active-sale con bundle)
         bulk_sale_req = request.Request(
             f"http://127.0.0.1:{port}/api/products/bulk-status",
-            data=json.dumps({
-                "ids": [id1, id2],
-                "status": "active-sale",
-                "sold_price_total": 400.0,
-                "fees_total": 30.0,
-                "selling_place": "Vinted",
-            }).encode("utf-8"),
+            data=json.dumps(
+                {
+                    "ids": [id1, id2],
+                    "status": "active-sale",
+                    "sold_price_total": 400.0,
+                    "fees_total": 30.0,
+                    "selling_place": "Vinted",
+                }
+            ).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
@@ -301,10 +317,12 @@ def test_bridge_bulk_operations(tmp_path):
         # 2. Bulk Status: Completa vendita
         complete_req = request.Request(
             f"http://127.0.0.1:{port}/api/products/bulk-status",
-            data=json.dumps({
-                "ids": [id1, id2],
-                "status": "completed",
-            }).encode("utf-8"),
+            data=json.dumps(
+                {
+                    "ids": [id1, id2],
+                    "status": "completed",
+                }
+            ).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
@@ -352,25 +370,29 @@ def test_bridge_bulk_operations(tmp_path):
         assert db.get(dup_id) is None
 
         # 5. Spostamento Parziale Scorte (Vendita parziale di 1 unità su 3)
-        multi_qty_id = db.save({
-            "name": "Yeezy 350 Onyx",
-            "size": "44",
-            "quantity": 3,
-            "purchased_price": Decimal("220.00"),
-            "purchased_place": "Confirmed",
-            "status": STATUS_STOCK,
-        })
+        multi_qty_id = db.save(
+            {
+                "name": "Yeezy 350 Onyx",
+                "size": "44",
+                "quantity": 3,
+                "purchased_price": Decimal("220.00"),
+                "purchased_place": "Confirmed",
+                "status": STATUS_STOCK,
+            }
+        )
 
         partial_sale_req = request.Request(
             f"http://127.0.0.1:{port}/api/products/bulk-status",
-            data=json.dumps({
-                "ids": [multi_qty_id],
-                "status": "active-sale",
-                "sold_price_total": 280.0,
-                "fees_total": 15.0,
-                "selling_place": "Vinted",
-                "quantity_to_sell": 1,
-            }).encode("utf-8"),
+            data=json.dumps(
+                {
+                    "ids": [multi_qty_id],
+                    "status": "active-sale",
+                    "sold_price_total": 280.0,
+                    "fees_total": 15.0,
+                    "selling_place": "Vinted",
+                    "quantity_to_sell": 1,
+                }
+            ).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
@@ -394,19 +416,21 @@ def test_bridge_bulk_operations(tmp_path):
         # 6. Test Undo Restore endpoint (/api/undo/restore)
         undo_restore_req = request.Request(
             f"http://127.0.0.1:{port}/api/undo/restore",
-            data=json.dumps({
-                "records": [
-                    {
-                        "id": multi_qty_id,
-                        "name": "Yeezy 350 Onyx",
-                        "size": "44",
-                        "quantity": 3,
-                        "purchased_price": 220.0,
-                        "purchased_place": "Confirmed",
-                        "status": "stock",
-                    }
-                ]
-            }).encode("utf-8"),
+            data=json.dumps(
+                {
+                    "records": [
+                        {
+                            "id": multi_qty_id,
+                            "name": "Yeezy 350 Onyx",
+                            "size": "44",
+                            "quantity": 3,
+                            "purchased_price": 220.0,
+                            "purchased_place": "Confirmed",
+                            "status": "stock",
+                        }
+                    ]
+                }
+            ).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
@@ -527,20 +551,22 @@ def test_bridge_multi_quantity_profit_and_roi(tmp_path):
     # Venduti a 160€ totali con 10€ di commissioni totali
     # Profitto atteso = 160 - (50 * 2) - 10 = 50€
     # ROI atteso = (50 / 100) * 100 = 50.0%
-    db.save({
-        "name": "Maglie Nike (2 pz)",
-        "size": "L",
-        "quantity": 2,
-        "purchased_price": Decimal("50.00"),
-        "purchased_place": "Nike Store",
-        "selling_place": "eBay",
-        "selling_price": Decimal("160.00"),
-        "sold_price": Decimal("160.00"),
-        "fees": Decimal("10.00"),
-        "sold_date": "2026-10-18",
-        "status": STATUS_SOLD,
-        "is_completed": 1,
-    })
+    db.save(
+        {
+            "name": "Maglie Nike (2 pz)",
+            "size": "L",
+            "quantity": 2,
+            "purchased_price": Decimal("50.00"),
+            "purchased_place": "Nike Store",
+            "selling_place": "eBay",
+            "selling_price": Decimal("160.00"),
+            "sold_price": Decimal("160.00"),
+            "fees": Decimal("10.00"),
+            "sold_date": "2026-10-18",
+            "status": STATUS_SOLD,
+            "is_completed": 1,
+        }
+    )
 
     class TestBridgeHandler(RSMBridgeHandler):
         @property
@@ -571,5 +597,3 @@ def test_bridge_multi_quantity_profit_and_roi(tmp_path):
     finally:
         server.shutdown()
         server.server_close()
-
-

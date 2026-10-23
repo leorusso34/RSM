@@ -62,7 +62,7 @@ class InventoryDatabase:
             );
             """
         )
-        
+
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS settings (
@@ -74,7 +74,7 @@ class InventoryDatabase:
 
         if existing_columns and "bundle_id" not in existing_columns:
             cursor.execute("ALTER TABLE products ADD COLUMN bundle_id TEXT NOT NULL DEFAULT ''")
-            
+
         if existing_columns and "is_completed" not in existing_columns:
             cursor.execute("ALTER TABLE products ADD COLUMN is_completed INTEGER NOT NULL DEFAULT 0")
 
@@ -136,7 +136,9 @@ class InventoryDatabase:
             """
         )
 
-        if self.connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='products_legacy'").fetchone():
+        if self.connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='products_legacy'"
+        ).fetchone():
             legacy_rows = self.connection.execute("SELECT * FROM products_legacy").fetchall()
             for row in legacy_rows:
                 data = dict(row)
@@ -147,15 +149,28 @@ class InventoryDatabase:
                      sold_date, status, release_date, notes, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
-                        data["id"], data.get("name", ""), data.get("size", ""), max(1, int(data.get("quantity", 1) or 1)),
+                        data["id"],
+                        data.get("name", ""),
+                        data.get("size", ""),
+                        max(1, int(data.get("quantity", 1) or 1)),
                         money_to_cents(Decimal(str(data.get("purchased_price", 0) or 0))),
-                        data.get("purchased_place", ""), data.get("selling_place", ""),
-                        money_to_cents(Decimal(str(data["selling_price"]))) if data.get("selling_price") is not None else None,
-                        money_to_cents(Decimal(str(data["sold_price"]))) if data.get("sold_price") is not None else None,
-                        money_to_cents(Decimal(str(data.get("fees", 0) or 0))), data.get("sold_date", ""),
-                        data.get("status", STATUS_STOCK) if data.get("status") in {STATUS_STOCK, STATUS_PREORDER, STATUS_SOLD} else STATUS_STOCK,
-                        data.get("release_date", ""), data.get("notes", ""),
-                        data.get("created_at"), data.get("updated_at"),
+                        data.get("purchased_place", ""),
+                        data.get("selling_place", ""),
+                        money_to_cents(Decimal(str(data["selling_price"])))
+                        if data.get("selling_price") is not None
+                        else None,
+                        money_to_cents(Decimal(str(data["sold_price"])))
+                        if data.get("sold_price") is not None
+                        else None,
+                        money_to_cents(Decimal(str(data.get("fees", 0) or 0))),
+                        data.get("sold_date", ""),
+                        data.get("status", STATUS_STOCK)
+                        if data.get("status") in {STATUS_STOCK, STATUS_PREORDER, STATUS_SOLD}
+                        else STATUS_STOCK,
+                        data.get("release_date", ""),
+                        data.get("notes", ""),
+                        data.get("created_at"),
+                        data.get("updated_at"),
                     ),
                 )
             cursor.execute("DROP TABLE products_legacy")
@@ -192,6 +207,7 @@ class InventoryDatabase:
 
         if status:
             from .config import STATUS_COMPLETED, STATUS_SOLD
+
             if status == STATUS_COMPLETED:
                 query += " AND status = ? AND is_completed = 1"
                 params.append(STATUS_SOLD)
@@ -253,9 +269,7 @@ class InventoryDatabase:
 
     def get(self, product_id: int) -> dict[str, Any] | None:
         """Ottiene un singolo prodotto per ID."""
-        row = self.connection.execute(
-            "SELECT * FROM products WHERE id = ?", (product_id,)
-        ).fetchone()
+        row = self.connection.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
         return self._row_to_product(row) if row else None
 
     def save(self, data: dict[str, Any], product_id: int | None = None) -> int:
@@ -263,9 +277,21 @@ class InventoryDatabase:
         bundle_id = str(data.get("bundle_id", "") or "")
         is_completed = int(data.get("is_completed", 0) or 0)
         fields = (
-            "name", "size", "quantity", "purchased_price_cents", "purchased_place",
-            "selling_place", "selling_price_cents", "sold_price_cents", "fees_cents", "sold_date",
-            "status", "release_date", "notes", "bundle_id", "is_completed"
+            "name",
+            "size",
+            "quantity",
+            "purchased_price_cents",
+            "purchased_place",
+            "selling_place",
+            "selling_price_cents",
+            "sold_price_cents",
+            "fees_cents",
+            "sold_date",
+            "status",
+            "release_date",
+            "notes",
+            "bundle_id",
+            "is_completed",
         )
         status = data.get("status", STATUS_STOCK)
         if status not in {STATUS_STOCK, STATUS_PREORDER, STATUS_SOLD}:
@@ -275,11 +301,21 @@ class InventoryDatabase:
         sold_date = data.get("sold_date", "") if status == STATUS_SOLD else ""
         release_date = data.get("release_date", "") if status == STATUS_PREORDER else ""
         values = (
-            data.get("name", ""), data.get("size", ""), data.get("quantity", 1),
-            money_to_cents(data.get("purchased_price")), data.get("purchased_place", ""),
-            data.get("selling_place", ""), money_to_cents(data.get("selling_price")),
-            money_to_cents(sold_price), money_to_cents(fees), sold_date, status,
-            release_date, data.get("notes", ""), bundle_id, is_completed,
+            data.get("name", ""),
+            data.get("size", ""),
+            data.get("quantity", 1),
+            money_to_cents(data.get("purchased_price")),
+            data.get("purchased_place", ""),
+            data.get("selling_place", ""),
+            money_to_cents(data.get("selling_price")),
+            money_to_cents(sold_price),
+            money_to_cents(fees),
+            sold_date,
+            status,
+            release_date,
+            data.get("notes", ""),
+            bundle_id,
+            is_completed,
         )
 
         with self.connection:
@@ -297,7 +333,7 @@ class InventoryDatabase:
                 values + (product_id,),
             )
             return product_id
-        
+
     def _read_config_json(self) -> dict[str, str]:
         """Legge il file config.json esterno se presente."""
         if not CONFIG_JSON_PATH.exists():
@@ -314,10 +350,7 @@ class InventoryDatabase:
     def _write_config_json(self, key: str, value: str) -> None:
         """Aggiorna il file config.json mantenendo sincronizzate le impostazioni."""
         try:
-            current_data = {
-                "email_sync_address": "",
-                "email_sync_app_password": ""
-            }
+            current_data = {"email_sync_address": "", "email_sync_app_password": ""}
             if CONFIG_JSON_PATH.exists():
                 try:
                     with open(CONFIG_JSON_PATH, "r", encoding="utf-8") as f:
@@ -345,13 +378,13 @@ class InventoryDatabase:
         cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
         row = cursor.fetchone()
         return row["value"] if row else default_value
-        
+
     def set_setting(self, key: str, value: str) -> None:
         """Salva un'impostazione nel database SQLite e la sincronizza nel file config.json."""
         with self.connection:
             self.connection.execute(
                 "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                (key, value)
+                (key, value),
             )
         self._write_config_json(key, value)
 
@@ -366,16 +399,11 @@ class InventoryDatabase:
             return 0
         placeholders = ", ".join("?" for _ in product_ids)
         with self.connection:
-            cursor = self.connection.execute(
-                f"DELETE FROM products WHERE id IN ({placeholders})", tuple(product_ids)
-            )
+            cursor = self.connection.execute(f"DELETE FROM products WHERE id IN ({placeholders})", tuple(product_ids))
             return cursor.rowcount
 
     def update_status_many(
-        self,
-        product_ids: list[int],
-        new_status: str,
-        extra_data: dict[str, Any] | None = None
+        self, product_ids: list[int], new_status: str, extra_data: dict[str, Any] | None = None
     ) -> int:
         """Aggiorna lo stato di più prodotti in una sola transazione."""
         if not product_ids:
@@ -409,7 +437,9 @@ class InventoryDatabase:
         elif new_status == STATUS_PREORDER:
             extra_sql += ", sold_price_cents = NULL, sold_date = '', fees_cents = 0, is_completed = 0"
 
-        query = f"UPDATE products SET status = ?, updated_at = CURRENT_TIMESTAMP {extra_sql} WHERE id IN ({placeholders})"
+        query = (
+            f"UPDATE products SET status = ?, updated_at = CURRENT_TIMESTAMP {extra_sql} WHERE id IN ({placeholders})"
+        )
         params.extend(product_ids)
 
         with self.connection:
@@ -459,7 +489,6 @@ class InventoryDatabase:
         row = self.connection.execute(query, params).fetchone()
         return self._row_to_product(row) if row else None
 
-
     def merge_into_stock_record(self, target_id: int, add_qty: int) -> None:
         """Incrementa la quantità di un record in magazzino esistente."""
         with self.connection:
@@ -471,38 +500,36 @@ class InventoryDatabase:
     def get_distinct_places(self) -> tuple[list[str], list[str]]:
         """Restituisce i luoghi di acquisto e vendita unici, combinando default, DB e custom_places."""
         purchased_db = [
-            row[0] for row in self.connection.execute(
+            row[0]
+            for row in self.connection.execute(
                 "SELECT DISTINCT purchased_place FROM products WHERE purchased_place != ''"
             ).fetchall()
         ]
-        
+
         selling_db = [
-            row[0] for row in self.connection.execute(
+            row[0]
+            for row in self.connection.execute(
                 "SELECT DISTINCT selling_place FROM products WHERE selling_place != ''"
             ).fetchall()
         ]
 
         custom_added = [
-            row[0] for row in self.connection.execute(
-                "SELECT name FROM custom_places WHERE is_deleted = 0"
-            ).fetchall()
+            row[0] for row in self.connection.execute("SELECT name FROM custom_places WHERE is_deleted = 0").fetchall()
         ]
 
         custom_deleted = {
-            row[0] for row in self.connection.execute(
-                "SELECT name FROM custom_places WHERE is_deleted = 1"
-            ).fetchall()
+            row[0] for row in self.connection.execute("SELECT name FROM custom_places WHERE is_deleted = 1").fetchall()
         }
-        
+
         purchased = sorted(set(purchased_db))
-        
+
         # Combine DB places, default places, and custom added places.
         # Then remove any that were explicitly deleted by the user.
         all_selling = set(selling_db + DEFAULT_SELLING_PLACES + custom_added)
         all_selling = {p for p in all_selling if p not in custom_deleted}
-        
+
         selling = sorted(all_selling, key=lambda s: s.casefold())
-        
+
         return purchased, selling
 
     def add_custom_place(self, name: str) -> None:
@@ -510,7 +537,8 @@ class InventoryDatabase:
         with self.connection:
             self.connection.execute(
                 "INSERT INTO custom_places (name, is_deleted) VALUES (?, 0) "
-                "ON CONFLICT(name) DO UPDATE SET is_deleted = 0", (name,)
+                "ON CONFLICT(name) DO UPDATE SET is_deleted = 0",
+                (name,),
             )
 
     def delete_custom_place(self, name: str) -> None:
@@ -518,7 +546,8 @@ class InventoryDatabase:
         with self.connection:
             self.connection.execute(
                 "INSERT INTO custom_places (name, is_deleted) VALUES (?, 1) "
-                "ON CONFLICT(name) DO UPDATE SET is_deleted = 1", (name,)
+                "ON CONFLICT(name) DO UPDATE SET is_deleted = 1",
+                (name,),
             )
 
     def totals(self) -> dict[str, Any]:
@@ -541,7 +570,7 @@ class InventoryDatabase:
         preorder_count_val = 0
         preorder_total_val = Decimal(0)
         sold_count_val = 0
-        
+
         sold_count_active_val = 0
         sold_count_completed_val = 0
         sold_profit_active_val = Decimal(0)
@@ -579,7 +608,11 @@ class InventoryDatabase:
         sold_count_val = sold_count_active_val + sold_count_completed_val
 
         total_items = stock_count_val + preorder_count_val + sold_count_val
-        overall_roi = ((sold_profit_active_val + sold_profit_completed_val) / sold_cost_val * 100) if sold_cost_val > 0 else Decimal(0)
+        overall_roi = (
+            ((sold_profit_active_val + sold_profit_completed_val) / sold_cost_val * 100)
+            if sold_cost_val > 0
+            else Decimal(0)
+        )
 
         return {
             "stock_total": stock_total_val.quantize(Decimal("0.01")),
@@ -622,12 +655,14 @@ class InventoryDatabase:
             fees = cents_to_money(row["total_fees"]) or Decimal(0)
             profit = revenue - cost - fees
 
-            result.append({
-                "month": month,
-                "revenue": revenue.quantize(Decimal("0.01")),
-                "profit": profit.quantize(Decimal("0.01")),
-                "count": int(qty),
-            })
+            result.append(
+                {
+                    "month": month,
+                    "revenue": revenue.quantize(Decimal("0.01")),
+                    "profit": profit.quantize(Decimal("0.01")),
+                    "count": int(qty),
+                }
+            )
         return result
 
     def get_profit_by_platform(self) -> list[dict[str, Any]]:
@@ -657,14 +692,16 @@ class InventoryDatabase:
             fees = cents_to_money(row["total_fees"]) or Decimal(0)
             profit = revenue - cost - fees
 
-            result.append({
-                "platform": platform,
-                "revenue": revenue.quantize(Decimal("0.01")),
-                "cost": cost.quantize(Decimal("0.01")),
-                "fees": fees.quantize(Decimal("0.01")),
-                "profit": profit.quantize(Decimal("0.01")),
-                "count": int(qty),
-            })
+            result.append(
+                {
+                    "platform": platform,
+                    "revenue": revenue.quantize(Decimal("0.01")),
+                    "cost": cost.quantize(Decimal("0.01")),
+                    "fees": fees.quantize(Decimal("0.01")),
+                    "profit": profit.quantize(Decimal("0.01")),
+                    "count": int(qty),
+                }
+            )
         return result
 
     def get_top_profitable_products(self, limit: int = 5) -> list[dict[str, Any]]:
@@ -693,11 +730,13 @@ class InventoryDatabase:
             fees = cents_to_money(row["total_fees"]) or Decimal(0)
             profit = revenue - cost - fees
 
-            result.append({
-                "name": name,
-                "profit": profit.quantize(Decimal("0.01")),
-                "count": int(qty),
-            })
+            result.append(
+                {
+                    "name": name,
+                    "profit": profit.quantize(Decimal("0.01")),
+                    "count": int(qty),
+                }
+            )
         return result
 
     def insert_many(self, records: list[dict[str, Any]]) -> int:

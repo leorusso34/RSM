@@ -180,7 +180,9 @@ def bundle_python(project_root: Path) -> None:
         raise RuntimeError("Verifica di integrità finale fallita.")
 
     total_size_mb = sum(f.stat().st_size for f in target_py_dir.rglob("*") if f.is_file()) / (1024 * 1024)
-    print(f"[OK] Tutti i moduli verificati con successo! Dimensione runtime: {total_size_mb:.1f} MB in '{target_py_dir}'\n")
+    print(
+        f"[OK] Tutti i moduli verificati con successo! Dimensione runtime: {total_size_mb:.1f} MB in '{target_py_dir}'\n"
+    )
 
 
 if __name__ == "__main__":

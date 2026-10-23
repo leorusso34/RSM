@@ -16,12 +16,18 @@ from src.utils import (
 
 def product(name="Test", status=STATUS_STOCK):
     return {
-        "name": name, "size": "42", "quantity": 2,
-        "purchased_price": Decimal("100.00"), "purchased_place": "Shop",
-        "selling_place": "Market", "selling_price": Decimal("150.00"),
+        "name": name,
+        "size": "42",
+        "quantity": 2,
+        "purchased_price": Decimal("100.00"),
+        "purchased_place": "Shop",
+        "selling_place": "Market",
+        "selling_price": Decimal("150.00"),
         "sold_price": Decimal("145.00") if status == STATUS_SOLD else None,
-        "fees": Decimal("5.00"), "sold_date": "2026-08-26" if status == STATUS_SOLD else "",
-        "status": status, "release_date": "2026-09-01" if status == STATUS_PREORDER else "",
+        "fees": Decimal("5.00"),
+        "sold_date": "2026-08-26" if status == STATUS_SOLD else "",
+        "status": status,
+        "release_date": "2026-09-01" if status == STATUS_PREORDER else "",
         "notes": "",
     }
 
@@ -105,11 +111,12 @@ def test_read_spreadsheet_raw_csv(tmp_path):
     assert "90" in raw
 
 
-
-
 def test_email_sync_html_stripper():
     from src.email_sync import _strip_html
-    raw_html = "<html><body><h1>Conferma Ordine Nike</h1><p>Hai acquistato <b>Dunk Low</b> a &euro; 120,00.</p></body></html>"
+
+    raw_html = (
+        "<html><body><h1>Conferma Ordine Nike</h1><p>Hai acquistato <b>Dunk Low</b> a &euro; 120,00.</p></body></html>"
+    )
     clean = _strip_html(raw_html)
     assert "Conferma Ordine Nike" in clean
     assert "Dunk Low" in clean
@@ -117,21 +124,20 @@ def test_email_sync_html_stripper():
     assert "<" not in clean
 
 
-
-
 def test_external_config_json_priority(tmp_path, monkeypatch):
     import json
 
     from src import database
+
     fake_config = tmp_path / "config.json"
     fake_config.write_text(json.dumps({"gemini_api_key": "KEY_FROM_JSON"}), encoding="utf-8")
     monkeypatch.setattr(database, "CONFIG_JSON_PATH", fake_config)
-    
+
     db = InventoryDatabase(tmp_path / "test.db")
     # DB has another value
     with db.connection:
         db.connection.execute("INSERT INTO settings (key, value) VALUES ('gemini_api_key', 'KEY_FROM_DB')")
-    
+
     # JSON has priority!
     assert db.get_setting("gemini_api_key") == "KEY_FROM_JSON"
     db.close()
@@ -140,20 +146,40 @@ def test_external_config_json_priority(tmp_path, monkeypatch):
 def test_search_by_price(tmp_path):
     """Verifica che la ricerca trovi prodotti anche cercando per prezzo o frazioni di prezzo."""
     db = InventoryDatabase(tmp_path / "test_search.db")
-    db.save({
-        "name": "Jordan 4 Retro", "size": "43", "quantity": 1,
-        "purchased_price": Decimal("210.50"), "purchased_place": "SNKRS",
-        "selling_place": "", "selling_price": Decimal("350.00"),
-        "sold_price": None, "fees": Decimal(0), "sold_date": "",
-        "status": STATUS_STOCK, "release_date": "", "notes": ""
-    })
-    db.save({
-        "name": "Yeezy Slide", "size": "42", "quantity": 1,
-        "purchased_price": Decimal("70.00"), "purchased_place": "Confirmed",
-        "selling_place": "", "selling_price": Decimal("110.00"),
-        "sold_price": None, "fees": Decimal(0), "sold_date": "",
-        "status": STATUS_STOCK, "release_date": "", "notes": ""
-    })
+    db.save(
+        {
+            "name": "Jordan 4 Retro",
+            "size": "43",
+            "quantity": 1,
+            "purchased_price": Decimal("210.50"),
+            "purchased_place": "SNKRS",
+            "selling_place": "",
+            "selling_price": Decimal("350.00"),
+            "sold_price": None,
+            "fees": Decimal(0),
+            "sold_date": "",
+            "status": STATUS_STOCK,
+            "release_date": "",
+            "notes": "",
+        }
+    )
+    db.save(
+        {
+            "name": "Yeezy Slide",
+            "size": "42",
+            "quantity": 1,
+            "purchased_price": Decimal("70.00"),
+            "purchased_place": "Confirmed",
+            "selling_place": "",
+            "selling_price": Decimal("110.00"),
+            "sold_price": None,
+            "fees": Decimal(0),
+            "sold_date": "",
+            "status": STATUS_STOCK,
+            "release_date": "",
+            "notes": "",
+        }
+    )
 
     # Ricerca per prezzo intero
     res_70 = db.list_products(search="70")
@@ -183,14 +209,12 @@ def test_search_by_price(tmp_path):
     db.close()
 
 
-
-
 def test_safe_parse_json_products_truncated():
     """Verifica che il parser gestisca sia JSON standard sia JSON troncati dall'AI."""
     from src.ai_agent import _safe_parse_json_products
 
     # 1. JSON integro in blocco markdown
-    normal_json = "```json\n{\"products\": [{\"name\": \"Prodotto A\", \"purchased_price\": 50.0}]}\n```"
+    normal_json = '```json\n{"products": [{"name": "Prodotto A", "purchased_price": 50.0}]}\n```'
     res1 = _safe_parse_json_products(normal_json)
     assert len(res1) == 1
     assert res1[0]["name"] == "Prodotto A"
@@ -218,13 +242,23 @@ def test_partial_sale_splits_record(tmp_path):
     sold_qty = 2
     remaining_qty = original_qty - sold_qty
 
-    prod_id = db.save({
-        "name": "Scarpa Test", "size": "42", "quantity": original_qty,
-        "purchased_price": Decimal("80.00"), "purchased_place": "Shop",
-        "selling_place": "eBay", "selling_price": Decimal("120.00"),
-        "sold_price": None, "fees": Decimal("0.00"),
-        "sold_date": "", "status": STATUS_STOCK, "release_date": "", "notes": "",
-    })
+    prod_id = db.save(
+        {
+            "name": "Scarpa Test",
+            "size": "42",
+            "quantity": original_qty,
+            "purchased_price": Decimal("80.00"),
+            "purchased_place": "Shop",
+            "selling_place": "eBay",
+            "selling_price": Decimal("120.00"),
+            "sold_price": None,
+            "fees": Decimal("0.00"),
+            "sold_date": "",
+            "status": STATUS_STOCK,
+            "release_date": "",
+            "notes": "",
+        }
+    )
 
     # Simulazione della logica di move_selected_to_sold (vendita parziale)
     record = dict(db.get(prod_id))
@@ -258,29 +292,59 @@ def test_partial_sale_splits_record(tmp_path):
 def test_get_profit_by_platform(tmp_path):
     db = InventoryDatabase(tmp_path / "inventory.db")
     # Prodotto 1: venduto su eBay (2 pz, costo 50x2=100, incasso 160, fees totali 10 -> profitto 50)
-    db.save({
-        "name": "Prodotto eBay", "size": "M", "quantity": 2,
-        "purchased_price": Decimal("50.00"), "purchased_place": "Shop",
-        "selling_place": "eBay", "selling_price": Decimal("160.00"),
-        "sold_price": Decimal("160.00"), "fees": Decimal("10.00"),
-        "sold_date": "2026-09-01", "status": STATUS_SOLD, "release_date": "", "notes": "",
-    })
+    db.save(
+        {
+            "name": "Prodotto eBay",
+            "size": "M",
+            "quantity": 2,
+            "purchased_price": Decimal("50.00"),
+            "purchased_place": "Shop",
+            "selling_place": "eBay",
+            "selling_price": Decimal("160.00"),
+            "sold_price": Decimal("160.00"),
+            "fees": Decimal("10.00"),
+            "sold_date": "2026-09-01",
+            "status": STATUS_SOLD,
+            "release_date": "",
+            "notes": "",
+        }
+    )
     # Prodotto 2: venduto su Vinted (1 pz, costo 30, incasso 50, fees 0 -> profitto 20)
-    db.save({
-        "name": "Prodotto Vinted", "size": "L", "quantity": 1,
-        "purchased_price": Decimal("30.00"), "purchased_place": "Shop",
-        "selling_place": "Vinted", "selling_price": Decimal("50.00"),
-        "sold_price": Decimal("50.00"), "fees": Decimal("0.00"),
-        "sold_date": "2026-09-02", "status": STATUS_SOLD, "release_date": "", "notes": "",
-    })
+    db.save(
+        {
+            "name": "Prodotto Vinted",
+            "size": "L",
+            "quantity": 1,
+            "purchased_price": Decimal("30.00"),
+            "purchased_place": "Shop",
+            "selling_place": "Vinted",
+            "selling_price": Decimal("50.00"),
+            "sold_price": Decimal("50.00"),
+            "fees": Decimal("0.00"),
+            "sold_date": "2026-09-02",
+            "status": STATUS_SOLD,
+            "release_date": "",
+            "notes": "",
+        }
+    )
     # Prodotto 3: In stock (non deve essere incluso nel calcolo vendite)
-    db.save({
-        "name": "Prodotto Stock", "size": "S", "quantity": 1,
-        "purchased_price": Decimal("20.00"), "purchased_place": "Shop",
-        "selling_place": "eBay", "selling_price": Decimal("40.00"),
-        "sold_price": None, "fees": Decimal("0.00"),
-        "sold_date": "", "status": STATUS_STOCK, "release_date": "", "notes": "",
-    })
+    db.save(
+        {
+            "name": "Prodotto Stock",
+            "size": "S",
+            "quantity": 1,
+            "purchased_price": Decimal("20.00"),
+            "purchased_place": "Shop",
+            "selling_place": "eBay",
+            "selling_price": Decimal("40.00"),
+            "sold_price": None,
+            "fees": Decimal("0.00"),
+            "sold_date": "",
+            "status": STATUS_STOCK,
+            "release_date": "",
+            "notes": "",
+        }
+    )
 
     platforms = db.get_profit_by_platform()
     assert len(platforms) == 2
@@ -297,29 +361,59 @@ def test_get_profit_by_platform(tmp_path):
 def test_get_top_profitable_products(tmp_path):
     db = InventoryDatabase(tmp_path / "inventory.db")
     # Prodotto A: profitto 100
-    db.save({
-        "name": "Nike Jordan 1", "size": "42", "quantity": 1,
-        "purchased_price": Decimal("100.00"), "purchased_place": "Shop",
-        "selling_place": "eBay", "selling_price": Decimal("200.00"),
-        "sold_price": Decimal("200.00"), "fees": Decimal("0.00"),
-        "sold_date": "2026-09-01", "status": STATUS_SOLD, "release_date": "", "notes": "",
-    })
+    db.save(
+        {
+            "name": "Nike Jordan 1",
+            "size": "42",
+            "quantity": 1,
+            "purchased_price": Decimal("100.00"),
+            "purchased_place": "Shop",
+            "selling_place": "eBay",
+            "selling_price": Decimal("200.00"),
+            "sold_price": Decimal("200.00"),
+            "fees": Decimal("0.00"),
+            "sold_date": "2026-09-01",
+            "status": STATUS_SOLD,
+            "release_date": "",
+            "notes": "",
+        }
+    )
     # Prodotto B: profitto 150 (2 pz con costo 50x2=100, incasso 260, fees totali 10 -> profitto 150)
-    db.save({
-        "name": "Rolex Submariner", "size": "UNI", "quantity": 2,
-        "purchased_price": Decimal("50.00"), "purchased_place": "Shop",
-        "selling_place": "Chrono24", "selling_price": Decimal("260.00"),
-        "sold_price": Decimal("260.00"), "fees": Decimal("10.00"),
-        "sold_date": "2026-09-02", "status": STATUS_SOLD, "release_date": "", "notes": "",
-    })
+    db.save(
+        {
+            "name": "Rolex Submariner",
+            "size": "UNI",
+            "quantity": 2,
+            "purchased_price": Decimal("50.00"),
+            "purchased_place": "Shop",
+            "selling_place": "Chrono24",
+            "selling_price": Decimal("260.00"),
+            "sold_price": Decimal("260.00"),
+            "fees": Decimal("10.00"),
+            "sold_date": "2026-09-02",
+            "status": STATUS_SOLD,
+            "release_date": "",
+            "notes": "",
+        }
+    )
     # Prodotto C: in stock (non venduto)
-    db.save({
-        "name": "Moneta Oro", "size": "UNI", "quantity": 1,
-        "purchased_price": Decimal("50.00"), "purchased_place": "Shop",
-        "selling_place": "Shop", "selling_price": Decimal("300.00"),
-        "sold_price": None, "fees": Decimal("0.00"),
-        "sold_date": "", "status": STATUS_STOCK, "release_date": "", "notes": "",
-    })
+    db.save(
+        {
+            "name": "Moneta Oro",
+            "size": "UNI",
+            "quantity": 1,
+            "purchased_price": Decimal("50.00"),
+            "purchased_place": "Shop",
+            "selling_place": "Shop",
+            "selling_price": Decimal("300.00"),
+            "sold_price": None,
+            "fees": Decimal("0.00"),
+            "sold_date": "",
+            "status": STATUS_STOCK,
+            "release_date": "",
+            "notes": "",
+        }
+    )
 
     top = db.get_top_profitable_products(limit=5)
     assert len(top) == 2
@@ -375,13 +469,23 @@ def test_multiple_quantity_single_shipping_fees(tmp_path):
 
     # Verifica nel DB
     db = InventoryDatabase(tmp_path / "inventory.db")
-    db.save({
-        "name": "Pacco 2 Prodotti", "size": "L", "quantity": 2,
-        "purchased_price": Decimal("100.00"), "purchased_place": "Shop",
-        "selling_place": "StockX", "selling_price": Decimal("250.00"),
-        "sold_price": Decimal("250.00"), "fees": Decimal("10.00"),
-        "sold_date": "2026-09-10", "status": STATUS_SOLD, "release_date": "", "notes": "",
-    })
+    db.save(
+        {
+            "name": "Pacco 2 Prodotti",
+            "size": "L",
+            "quantity": 2,
+            "purchased_price": Decimal("100.00"),
+            "purchased_place": "Shop",
+            "selling_place": "StockX",
+            "selling_price": Decimal("250.00"),
+            "sold_price": Decimal("250.00"),
+            "fees": Decimal("10.00"),
+            "sold_date": "2026-09-10",
+            "status": STATUS_SOLD,
+            "release_date": "",
+            "notes": "",
+        }
+    )
 
     t = db.totals()
     assert t["sold_profit"] == Decimal("40.00")
@@ -425,9 +529,6 @@ def test_bulk_status_move_with_selling_place(tmp_path):
     db.close()
 
 
-
-
-
 def test_cross_platform_config_app_directory(monkeypatch):
     """Verifica che app_directory gestisca correttamente bundle macOS .app e modalità standard."""
     import sys
@@ -450,9 +551,3 @@ def test_cross_platform_config_app_directory(monkeypatch):
 
     win_dir = app_directory()
     assert win_dir.as_posix().endswith("Program Files/RSM")
-
-
-
-
-
-

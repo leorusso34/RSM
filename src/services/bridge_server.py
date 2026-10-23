@@ -41,6 +41,7 @@ HOST = "127.0.0.1"
 
 class DecimalEncoder(json.JSONEncoder):
     """Encoder JSON personalizzato per gestire oggetti Decimal di Python."""
+
     def default(self, obj: Any) -> Any:
         if isinstance(obj, Decimal):
             return float(obj)
@@ -48,6 +49,7 @@ class DecimalEncoder(json.JSONEncoder):
 
 
 _thread_local = threading.local()
+
 
 def get_thread_db() -> InventoryDatabase:
     """Restituisce un'istanza thread-safe di InventoryDatabase per il thread corrente."""
@@ -67,6 +69,7 @@ _transcription_status = {
     "text": "",
     "error": "",
 }
+
 
 def _start_voice_recording() -> tuple[bool, str]:
     global _active_transcriber
@@ -98,6 +101,7 @@ def _start_voice_recording() -> tuple[bool, str]:
 
         try:
             from src.speech_helper import SpeechTranscriber
+
             api_key = os.environ.get("GEMINI_API_KEY", "")
             _active_transcriber = SpeechTranscriber()
             _active_transcriber.start(
@@ -114,6 +118,7 @@ def _start_voice_recording() -> tuple[bool, str]:
             _transcription_status["is_processing"] = False
             _transcription_status["error"] = str(exc)
             return False, str(exc)
+
 
 def _stop_voice_recording() -> tuple[bool, str]:
     with _speech_lock:
@@ -156,6 +161,7 @@ _update_state: dict[str, Any] = {
 
 def _run_update_worker(download_url: str) -> None:
     try:
+
         def on_progress(fraction: float) -> None:
             with _updater_lock:
                 _update_state["status"] = "downloading"
@@ -194,15 +200,17 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if not origin:
             return True
         o = origin.lower()
-        return o.startswith((
-            "https://tauri.localhost",
-            "http://tauri.localhost",
-            "tauri://localhost",
-            "http://localhost",
-            "https://localhost",
-            "http://127.0.0.1",
-            "https://127.0.0.1",
-        ))
+        return o.startswith(
+            (
+                "https://tauri.localhost",
+                "http://tauri.localhost",
+                "tauri://localhost",
+                "http://localhost",
+                "https://localhost",
+                "http://127.0.0.1",
+                "https://127.0.0.1",
+            )
+        )
 
     def _set_cors_headers(self) -> None:
         origin = self.headers.get("Origin", "")
@@ -254,12 +262,14 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         # Health Check
         if path == "/api/health":
             products = self.db.all_products()
-            self._send_json({
-                "status": "online",
-                "app": APP_NAME,
-                "version": APP_VERSION,
-                "database_products_count": len(products),
-            })
+            self._send_json(
+                {
+                    "status": "online",
+                    "app": APP_NAME,
+                    "version": APP_VERSION,
+                    "database_products_count": len(products),
+                }
+            )
             return
 
         # Controllo Versione
@@ -270,11 +280,13 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         # Stato microfono / trascrizione vocale
         if path == "/api/speech/status":
             with _speech_lock:
-                self._send_json({
-                    "success": True,
-                    "is_recording": _transcription_status["is_recording"],
-                    "is_processing": _transcription_status["is_processing"],
-                })
+                self._send_json(
+                    {
+                        "success": True,
+                        "is_recording": _transcription_status["is_recording"],
+                        "is_processing": _transcription_status["is_processing"],
+                    }
+                )
             return
 
         # Lista Prodotti
@@ -287,8 +299,8 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 sale_price = float(p.get("sold_price") or p.get("selling_price") or 0)
                 fees = float(p.get("fees") or 0)
                 st = p.get("status") or STATUS_STOCK
-                is_completed = (p.get("is_completed") == 1)
-                is_active_sale = (st == STATUS_SOLD and not is_completed)
+                is_completed = p.get("is_completed") == 1
+                is_active_sale = st == STATUS_SOLD and not is_completed
 
                 if is_completed:
                     status_key = "completed"
@@ -303,29 +315,31 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     status_key = "stock"
                     status_label = "In Stock"
 
-                has_sale_data = (is_completed or is_active_sale)
+                has_sale_data = is_completed or is_active_sale
                 total_cost = cost * qty
                 profit = (sale_price - total_cost - fees) if has_sale_data else 0.0
                 roi = (profit / total_cost * 100) if (total_cost > 0 and has_sale_data) else 0.0
 
-                formatted.append({
-                    "id": p.get("id"),
-                    "name": p.get("name") or "",
-                    "size": p.get("size") or "-",
-                    "quantity": qty,
-                    "purchasedPrice": cost,
-                    "purchasedPlace": p.get("purchased_place") or "",
-                    "sellingPlace": p.get("selling_place") or "",
-                    "salePrice": sale_price if (sale_price > 0) else None,
-                    "fees": fees,
-                    "profit": round(profit, 2) if has_sale_data else None,
-                    "roi": round(roi, 1) if has_sale_data else None,
-                    "status": status_key,
-                    "statusLabel": status_label,
-                    "date": p.get("sold_date") or p.get("created_at") or "",
-                    "notes": p.get("notes") or "",
-                    "bundle_id": p.get("bundle_id") or "",
-                })
+                formatted.append(
+                    {
+                        "id": p.get("id"),
+                        "name": p.get("name") or "",
+                        "size": p.get("size") or "-",
+                        "quantity": qty,
+                        "purchasedPrice": cost,
+                        "purchasedPlace": p.get("purchased_place") or "",
+                        "sellingPlace": p.get("selling_place") or "",
+                        "salePrice": sale_price if (sale_price > 0) else None,
+                        "fees": fees,
+                        "profit": round(profit, 2) if has_sale_data else None,
+                        "roi": round(roi, 1) if has_sale_data else None,
+                        "status": status_key,
+                        "statusLabel": status_label,
+                        "date": p.get("sold_date") or p.get("created_at") or "",
+                        "notes": p.get("notes") or "",
+                        "bundle_id": p.get("bundle_id") or "",
+                    }
+                )
             self._send_json({"success": True, "count": len(formatted), "data": formatted})
             return
 
@@ -343,24 +357,26 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     place = p.get("selling_place") or "Altro"
                     platforms_count[place] = platforms_count.get(place, 0) + 1
 
-            self._send_json({
-                "success": True,
-                "kpi": {
-                    "totalInvested": float(totals["committed_total"]),
-                    "totalStockValue": float(totals["stock_total"]),
-                    "totalProfit": float(totals["sold_profit"]),
-                    "avgRoi": float(totals["sold_roi"]),
-                    "completedSalesCount": totals["sold_count_completed"],
-                    "activeSalesCount": totals["sold_count_active"],
-                    "stockCount": totals["stock_count"],
-                    "preorderCount": totals["preorder_count"],
-                    "allCount": totals["all_count"],
-                },
-                "platforms": platforms_count,
-                "monthlySales": monthly_sales,
-                "platformProfits": platform_profits,
-                "topProducts": top_products,
-            })
+            self._send_json(
+                {
+                    "success": True,
+                    "kpi": {
+                        "totalInvested": float(totals["committed_total"]),
+                        "totalStockValue": float(totals["stock_total"]),
+                        "totalProfit": float(totals["sold_profit"]),
+                        "avgRoi": float(totals["sold_roi"]),
+                        "completedSalesCount": totals["sold_count_completed"],
+                        "activeSalesCount": totals["sold_count_active"],
+                        "stockCount": totals["stock_count"],
+                        "preorderCount": totals["preorder_count"],
+                        "allCount": totals["all_count"],
+                    },
+                    "platforms": platforms_count,
+                    "monthlySales": monthly_sales,
+                    "platformProfits": platform_profits,
+                    "topProducts": top_products,
+                }
+            )
             return
 
         # Stima prezzi di mercato eBay
@@ -372,6 +388,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 return
             try:
                 from src.ebay_api import fetch_market_prices
+
                 ebay_res = fetch_market_prices(name, size)
                 self._send_json({"success": True, "data": ebay_res})
             except Exception as e:  # noqa: BLE001
@@ -393,21 +410,25 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if path == "/api/settings":
             email_addr = self.db.get_setting("email_sync_address", "")
             has_pwd = bool(self.db.get_setting("email_sync_app_password", ""))
-            self._send_json({
-                "success": True,
-                "email_sync_address": email_addr,
-                "has_app_password": has_pwd,
-            })
+            self._send_json(
+                {
+                    "success": True,
+                    "email_sync_address": email_addr,
+                    "has_app_password": has_pwd,
+                }
+            )
             return
 
         # Luoghi e Marketplace per Autocompletamento (Punto 7)
         if path == "/api/places":
             purchased, selling = self.db.get_distinct_places()
-            self._send_json({
-                "success": True,
-                "purchased": purchased,
-                "selling": selling,
-            })
+            self._send_json(
+                {
+                    "success": True,
+                    "purchased": purchased,
+                    "selling": selling,
+                }
+            )
             return
 
         # Verifica disponibilità aggiornamenti (Punto 8)
@@ -416,17 +437,20 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 import importlib
 
                 import src.config
+
                 importlib.reload(src.config)
                 curr_ver = params.get("current_version", [src.config.APP_VERSION])[0]
                 update_info = check_for_updates(current_version=curr_ver)
                 with _updater_lock:
                     _update_state["latest_info"] = update_info
-                self._send_json({
-                    "success": True,
-                    "has_update": update_info is not None,
-                    "current_version": curr_ver,
-                    "update": update_info,
-                })
+                self._send_json(
+                    {
+                        "success": True,
+                        "has_update": update_info is not None,
+                        "current_version": curr_ver,
+                        "update": update_info,
+                    }
+                )
             except Exception as e:  # noqa: BLE001
                 self._send_error(f"Errore verifica aggiornamenti: {e}")
             return
@@ -434,15 +458,17 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         # Stato avanzamento download/installazione aggiornamento (Punto 8)
         if path == "/api/updates/progress":
             with _updater_lock:
-                self._send_json({
-                    "success": True,
-                    "status": _update_state["status"],
-                    "progress": _update_state["progress"],
-                    "message": _update_state["message"],
-                    "error": _update_state["error"],
-                    "has_update": _update_state["latest_info"] is not None,
-                    "update": _update_state["latest_info"],
-                })
+                self._send_json(
+                    {
+                        "success": True,
+                        "status": _update_state["status"],
+                        "progress": _update_state["progress"],
+                        "message": _update_state["message"],
+                        "error": _update_state["error"],
+                        "has_update": _update_state["latest_info"] is not None,
+                        "update": _update_state["latest_info"],
+                    }
+                )
             return
 
         self._send_error("Endpoint non trovato", status=HTTPStatus.NOT_FOUND)
@@ -480,6 +506,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 return
             try:
                 from src.ai_agent import parse_product_with_ai
+
                 parsed = parse_product_with_ai(prompt)
                 self._send_json({"success": True, "data": parsed})
             except Exception as e:  # noqa: BLE001
@@ -499,21 +526,24 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     mark_emails_as_read,
                     parse_order_email_with_gemini,
                 )
+
                 emails = fetch_unread_order_emails(email_addr, app_pwd, max_emails=10)
                 imported = []
                 read_uids = []
                 for em in emails:
                     extracted = parse_order_email_with_gemini(em)
                     for prod in extracted:
-                        new_id = self.db.save({
-                            "name": prod.get("name", "Prodotto da Email"),
-                            "size": prod.get("size", "UNI"),
-                            "quantity": int(prod.get("quantity", 1)),
-                            "purchased_price": Decimal(str(prod.get("purchased_price", 0))),
-                            "purchased_place": prod.get("purchased_place", "Email"),
-                            "status": STATUS_PREORDER,
-                            "notes": f"Email: {em.get('subject', '')}",
-                        })
+                        new_id = self.db.save(
+                            {
+                                "name": prod.get("name", "Prodotto da Email"),
+                                "size": prod.get("size", "UNI"),
+                                "quantity": int(prod.get("quantity", 1)),
+                                "purchased_price": Decimal(str(prod.get("purchased_price", 0))),
+                                "purchased_place": prod.get("purchased_place", "Email"),
+                                "status": STATUS_PREORDER,
+                                "notes": f"Email: {em.get('subject', '')}",
+                            }
+                        )
                         imported.append({"id": new_id, "name": prod.get("name")})
                     if em.get("uid"):
                         read_uids.append(em.get("uid"))
@@ -527,12 +557,17 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         # Test connessione Gmail
         if path == "/api/test-email-connection":
             email_addr = (body.get("email_sync_address") or self.db.get_setting("email_sync_address", "")).strip()
-            app_pwd = (body.get("email_sync_app_password") or self.db.get_setting("email_sync_app_password", "")).replace(" ", "").strip()
+            app_pwd = (
+                (body.get("email_sync_app_password") or self.db.get_setting("email_sync_app_password", ""))
+                .replace(" ", "")
+                .strip()
+            )
             if not email_addr or not app_pwd:
                 self._send_error("Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri.")
                 return
             try:
                 from src.email_sync import test_gmail_connection
+
                 ok, msg = test_gmail_connection(email_addr, app_pwd)
                 self._send_json({"success": ok, "message": msg})
             except Exception as e:  # noqa: BLE001
@@ -543,6 +578,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if path == "/api/ebay-open-browser":
             try:
                 from src.ebay_api import open_search_in_browser
+
                 name = str(body.get("name", "")).strip()
                 size = str(body.get("size", "")).strip()
                 if size.upper() == "UNI":
@@ -556,7 +592,11 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         # Scansione Email Gmail con anteprima
         if path == "/api/scan-emails":
             email_addr = (body.get("email_sync_address") or self.db.get_setting("email_sync_address", "")).strip()
-            app_pwd = (body.get("email_sync_app_password") or self.db.get_setting("email_sync_app_password", "")).replace(" ", "").strip()
+            app_pwd = (
+                (body.get("email_sync_app_password") or self.db.get_setting("email_sync_app_password", ""))
+                .replace(" ", "")
+                .strip()
+            )
             if not email_addr or not app_pwd:
                 self._send_error("Configura prima l'indirizzo Gmail e la Password per le App.")
                 return
@@ -565,28 +605,27 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     fetch_unread_order_emails,
                     parse_order_email_with_gemini,
                 )
+
                 emails = fetch_unread_order_emails(email_addr, app_pwd, max_emails=15)
                 extracted_items = []
                 for em in emails:
                     try:
                         parsed = parse_order_email_with_gemini(em)
                         for prod in parsed:
-                            extracted_items.append({
-                                "name": prod.get("name", "Prodotto da Email"),
-                                "size": prod.get("size", "UNI"),
-                                "quantity": int(prod.get("quantity", 1)),
-                                "price": float(prod.get("purchased_price", 0)),
-                                "store": prod.get("purchased_place", "Email"),
-                                "date": prod.get("release_date") or em.get("date", ""),
-                                "uid": em.get("uid"),
-                            })
+                            extracted_items.append(
+                                {
+                                    "name": prod.get("name", "Prodotto da Email"),
+                                    "size": prod.get("size", "UNI"),
+                                    "quantity": int(prod.get("quantity", 1)),
+                                    "price": float(prod.get("purchased_price", 0)),
+                                    "store": prod.get("purchased_place", "Email"),
+                                    "date": prod.get("release_date") or em.get("date", ""),
+                                    "uid": em.get("uid"),
+                                }
+                            )
                     except Exception as err:  # noqa: BLE001
                         print(f"Errore parsing email UID {em.get('uid')}: {err}")
-                self._send_json({
-                    "success": True,
-                    "emails_scanned": len(emails),
-                    "items": extracted_items
-                })
+                self._send_json({"success": True, "emails_scanned": len(emails), "items": extracted_items})
             except Exception as e:  # noqa: BLE001
                 self._send_error(f"Scansione fallita: {e}")
             return
@@ -599,19 +638,22 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             app_pwd = (self.db.get_setting("email_sync_app_password", "")).replace(" ", "").strip()
             saved_count = 0
             for item in items:
-                self.db.save({
-                    "name": str(item.get("name", "Prodotto Email")).strip(),
-                    "size": str(item.get("size", "UNI")).strip(),
-                    "quantity": int(item.get("quantity", 1)),
-                    "purchased_price": Decimal(str(item.get("price", 0))),
-                    "purchased_place": str(item.get("store", "Email")).strip(),
-                    "status": STATUS_PREORDER,
-                    "notes": "Importato automaticamente da email di ordine.",
-                })
+                self.db.save(
+                    {
+                        "name": str(item.get("name", "Prodotto Email")).strip(),
+                        "size": str(item.get("size", "UNI")).strip(),
+                        "quantity": int(item.get("quantity", 1)),
+                        "purchased_price": Decimal(str(item.get("price", 0))),
+                        "purchased_place": str(item.get("store", "Email")).strip(),
+                        "status": STATUS_PREORDER,
+                        "notes": "Importato automaticamente da email di ordine.",
+                    }
+                )
                 saved_count += 1
             if uids and email_addr and app_pwd:
                 try:
                     from src.email_sync import mark_emails_as_read
+
                     mark_emails_as_read(email_addr, app_pwd, uids)
                 except Exception as e:  # noqa: BLE001
                     print(f"Errore marcatura email lette: {e}")
@@ -623,15 +665,17 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             records = body.get("products", [])
             inserted = 0
             for p in records:
-                self.db.save({
-                    "name": str(p.get("name", "")).strip(),
-                    "size": str(p.get("size", "UNI")).strip(),
-                    "quantity": int(p.get("quantity", 1)),
-                    "purchased_price": Decimal(str(p.get("purchased_price", 0))),
-                    "purchased_place": str(p.get("purchased_place", "")).strip(),
-                    "status": p.get("status", STATUS_STOCK),
-                    "notes": p.get("notes", "Generato automaticamente tramite AI."),
-                })
+                self.db.save(
+                    {
+                        "name": str(p.get("name", "")).strip(),
+                        "size": str(p.get("size", "UNI")).strip(),
+                        "quantity": int(p.get("quantity", 1)),
+                        "purchased_price": Decimal(str(p.get("purchased_price", 0))),
+                        "purchased_place": str(p.get("purchased_place", "")).strip(),
+                        "status": p.get("status", STATUS_STOCK),
+                        "notes": p.get("notes", "Generato automaticamente tramite AI."),
+                    }
+                )
                 inserted += 1
             self._send_json({"success": True, "inserted_count": inserted})
             return
@@ -663,7 +707,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             purchased_raw = body.get("purchasedPrice", 0)
             purchased_price = Decimal(str(purchased_raw or 0))
             sale_price_raw = body.get("salePrice")
-            selling_price = Decimal(str(sale_price_raw)) if (sale_price_raw is not None and sale_price_raw != "") else None
+            selling_price = (
+                Decimal(str(sale_price_raw)) if (sale_price_raw is not None and sale_price_raw != "") else None
+            )
             sold_price = selling_price if (is_completed or status_input == "active-sale") else None
             fees_raw = body.get("fees", 0)
             fees = Decimal(str(fees_raw or 0))
@@ -871,13 +917,15 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                             new_sold["sold_date"] = extra.get("sold_date", "")
                             new_sold["bundle_id"] = ""
                             new_id = self.db.save(new_sold)
-                            self._send_json({
-                                "success": True,
-                                "updated_count": 1,
-                                "partial": True,
-                                "new_id": new_id,
-                                "remaining": remaining,
-                            })
+                            self._send_json(
+                                {
+                                    "success": True,
+                                    "updated_count": 1,
+                                    "partial": True,
+                                    "new_id": new_id,
+                                    "remaining": remaining,
+                                }
+                            )
                             return
 
                     extra["bundle_id"] = str(uuid.uuid4()) if len(ids) > 1 else ""
@@ -990,12 +1038,14 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 return
             self.db.add_custom_place(name)
             purchased, selling = self.db.get_distinct_places()
-            self._send_json({
-                "success": True,
-                "name": name,
-                "purchased": purchased,
-                "selling": selling,
-            })
+            self._send_json(
+                {
+                    "success": True,
+                    "name": name,
+                    "purchased": purchased,
+                    "selling": selling,
+                }
+            )
             return
 
         # Eliminazione Luogo/Marketplace Personalizzato (Punto 7)
@@ -1006,12 +1056,14 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 return
             self.db.delete_custom_place(name)
             purchased, selling = self.db.get_distinct_places()
-            self._send_json({
-                "success": True,
-                "name": name,
-                "purchased": purchased,
-                "selling": selling,
-            })
+            self._send_json(
+                {
+                    "success": True,
+                    "name": name,
+                    "purchased": purchased,
+                    "selling": selling,
+                }
+            )
             return
 
         # Avvio download e applicazione aggiornamento (Punto 8)
@@ -1090,7 +1142,11 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             if sold_price_raw is None:
                 sold_price = existing.get("sold_price") if (is_completed or status_input == "active-sale") else None
             else:
-                sold_price = Decimal(str(sold_price_raw)) if (sold_price_raw != "" and (is_completed or status_input == "active-sale")) else None
+                sold_price = (
+                    Decimal(str(sold_price_raw))
+                    if (sold_price_raw != "" and (is_completed or status_input == "active-sale"))
+                    else None
+                )
 
             fees_raw = body.get("fees")
             if fees_raw is None:
@@ -1148,12 +1204,14 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 return
             self.db.delete_custom_place(name)
             purchased, selling = self.db.get_distinct_places()
-            self._send_json({
-                "success": True,
-                "name": name,
-                "purchased": purchased,
-                "selling": selling,
-            })
+            self._send_json(
+                {
+                    "success": True,
+                    "name": name,
+                    "purchased": purchased,
+                    "selling": selling,
+                }
+            )
             return
 
         self._send_error("Endpoint DELETE non trovato", status=HTTPStatus.NOT_FOUND)
