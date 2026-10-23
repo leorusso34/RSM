@@ -1,5 +1,5 @@
 """
-Modulo ottimizzato per il riconoscimento vocale rapido tramite Gemini 3.1 Flash Lite e Google Speech API.
+Modulo ottimizzato per il riconoscimento vocale rapido tramite Gemini 2.5 Flash e Google Speech API.
 Usa sounddevice per la cattura a 16kHz Mono e supporta interruzione istantanea e trimming del silenzio.
 """
 
@@ -9,7 +9,7 @@ from collections.abc import Callable
 
 
 def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> str | None:
-    """Tenta la trascrizione fedele e veloce dell'audio tramite l'API Gemini 3.1 Flash Lite."""
+    """Tenta la trascrizione fedele e veloce dell'audio tramite l'API Gemini 2.5 Flash."""
     import base64
     import http.client
     import json
@@ -17,26 +17,20 @@ def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> str | None:
     try:
         b64_audio = base64.b64encode(wav_bytes).decode("utf-8")
         host = "generativelanguage.googleapis.com"
-        path = f"/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
+        path = f"/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
 
         payload = {
-            "contents": [{
-                "parts": [
-                    {
-                        "inlineData": {
-                            "mimeType": "audio/wav",
-                            "data": b64_audio
-                        }
-                    },
-                    {
-                        "text": "Trascrivi l'audio in testo italiano. Restituisci SOLO le parole pronunciate, senza spiegazioni."
-                    }
-                ]
-            }],
-            "generationConfig": {
-                "temperature": 0.0,
-                "maxOutputTokens": 250
-            }
+            "contents": [
+                {
+                    "parts": [
+                        {"inlineData": {"mimeType": "audio/wav", "data": b64_audio}},
+                        {
+                            "text": "Trascrivi l'audio in testo italiano. Restituisci SOLO le parole pronunciate, senza spiegazioni."
+                        },
+                    ]
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 250},
         }
 
         data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
@@ -78,7 +72,7 @@ class SpeechTranscriber:
         on_listening: Callable[[], None],
         api_key: str = "",
         max_duration: int = 20,
-        language: str = "it-IT"
+        language: str = "it-IT",
     ) -> None:
         """Avvia la registrazione in background."""
         if self._is_recording:
@@ -108,12 +102,7 @@ class SpeechTranscriber:
                 sample_rate = 16000
                 on_listening()
 
-                with sd.InputStream(
-                    samplerate=sample_rate,
-                    channels=1,
-                    dtype="int16",
-                    callback=_audio_callback
-                ):
+                with sd.InputStream(samplerate=sample_rate, channels=1, dtype="int16", callback=_audio_callback):
                     self._stop_event.wait(timeout=max_duration)
 
                 self._is_recording = False
@@ -139,7 +128,7 @@ class SpeechTranscriber:
                 wav_io.write(wav_buffer, sample_rate, audio_data)
                 wav_bytes = wav_buffer.getvalue()
 
-                # 1. Prova prima con Gemini 3.1 Flash Lite
+                # 1. Prova prima con Gemini 2.5 Flash
                 if api_key:
                     gemini_text = _transcribe_with_gemini(wav_bytes, api_key)
                     if gemini_text:
@@ -157,8 +146,15 @@ class SpeechTranscriber:
                 self._is_recording = False
                 name = type(e).__name__
                 msg = str(e)
-                if "11001" in msg or "getaddrinfo" in msg or "connection failed" in msg.lower() or "RequestError" in name:
-                    on_error("Connessione internet non disponibile per il riconoscimento vocale. Puoi scrivere direttamente nel testo.")
+                if (
+                    "11001" in msg
+                    or "getaddrinfo" in msg
+                    or "connection failed" in msg.lower()
+                    or "RequestError" in name
+                ):
+                    on_error(
+                        "Connessione internet non disponibile per il riconoscimento vocale. Puoi scrivere direttamente nel testo."
+                    )
                 elif "UnknownValueError" in name or "Could not understand" in msg:
                     on_error("Nessun parlato chiaro rilevato. Riprova parlando più vicino al microfono.")
                 elif "Invalid" in msg or "device" in msg.lower():
@@ -180,7 +176,7 @@ def transcribe_from_microphone(
     on_error: Callable[[str], None],
     on_listening: Callable[[], None],
     api_key: str = "",
-    language: str = "it-IT"
+    language: str = "it-IT",
 ) -> SpeechTranscriber:
     """Helper per avviare la trascrizione vocale restituendo l'istanza controllabile."""
     transcriber = SpeechTranscriber()

@@ -90,6 +90,7 @@ def test_check_for_updates_via_worker_proxy(monkeypatch):
 
 def test_check_for_updates_platform_asset_selection(monkeypatch):
     import sys
+
     monkeypatch.setattr("src.updater.WORKER_URL", "https://rsm-proxy.test.workers.dev")
     monkeypatch.setattr("src.updater.RSM_AUTH_KEY", "secret123")
     fake_release = {
@@ -131,9 +132,9 @@ def test_check_for_updates_platform_asset_selection(monkeypatch):
         assert "111" in mac_res["download_url"]
 
 
-
 def test_ebay_fetch_market_prices_proxy(monkeypatch):
     from src.ebay_api import fetch_market_prices
+
     monkeypatch.setattr("src.ebay_api.WORKER_URL", "https://rsm-proxy.test.workers.dev")
     monkeypatch.setattr("src.ebay_api.RSM_AUTH_KEY", "secret123")
 
@@ -157,8 +158,28 @@ def test_ebay_fetch_market_prices_proxy(monkeypatch):
         assert res["max"] == 120.0
 
 
+def test_ebay_fetch_market_prices_html_error(monkeypatch):
+    from src.ebay_api import fetch_market_prices
+
+    monkeypatch.setattr("src.ebay_api.WORKER_URL", "https://rsm-proxy.test.workers.dev")
+    monkeypatch.setattr("src.ebay_api.RSM_AUTH_KEY", "secret123")
+
+    mock_resp = MagicMock()
+    mock_resp.status = 502
+    mock_resp.read.return_value = b"<!DOCTYPE html><html><body>502 Bad Gateway</body></html>"
+    mock_conn = MagicMock()
+    mock_conn.getresponse.return_value = mock_resp
+
+    with patch("http.client.HTTPSConnection", return_value=mock_conn):
+        import pytest
+
+        with pytest.raises(RuntimeError, match="Risposta non valida dal server proxy \\(HTTP 502\\)"):
+            fetch_market_prices("Nike Dunk", "42")
+
+
 def test_ai_parse_product_proxy(monkeypatch):
     from src.ai_agent import parse_product_with_ai
+
     monkeypatch.setattr("src.ai_agent.WORKER_URL", "https://rsm-proxy.test.workers.dev")
     monkeypatch.setattr("src.ai_agent.RSM_AUTH_KEY", "secret123")
 
@@ -168,17 +189,19 @@ def test_ai_parse_product_proxy(monkeypatch):
                 "content": {
                     "parts": [
                         {
-                            "text": json.dumps({
-                                "products": [
-                                    {
-                                        "name": "Jordan 4",
-                                        "size": "43",
-                                        "quantity": 1,
-                                        "purchased_price": 200.0,
-                                        "status": "In Stock",
-                                    }
-                                ]
-                            })
+                            "text": json.dumps(
+                                {
+                                    "products": [
+                                        {
+                                            "name": "Jordan 4",
+                                            "size": "43",
+                                            "quantity": 1,
+                                            "purchased_price": 200.0,
+                                            "status": "In Stock",
+                                        }
+                                    ]
+                                }
+                            )
                         }
                     ]
                 }
@@ -231,6 +254,7 @@ def test_source_root_extraction_resolution(tmp_path):
 
 def test_nested_zip_extraction(tmp_path):
     import zipfile
+
     inner_zip_path = tmp_path / "inner.zip"
     with zipfile.ZipFile(inner_zip_path, "w") as z:
         z.writestr("RSM/RSM.exe", "fake_binary")
@@ -253,6 +277,3 @@ def test_nested_zip_extraction(tmp_path):
         nested_zips[0].unlink(missing_ok=True)
 
     assert (extract_dir / "RSM" / "RSM.exe").is_file()
-
-
-

@@ -25,6 +25,7 @@ EBAY_SEARCH_URL = "https://www.ebay.it/sch/i.html"
 # URL di ricerca pubblica (nessuna autenticazione richiesta)
 # ---------------------------------------------------------------------------
 
+
 def build_search_url(name: str, size: str = "") -> str:
     """
     Costruisce l'URL di ricerca su eBay.it per un prodotto.
@@ -63,6 +64,7 @@ def open_search_in_browser(name: str, size: str = "") -> None:
 # ---------------------------------------------------------------------------
 # Cloudflare Worker Proxy — ricerca prezzi
 # ---------------------------------------------------------------------------
+
 
 def fetch_market_prices(
     name: str,
@@ -117,8 +119,12 @@ def fetch_market_prices(
     finally:
         conn.close()
 
-    data = json.loads(raw)
-    if resp.status != 200:
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        data = {"error": f"Risposta non valida dal server proxy (HTTP {resp.status})"}
+
+    if resp.status != 200 or "error" in data:
         error = data.get("error") or data.get("errors", [{}])[0].get("message", "Errore sconosciuto")
         raise RuntimeError(f"Errore Proxy eBay ({resp.status}): {error}")
 
@@ -140,8 +146,8 @@ def fetch_market_prices(
 
     return {
         "count": len(prices),
-        "min":   round(min(prices), 2),
-        "avg":   round(sum(prices) / len(prices), 2),
-        "max":   round(max(prices), 2),
+        "min": round(min(prices), 2),
+        "avg": round(sum(prices) / len(prices), 2),
+        "max": round(max(prices), 2),
         "query": query,
     }
