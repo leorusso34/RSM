@@ -1,6 +1,6 @@
 [package]
 name = "rsm-desktop"
-version = "1.6.1"
+version = "1.6.2"
 description = "RSM - Reseller Stock & Sales Manager Next-Gen UI"
 authors = ["Leonardo Russo"]
 edition = "2021"
