@@ -3,7 +3,7 @@
 Regole operative tassative:
 1. Zero-Code-Touch: nessun file dell'applicazione viene modificato durante il test.
 2. Fail-Fast per Livello:
-   Livello 1 (Smoke) -> se verde -> Livello 2 (CRUD) -> se verde -> Livello 3 (Ciclo Vendita) -> se verde -> Livello 4 (Avanzato).
+   Livello 1 (Smoke) -> se verde -> Livello 2 (CRUD) -> se verde -> Livello 3 (Ciclo Vendita) -> se verde -> Livello 4 (Avanzato) -> se verde -> Livello 5 (Vendita Multipla).
    Se un livello fallisce, il runner si arresta immediatamente e genera il report HTML.
 3. Isolamento Sandbox: server effimero su porta 28475 con DB in %TEMP%.
 4. Reportistica Multimediale: C:\\Users\\<user>\\Desktop\\E2E_REPORT_RSM.html con video e screenshot in Base64.
@@ -29,6 +29,7 @@ from tests.e2e.test_level1_smoke import run_level1_smoke_checks
 from tests.e2e.test_level2_crud import run_level2_crud_checks
 from tests.e2e.test_level3_flow import run_level3_flow_checks
 from tests.e2e.test_level4_advanced import run_level4_advanced_checks
+from tests.e2e.test_level5_bulk import run_level5_bulk_checks
 
 
 def extract_error_info(exc: Exception) -> tuple[str, str | None, int | None]:
@@ -58,8 +59,8 @@ def main() -> int:
         "--level",
         "-l",
         type=int,
-        choices=[1, 2, 3, 4],
-        help="Esegue esclusivamente il livello indicato (1: Smoke, 2: CRUD, 3: Ciclo Vendita, 4: Avanzato)",
+        choices=[1, 2, 3, 4, 5],
+        help="Esegue esclusivamente il livello indicato (1: Smoke, 2: CRUD, 3: Ciclo Vendita, 4: Avanzato, 5: Vendita Multipla)",
     )
     parser.add_argument(
         "--output",
@@ -76,7 +77,7 @@ def main() -> int:
     print("================================================================================")
     print("🚀 [RSM E2E] AVVIO SUITE DI COLLAUDO AUTOMATIZZATA (CHROMIUM HEADLESS)")
     print(
-        f"📍 Modalità: {'Cascata Completa (Livelli 1 -> 2 -> 3 -> 4)' if not args.level else f'Livello Singolo ({args.level})'}"
+        f"📍 Modalità: {'Cascata Completa (Livelli 1 -> 2 -> 3 -> 4 -> 5)' if not args.level else f'Livello Singolo ({args.level})'}"
     )
     print("🛡️  Regole: Zero-Code-Touch | Isolamento Sandbox :28475 | Fail-Fast per Livello")
     print(f"📄 Report Target: {report_target}")
@@ -293,6 +294,61 @@ def main() -> int:
                     LevelResult(
                         level_id=4,
                         name="Selezione Multipla, Pillola Flottante, Filtri & Eliminazione",
+                        status="SKIPPED",
+                        details=[
+                            "Livello saltato automaticamente a causa del fallimento di un livello precedente (Fail-Fast)."
+                        ],
+                    )
+                )
+
+            # ------------------------------------------------------------------
+            # LIVELLO 5: VENDITA MULTIPLA, BUNDLE & PILLOLA FLOTTANTE CUMULATIVA
+            # ------------------------------------------------------------------
+            if (args.level is None and not has_failed) or args.level == 5:
+                print("🔵 [LIVELLO 5] Esecuzione: Vendita Multipla Massiva, Bundle & Pillola Cumulativa...")
+                start_t = time.time()
+                mgr5 = E2EContextManager(playwright, "level5_bulk")
+                try:
+                    with mgr5 as (page, console_errors):
+                        chk5 = run_level5_bulk_checks(page, console_errors)
+
+                    elapsed = time.time() - start_t
+                    res5 = LevelResult(
+                        level_id=5,
+                        name="Vendita Multipla (Bulk Sale), Bundle & Pillola Cumulativa",
+                        status="PASSED",
+                        duration=elapsed,
+                        screenshot_path=chk5["screenshot_path"],
+                        video_path=mgr5.final_video_path or VIDEOS_DIR / "level5_bulk.webm",
+                        details=chk5["details"],
+                    )
+                    results.append(res5)
+                    print(
+                        f"   ✅ LIVELLO 5 SUPERATO in {elapsed:.2f}s (bulk sale, aggregazioni pillola e bundle validati)\n"
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    elapsed = time.time() - start_t
+                    err_msg, f_path, line_no = extract_error_info(exc)
+                    res5 = LevelResult(
+                        level_id=5,
+                        name="Vendita Multipla (Bulk Sale), Bundle & Pillola Cumulativa",
+                        status="FAILED",
+                        duration=elapsed,
+                        error_message=err_msg,
+                        file_path=f_path,
+                        line_number=line_no,
+                        video_path=mgr5.final_video_path or VIDEOS_DIR / "level5_bulk.webm",
+                        details=["Fallimento durante la vendita multipla o calcolo aggregato nel Livello 5."],
+                    )
+                    results.append(res5)
+                    has_failed = True
+                    print(f"   ❌ LIVELLO 5 FALLITO in {elapsed:.2f}s:")
+                    print(f"      {err_msg}\n")
+            elif args.level is None and has_failed:
+                results.append(
+                    LevelResult(
+                        level_id=5,
+                        name="Vendita Multipla (Bulk Sale), Bundle & Pillola Cumulativa",
                         status="SKIPPED",
                         details=[
                             "Livello saltato automaticamente a causa del fallimento di un livello precedente (Fail-Fast)."
