@@ -3245,6 +3245,17 @@ async function openEmailSyncModal() {
       if (data.email_sync_address) {
         document.getElementById("email-sync-address").value = data.email_sync_address;
       }
+      const pwdInput = document.getElementById("email-sync-pwd");
+      if (pwdInput) {
+        if (data.has_app_password) {
+          pwdInput.placeholder = "•••••••••••••••• (Password già salvata)";
+          pwdInput.dataset.hasSaved = "true";
+        } else {
+          pwdInput.placeholder = "Inserisci password a 16 caratteri";
+          pwdInput.dataset.hasSaved = "false";
+        }
+        pwdInput.value = "";
+      }
     }
   } catch (_) {}
 }
@@ -3258,22 +3269,34 @@ function toggleEmailPwdVisibility(show) {
 
 async function saveEmailCredentials() {
   const email = document.getElementById("email-sync-address").value.trim();
-  const pwd = document.getElementById("email-sync-pwd").value.replace(/\s+/g, "").trim();
+  const pwdInput = document.getElementById("email-sync-pwd");
+  const pwd = pwdInput ? pwdInput.value.replace(/\s+/g, "").trim() : "";
+  const hasSaved = pwdInput && pwdInput.dataset.hasSaved === "true";
 
-  if (!email || !pwd) {
+  if (!email || (!pwd && !hasSaved)) {
     showToast("Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri.");
     return;
+  }
+
+  const payload = { email_sync_address: email };
+  if (pwd) {
+    payload.email_sync_app_password = pwd;
   }
 
   try {
     const res = await callApi("/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email_sync_address: email, email_sync_app_password: pwd })
+      body: JSON.stringify(payload)
     });
     const json = await res.json();
     if (json.success) {
       showToast("Credenziali email salvate con successo nel database!");
+      if (pwdInput && pwd) {
+        pwdInput.dataset.hasSaved = "true";
+        pwdInput.placeholder = "•••••••••••••••• (Password già salvata)";
+        pwdInput.value = "";
+      }
     } else {
       showToast(`Errore salvataggio: ${json.error}`);
     }
@@ -3284,20 +3307,26 @@ async function saveEmailCredentials() {
 
 async function testEmailConnection() {
   const email = document.getElementById("email-sync-address").value.trim();
-  const pwd = document.getElementById("email-sync-pwd").value.replace(/\s+/g, "").trim();
+  const pwdInput = document.getElementById("email-sync-pwd");
+  const pwd = pwdInput ? pwdInput.value.replace(/\s+/g, "").trim() : "";
+  const hasSaved = pwdInput && pwdInput.dataset.hasSaved === "true";
   const statusEl = document.getElementById("email-scan-status");
 
-  if (!email || !pwd) {
+  if (!email || (!pwd && !hasSaved)) {
     showToast("Compila prima Email e Password per le App.");
     return;
   }
 
   statusEl.textContent = "Verifica connessione a Gmail in corso...";
   try {
+    const payload = { email_sync_address: email };
+    if (pwd) {
+      payload.email_sync_app_password = pwd;
+    }
     const res = await callApi("/test-email-connection", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email_sync_address: email, email_sync_app_password: pwd })
+      body: JSON.stringify(payload)
     });
     const json = await res.json();
     if (json.success) {
@@ -3315,14 +3344,16 @@ async function testEmailConnection() {
 
 async function startEmailScan() {
   const email = document.getElementById("email-sync-address").value.trim();
-  const pwd = document.getElementById("email-sync-pwd").value.replace(/\s+/g, "").trim();
+  const pwdInput = document.getElementById("email-sync-pwd");
+  const pwd = pwdInput ? pwdInput.value.replace(/\s+/g, "").trim() : "";
+  const hasSaved = pwdInput && pwdInput.dataset.hasSaved === "true";
   const statusEl = document.getElementById("email-scan-status");
   const btnScan = document.getElementById("btn-start-email-scan");
   const tbody = document.getElementById("email-sync-table-body");
   const countInfo = document.getElementById("email-sync-count-info");
   const btnSave = document.getElementById("btn-save-email-preorders");
 
-  if (!email || !pwd) {
+  if (!email || (!pwd && !hasSaved)) {
     showToast("Inserisci Email e Password per le App prima di avviare la scansione.");
     return;
   }
@@ -3331,10 +3362,14 @@ async function startEmailScan() {
   statusEl.textContent = "Connessione a Gmail e ricerca nuove email non lette...";
 
   try {
+    const payload = { email_sync_address: email };
+    if (pwd) {
+      payload.email_sync_app_password = pwd;
+    }
     const res = await callApi("/scan-emails", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email_sync_address: email, email_sync_app_password: pwd })
+      body: JSON.stringify(payload)
     });
     const json = await res.json();
     btnScan.disabled = false;
