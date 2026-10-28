@@ -88,14 +88,18 @@ python rsm.py
 
 ## Esecuzione dei Test e Controllo Qualità
 
-Il progetto integra una suite di test completa con **Pytest** e controlli automatici di formattazione e linting con **Ruff** (attivi anche nella CI di GitHub Actions):
+Il progetto integra una suite di test completa con **Pytest**, collaudo **End-to-End (E2E)** con Chromium headless e controlli automatici di formattazione e linting con **Ruff** (attivi anche nella CI di GitHub Actions):
 
 ```powershell
 # Installa le dipendenze
 python -m pip install -r requirements.txt
 
-# Esegui i test unitari
+# Esegui i test unitari (131 test)
 pytest -v
+
+# Esegui la suite E2E a cascata (con player video e report su Desktop)
+playwright install chromium
+python tests/e2e/runner.py
 
 # Esegui il linter del codice
 ruff check .
