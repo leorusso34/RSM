@@ -319,22 +319,69 @@ def generate_e2e_html_report(
       border: 1px solid rgba(100, 116, 139, 0.4);
       color: #94a3b8;
     }}
-    .levels-grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 18px;
+    .levels-track-wrapper {{
+      position: relative;
       margin-bottom: 28px;
     }}
+    .levels-track-hint {{
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: #60a5fa;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }}
+    .levels-grid {{
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 14px;
+      padding-top: 4px;
+      padding-left: 2px;
+      padding-right: 2px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: #3b82f6 rgba(14, 19, 31, 0.85);
+    }}
+    .levels-grid::-webkit-scrollbar {{
+      height: 8px;
+    }}
+    .levels-grid::-webkit-scrollbar-track {{
+      background: rgba(14, 19, 31, 0.9);
+      border-radius: 999px;
+      border: 1px solid rgba(30, 41, 59, 0.8);
+      margin: 0 4px;
+    }}
+    .levels-grid::-webkit-scrollbar-thumb {{
+      background: linear-gradient(90deg, #2563eb, #3b82f6);
+      border-radius: 999px;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+      cursor: pointer;
+    }}
+    .levels-grid::-webkit-scrollbar-thumb:hover {{
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }}
     .level-card {{
+      flex: 0 0 340px;
+      width: 340px;
+      scroll-snap-align: start;
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 20px;
-      transition: border-color 0.2s ease, transform 0.2s ease;
+      transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+      display: flex;
+      flex-direction: column;
     }}
     .level-card:hover {{
-      border-color: rgba(59, 130, 246, 0.35);
+      border-color: rgba(59, 130, 246, 0.45);
       transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
     }}
     .level-card.status-passed {{
       border-left: 4px solid var(--green);
@@ -609,8 +656,14 @@ def generate_e2e_html_report(
       </div>
     </header>
 
-    <div class="levels-grid">
-      {"".join(level_cards_html)}
+    <div class="levels-track-wrapper">
+      <div class="levels-track-hint">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+        <span>Scorri orizzontalmente per visualizzare tutti i test</span>
+      </div>
+      <div class="levels-grid">
+        {"".join(level_cards_html)}
+      </div>
     </div>
 
     {video_section_html}
@@ -656,6 +709,16 @@ def generate_e2e_html_report(
     document.addEventListener("keydown", function(e) {{
       if (e.key === "Escape") closeLightbox();
     }});
+
+    const track = document.querySelector(".levels-grid");
+    if (track) {{
+      track.addEventListener("wheel", function(e) {{
+        if (e.deltaY !== 0 && !e.shiftKey) {{
+          e.preventDefault();
+          track.scrollLeft += e.deltaY * 1.2;
+        }}
+      }}, {{ passive: false }});
+    }}
   </script>
 </body>
 </html>
