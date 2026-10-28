@@ -159,6 +159,7 @@ class E2EContextManager:
     def __enter__(self) -> tuple[Page, list[str]]:
         self.browser = self.playwright.chromium.launch(
             headless=True,
+            slow_mo=200,  # Ritmo umano naturale per le registrazioni video (200ms per azione)
             args=[
                 "--disable-web-security",
                 "--disable-features=IsolateOrigins,site-per-process",

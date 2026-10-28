@@ -20,15 +20,20 @@ def run_level1_smoke_checks(page: Page, console_errors: list[str]) -> dict[str, 
 
     # 1. Apertura dell'applicazione
     page.goto(SANDBOX_BASE_URL, wait_until="networkidle")
+    page.wait_for_timeout(1000)
     details.append("Pagina iniziale caricata con successo (networkidle)")
 
     # 2. Verifica elementi strutturali principali
     sidebar = page.locator("#appSidebar")
     expect(sidebar).to_be_visible(timeout=5000)
+    sidebar.hover()
+    page.wait_for_timeout(400)
     details.append("Sidebar (#appSidebar) presente e visibile")
 
     kpi_grid = page.locator(".kpi-grid")
     expect(kpi_grid).to_be_visible(timeout=5000)
+    kpi_grid.hover()
+    page.wait_for_timeout(400)
     details.append("Griglia KPI metriche (.kpi-grid) presente e visibile")
 
     search_input = page.locator("#global-search-input")
@@ -38,6 +43,9 @@ def run_level1_smoke_checks(page: Page, console_errors: list[str]) -> dict[str, 
     table_wrap = page.locator(".data-table-wrap")
     expect(table_wrap).to_be_visible(timeout=5000)
     details.append("Contenitore tabella inventario (.data-table-wrap) inizializzato")
+
+    # Pausa di stabilità per consentire una visione chiara e naturale nel video
+    page.wait_for_timeout(1200)
 
     # 3. Verifica zero errori JavaScript in console
     assert len(console_errors) == 0, f"Rilevati {len(console_errors)} errori JavaScript in console: {console_errors}"

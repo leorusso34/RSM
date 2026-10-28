@@ -23,6 +23,7 @@ def run_level2_crud_checks(page: Page, console_errors: list[str]) -> dict[str, A
     # 1. Apertura e attesa layout
     page.goto(SANDBOX_BASE_URL, wait_until="networkidle")
     page.wait_for_selector(".table-card", timeout=5000)
+    page.wait_for_timeout(600)
 
     # 2. Click su pulsante Aggiungi Prodotto
     add_btn = page.locator(".btn-sidebar-add")
@@ -32,32 +33,38 @@ def run_level2_crud_checks(page: Page, console_errors: list[str]) -> dict[str, A
 
     # 3. Attesa apertura modale anagrafica
     page.wait_for_selector("#productModal.open", timeout=5000)
+    page.wait_for_timeout(500)
     details.append("Modale anagrafica (#productModal) aperta e attiva")
 
-    # 4. Compilazione campi
+    # 4. Compilazione campi con ritmo di digitazione naturale e visibile
     test_product_name = "Nike Dunk Low Retro Panda"
     test_size = "42"
     test_buy_price = "120.00"
     test_buy_place = "Nike SNKRS"
 
-    page.fill("#prod-name", test_product_name)
-    page.fill("#prod-size", test_size)
-    page.fill("#prod-qty", "1")
-    page.fill("#prod-buy-price", test_buy_price)
-    page.fill("#prod-buy-place", test_buy_place)
+    page.locator("#prod-name").press_sequentially(test_product_name, delay=30)
+    page.locator("#prod-size").press_sequentially(test_size, delay=30)
+    page.locator("#prod-qty").fill("1")
+    page.locator("#prod-buy-price").press_sequentially(test_buy_price, delay=30)
+    page.locator("#prod-buy-place").press_sequentially(test_buy_place, delay=30)
     details.append(
         f"Campi compilati: '{test_product_name}', Taglia {test_size}, Spesa € {test_buy_price}, Luogo '{test_buy_place}'"
     )
+
+    # Pausa per mostrare il modulo compilato chiaramente nel video
+    page.wait_for_timeout(800)
 
     # 5. Invio del modulo
     submit_btn = page.locator("#productForm button.btn-primary")
     submit_btn.click()
     page.wait_for_selector("#productModal", state="hidden", timeout=5000)
+    page.wait_for_timeout(800)
     details.append("Modulo inviato e modale chiusa correttamente")
 
     # 6. Verifica comparsa della riga in tabella (vista Tutti i Prodotti)
     product_row = page.locator(f"#inventory-table-body tr:has-text('{test_product_name}')")
     expect(product_row).to_be_visible(timeout=5000)
+    page.wait_for_timeout(800)
 
     row_text = product_row.inner_text()
     assert "120" in row_text, "Prezzo di acquisto non visualizzato correttamente nella riga"
@@ -68,13 +75,14 @@ def run_level2_crud_checks(page: Page, console_errors: list[str]) -> dict[str, A
     page.click('button.table-tab-pill[data-filter="stock"]')
     stock_row = page.locator(f"#inventory-table-body tr:has-text('{test_product_name}')")
     expect(stock_row).to_be_visible(timeout=5000)
+    page.wait_for_timeout(1200)
     stock_row_text = stock_row.inner_text()
     assert test_size in stock_row_text, f"Taglia '{test_size}' non trovata nella vista 'Magazzino': {stock_row_text}"
     details.append(f"Scheda 'Magazzino' verificata: visualizzazione corretta della colonna Taglia ({test_size})")
 
     # Torna a 'Tutti i Prodotti'
     page.click('button.table-tab-pill[data-filter="all"]')
-    page.wait_for_timeout(200)
+    page.wait_for_timeout(800)
 
     # 8. Verifica metriche KPI Capitale Investito
     kpi_invested = page.locator("#kpi-invested")

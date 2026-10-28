@@ -50,29 +50,35 @@ def run_level3_flow_checks(page: Page, console_errors: list[str]) -> dict[str, A
 
     # 1. Assicura che esista il prodotto da vendere
     ensure_test_product_exists(page)
+    page.wait_for_timeout(600)
     details.append("Prodotto base verificato in tabella inventario")
 
     # 2. Apertura modale di modifica
     page.click('button[title="Modifica Prodotto"]')
     page.wait_for_selector("#productModal.open", timeout=5000)
+    page.wait_for_timeout(500)
     details.append("Modale di modifica aperta sul prodotto selezionato")
 
-    # 3. Passaggio allo stato 'completed' e compilazione parametri di vendita
+    # 3. Passaggio allo stato 'completed' e compilazione parametri di vendita con ritmo visibile
     page.select_option("#prod-status", "completed")
-    page.fill("#prod-sold-price", "180.00")
-    page.fill("#prod-fees", "15.00")
-    page.fill("#prod-sell-place", "StockX")
+    page.wait_for_timeout(400)
+    page.locator("#prod-sold-price").press_sequentially("180.00", delay=35)
+    page.locator("#prod-fees").press_sequentially("15.00", delay=35)
+    page.locator("#prod-sell-place").press_sequentially("StockX", delay=35)
+    page.wait_for_timeout(800)
     details.append("Stato impostato su 'Venduto' con Prezzo Vendita € 180,00, Spese € 15,00 e Canale 'StockX'")
 
     # 4. Salvataggio
     page.click("#productForm button.btn-primary")
     page.wait_for_selector("#productModal", state="hidden", timeout=5000)
+    page.wait_for_timeout(600)
     details.append("Vendita salvata e registrata nel database")
 
     # 5. Navigazione a 'Vendite Completate' e asserzione matematica del profitto
     page.click('button.table-tab-pill[data-filter="completed"]')
     sale_row = page.locator("#inventory-table-body tr:has-text('Nike Dunk Low Retro Panda')")
     expect(sale_row).to_be_visible(timeout=5000)
+    page.wait_for_timeout(1500)
 
     sale_row_text = sale_row.inner_text()
     assert "180" in sale_row_text, "Prezzo di vendita (€ 180,00) non trovato nella riga della vendita completata"
@@ -82,23 +88,26 @@ def run_level3_flow_checks(page: Page, console_errors: list[str]) -> dict[str, A
     assert "StockX" in sale_row_text, "Canale di vendita 'StockX' non trovato nella riga"
     details.append("Asserzione matematica superata: Utile Netto = +€ 45,00 e ROI = +37.5% verificati con successo")
 
-    # 6. Test Filtro di Ricerca Globale
+    # 6. Test Filtro di Ricerca Globale con ritmo visibile
     search_input = page.locator("#global-search-input")
 
     # Ricerca con termine valido
-    search_input.fill("Panda")
+    search_input.press_sequentially("Panda", delay=40)
     expect(page.locator("#inventory-table-body tr:has-text('Panda')")).to_be_visible(timeout=5000)
+    page.wait_for_timeout(1000)
     details.append("Filtro di ricerca: match positivo su 'Panda' confermato")
 
     # Ricerca con termine inesistente
     search_input.fill("NonExistentXYZ999")
     expect(page.locator("#inventory-table-body tr:has-text('Panda')")).to_have_count(0, timeout=5000)
     expect(page.locator("#inventory-table-body")).to_contain_text("Nessun prodotto trovato", timeout=5000)
+    page.wait_for_timeout(1000)
     details.append("Filtro di ricerca: stato vuoto confermato su termine inesistente")
 
     # Reset ricerca
     search_input.fill("")
     expect(page.locator("#inventory-table-body tr:has-text('Panda')")).to_be_visible(timeout=5000)
+    page.wait_for_timeout(800)
     details.append("Filtro di ricerca azzerato correttamente")
 
     # 7. Test Eliminazione Prodotto
@@ -107,6 +116,7 @@ def run_level3_flow_checks(page: Page, console_errors: list[str]) -> dict[str, A
         0, timeout=5000
     )
     expect(page.locator("#inventory-table-body")).to_contain_text("Nessun prodotto trovato", timeout=5000)
+    page.wait_for_timeout(1500)
     details.append("Eliminazione riga eseguita con successo con accettazione automatica del dialogo di conferma")
 
     # 8. Verifica zero errori console
