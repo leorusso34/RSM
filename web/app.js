@@ -3246,15 +3246,20 @@ async function openEmailSyncModal() {
         document.getElementById("email-sync-address").value = data.email_sync_address;
       }
       const pwdInput = document.getElementById("email-sync-pwd");
+      const showPwdCheckbox = document.getElementById("email-show-pwd");
+      if (showPwdCheckbox) {
+        showPwdCheckbox.checked = false;
+      }
       if (pwdInput) {
-        if (data.has_app_password) {
-          pwdInput.placeholder = "•••••••••••••••• (Password già salvata)";
+        pwdInput.type = "password";
+        if (data.email_sync_app_password) {
+          pwdInput.value = data.email_sync_app_password;
           pwdInput.dataset.hasSaved = "true";
         } else {
-          pwdInput.placeholder = "Inserisci password a 16 caratteri";
+          pwdInput.value = "";
           pwdInput.dataset.hasSaved = "false";
         }
-        pwdInput.value = "";
+        pwdInput.placeholder = "Inserisci password a 16 caratteri";
       }
     }
   } catch (_) {}
@@ -3292,10 +3297,11 @@ async function saveEmailCredentials() {
     const json = await res.json();
     if (json.success) {
       showToast("Credenziali email salvate con successo nel database!");
-      if (pwdInput && pwd) {
+      if (pwdInput) {
         pwdInput.dataset.hasSaved = "true";
-        pwdInput.placeholder = "•••••••••••••••• (Password già salvata)";
-        pwdInput.value = "";
+        if (pwd) {
+          pwdInput.value = pwd;
+        }
       }
     } else {
       showToast(`Errore salvataggio: ${json.error}`);

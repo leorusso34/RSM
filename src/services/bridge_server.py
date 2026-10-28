@@ -409,12 +409,13 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         # Impostazioni applicazione
         if path == "/api/settings":
             email_addr = self.db.get_setting("email_sync_address", "")
-            has_pwd = bool(self.db.get_setting("email_sync_app_password", ""))
+            app_pwd = self.db.get_setting("email_sync_app_password", "")
             self._send_json(
                 {
                     "success": True,
                     "email_sync_address": email_addr,
-                    "has_app_password": has_pwd,
+                    "email_sync_app_password": app_pwd,
+                    "has_app_password": bool(app_pwd),
                 }
             )
             return

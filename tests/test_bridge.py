@@ -597,3 +597,65 @@ def test_bridge_multi_quantity_profit_and_roi(tmp_path):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_bridge_settings_email_sync(tmp_path, monkeypatch):
+    """Verifica che /api/settings salvi e restituisca correttamente email_sync_address e email_sync_app_password."""
+    test_config = tmp_path / "test_config.json"
+    monkeypatch.setattr("src.database.CONFIG_JSON_PATH", test_config)
+    test_db = tmp_path / "test_inventory_settings.db"
+    db = InventoryDatabase(test_db)
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        # 1. Inizialmente le credenziali non sono presenti
+        req_get_initial = request.Request(f"http://127.0.0.1:{port}/api/settings")
+        with request.urlopen(req_get_initial) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["email_sync_address"] == ""
+            assert data["email_sync_app_password"] == ""
+            assert data["has_app_password"] is False
+
+        # 2. Salvataggio impostazioni via POST /api/settings
+        post_payload = json.dumps(
+            {
+                "email_sync_address": "utente@gmail.com",
+                "email_sync_app_password": "abcd efgh ijkl mnop",
+            }
+        ).encode("utf-8")
+        req_post = request.Request(
+            f"http://127.0.0.1:{port}/api/settings",
+            data=post_payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req_post) as resp:
+            post_res = json.loads(resp.read().decode("utf-8"))
+            assert post_res["success"] is True
+
+        # 3. Lettura impostazioni via GET /api/settings: password ed email devono essere restituite
+        req_get_after = request.Request(f"http://127.0.0.1:{port}/api/settings")
+        with request.urlopen(req_get_after) as resp:
+            data_after = json.loads(resp.read().decode("utf-8"))
+            assert data_after["success"] is True
+            assert data_after["email_sync_address"] == "utente@gmail.com"
+            assert data_after["email_sync_app_password"] == "abcd efgh ijkl mnop"
+            assert data_after["has_app_password"] is True
+
+        assert db.get_setting("email_sync_address") == "utente@gmail.com"
+        assert db.get_setting("email_sync_app_password") == "abcd efgh ijkl mnop"
+    finally:
+        server.shutdown()
+        server.server_close()
