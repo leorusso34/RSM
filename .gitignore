@@ -36,3 +36,6 @@ GEMINI.md
 # Workspace Agent Skills and Customizations
 .agents/
 .agent/
+
+# E2E test run artifacts (video e screenshot generati)
+tests/e2e/artifacts/
