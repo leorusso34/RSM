@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "RSM Next-Gen",
-    "version": "1.6.2"
+    "version": "1.6.3"
   },
   "tauri": {
     "allowlist": {
