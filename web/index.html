@@ -202,6 +202,31 @@
 
         </section>
 
+        <!-- Banner Allerta Dead Stock (Capitale Immobilizzato & Giacenza) -->
+        <div id="deadStockAlertBanner" class="dead-stock-alert-banner" style="display: none;">
+          <div class="dead-stock-banner-left">
+            <div class="dead-stock-banner-icon" id="deadStockBannerIcon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div>
+              <div class="dead-stock-banner-title" id="deadStockBannerTitle">Allerta Dead Stock</div>
+              <div class="dead-stock-banner-desc" id="deadStockBannerDesc">
+                Hai <strong id="deadStockCapitalText">€ 0,00</strong> di capitale fermo su <span id="deadStockCountText">0 prodotti</span>.
+              </div>
+            </div>
+          </div>
+          <div class="dead-stock-banner-actions">
+            <button type="button" class="btn-dead-stock-filter" id="btnFilterDeadStock" onclick="toggleDeadStockFilter()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+              </svg>
+              <span id="btnFilterDeadStockText">Filtra Dead Stock</span>
+            </button>
+          </div>
+        </div>
+
         <!-- ================================================================
              RIGA 2: 2 GRAFICI (COME DA DISEGNO: GRANDE A SX, CIAMBELLA A DX)
              ================================================================ -->

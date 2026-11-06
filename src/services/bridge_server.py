@@ -337,6 +337,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                         "status": status_key,
                         "statusLabel": status_label,
                         "date": p.get("sold_date") or p.get("created_at") or "",
+                        "createdAt": p.get("created_at") or "",
                         "notes": p.get("notes") or "",
                         "bundle_id": p.get("bundle_id") or "",
                     }

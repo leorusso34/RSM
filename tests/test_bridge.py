@@ -748,3 +748,48 @@ def test_bridge_bundle_fees_and_price_are_single_not_split(tmp_path):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_products_api_returns_created_at_for_dead_stock(tmp_path):
+    """Verifica che /api/products restituisca esplicitamente createdAt per il calcolo del dead stock."""
+    test_db = tmp_path / "test_inventory_dead_stock.db"
+    db = InventoryDatabase(test_db)
+
+    pid = db.save(
+        {
+            "name": "Jordan 4 Retro",
+            "size": "42.5",
+            "quantity": 1,
+            "purchased_price": Decimal("210.00"),
+            "purchased_place": "SNKRS",
+            "status": STATUS_STOCK,
+        }
+    )
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        req_get = request.Request(f"http://127.0.0.1:{port}/api/products")
+        with request.urlopen(req_get) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            items = data["data"]
+            assert len(items) == 1
+            item = items[0]
+            assert item["id"] == pid
+            assert "createdAt" in item
+            assert item["createdAt"] != ""
+            assert len(item["createdAt"]) >= 10
+    finally:
+        server.shutdown()
+        server.server_close()

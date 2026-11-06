@@ -39,6 +39,25 @@ function formatMoney(val) {
   })}`;
 }
 
+// Calcolo giorni di giacenza per dead stock (Zero-Lag, robusto contro fusi orari)
+function getProductAgeDays(item) {
+  if (!item) return 0;
+  const rawDate = item.createdAt || item.date;
+  if (!rawDate || typeof rawDate !== "string") return 0;
+  const str = rawDate.trim();
+  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}):(\d{2}))?/);
+  if (!m) return 0;
+  const year = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10) - 1;
+  const day = parseInt(m[3], 10);
+  const hour = m[4] ? parseInt(m[4], 10) : 0;
+  const min = m[5] ? parseInt(m[5], 10) : 0;
+  const sec = m[6] ? parseInt(m[6], 10) : 0;
+  const createdMs = Date.UTC(year, month, day, hour, min, sec);
+  const diffMs = Date.now() - createdMs;
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+}
+
 async function loadProductsFromBackend(retries = 6, delay = 500) {
   for (let i = 0; i < retries; i++) {
     try {
@@ -127,6 +146,7 @@ let filterPurchasedPlace = "";
 let filterSellingPlace = "";
 let filterMinPrice = null;
 let filterMaxPrice = null;
+let filterDeadStockOnly = false;
 
 // Modalità Selezione Multipla & Operazioni Massive
 let isSelectionModeActive = false;
@@ -352,7 +372,8 @@ function updateFilterIndicators() {
     filterPurchasedPlace ||
     filterSellingPlace ||
     (filterMinPrice !== null && filterMinPrice !== undefined) ||
-    (filterMaxPrice !== null && filterMaxPrice !== undefined)
+    (filterMaxPrice !== null && filterMaxPrice !== undefined) ||
+    filterDeadStockOnly
   );
 
   const hasAnyFilter = Boolean(hasActiveAdvanced || searchTerm);
@@ -388,6 +409,10 @@ function resetAllFilters() {
   filterMaxPrice = null;
   const maxInput = document.getElementById("filter-max-price");
   if (maxInput) maxInput.value = "";
+
+  filterDeadStockOnly = false;
+  const btnFilterDeadStockText = document.getElementById("btnFilterDeadStockText");
+  if (btnFilterDeadStockText) btnFilterDeadStockText.textContent = "Filtra Dead Stock";
 
   sortField = "date";
   sortOrder = "desc";
@@ -519,6 +544,93 @@ function updateDashboardMetrics() {
   if (badgePreorder) badgePreorder.textContent = preorderCount;
   if (badgeActive) badgeActive.textContent = activeCount;
   if (badgeCompleted) badgeCompleted.textContent = completedCount;
+
+  // Calcolo Dead Stock (Capitale fermo su prodotti in magazzino e pre-ordini)
+  let deadStockCriticalCount = 0; // > 90 giorni (> 3 mesi)
+  let deadStockCriticalCapital = 0;
+  let deadStockWarningCount = 0;  // 60-90 giorni (2-3 mesi)
+  let deadStockWarningCapital = 0;
+
+  inventoryData.forEach((item) => {
+    if (item.status === "stock" || item.status === "preorder") {
+      const days = getProductAgeDays(item);
+      const qty = item.quantity || 1;
+      const cost = (item.purchasedPrice || 0) * qty;
+      if (days > 90) {
+        deadStockCriticalCount += qty;
+        deadStockCriticalCapital += cost;
+      } else if (days >= 60) {
+        deadStockWarningCount += qty;
+        deadStockWarningCapital += cost;
+      }
+    }
+  });
+
+  const totalDeadStockCount = deadStockCriticalCount + deadStockWarningCount;
+  const totalDeadStockCapital = deadStockCriticalCapital + deadStockWarningCapital;
+
+  const banner = document.getElementById("deadStockAlertBanner");
+  if (banner) {
+    if (totalDeadStockCount > 0) {
+      banner.style.display = "flex";
+      const isCritical = deadStockCriticalCount > 0;
+      banner.classList.toggle("critical", isCritical);
+
+      const titleEl = document.getElementById("deadStockBannerTitle");
+      const descEl = document.getElementById("deadStockBannerDesc");
+
+      if (titleEl) {
+        titleEl.textContent = isCritical ? "Allerta Dead Stock (> 3 Mesi)" : "Attenzione Giacenza (> 60 Giorni)";
+      }
+
+      if (descEl) {
+        if (isCritical) {
+          const formattedCapital = formatMoney(deadStockCriticalCapital);
+          let extra = "";
+          if (deadStockWarningCount > 0) {
+            extra = ` <span style="color: var(--text-muted); font-size: 11.5px;">(+ ${deadStockWarningCount} fermi da 60-90 gg)</span>`;
+          }
+          descEl.innerHTML = `Hai <strong>${formattedCapital}</strong> di capitale fermo da più di 3 mesi su <strong>${deadStockCriticalCount} ${deadStockCriticalCount === 1 ? "prodotto" : "prodotti"}</strong>.${extra}`;
+        } else {
+          const formattedCapital = formatMoney(deadStockWarningCapital);
+          descEl.innerHTML = `Hai <strong>${formattedCapital}</strong> di capitale fermo da oltre 60 giorni su <strong>${deadStockWarningCount} ${deadStockWarningCount === 1 ? "prodotto" : "prodotti"}</strong>.`;
+        }
+      }
+    } else {
+      banner.style.display = "none";
+    }
+  }
+}
+
+function toggleDeadStockFilter() {
+  filterDeadStockOnly = !filterDeadStockOnly;
+
+  if (filterDeadStockOnly) {
+    if (activeFilter !== "stock" && activeFilter !== "preorder") {
+      activeFilter = "stock";
+      document.querySelectorAll(".table-tab-pill").forEach((p) => {
+        p.classList.toggle("active", p.getAttribute("data-filter") === "stock");
+      });
+      document.querySelectorAll(".nav-item").forEach((i) => {
+        i.classList.toggle("active", i.getAttribute("data-section") === "magazzino");
+      });
+    }
+    const btnText = document.getElementById("btnFilterDeadStockText");
+    if (btnText) btnText.textContent = "Mostra Tutti";
+    showToast("Filtro Dead Stock: mostrati capi con oltre 60 giorni di giacenza");
+  } else {
+    const btnText = document.getElementById("btnFilterDeadStockText");
+    if (btnText) btnText.textContent = "Filtra Dead Stock";
+    showToast("Filtro Dead Stock rimosso");
+  }
+
+  updateFilterIndicators();
+  renderTable();
+
+  const tableCard = document.querySelector(".table-card");
+  if (tableCard) {
+    tableCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 // ==========================================================================
@@ -545,6 +657,13 @@ function getFilteredAndSortedProducts() {
   let filtered = inventoryData.filter((item) => {
     // 1. Filtro per stato tab
     if (activeFilter !== "all" && item.status !== activeFilter) return false;
+
+    // Filtro rapido Dead Stock (> 60 giorni)
+    if (filterDeadStockOnly) {
+      if (item.status !== "stock" && item.status !== "preorder") return false;
+      const days = getProductAgeDays(item);
+      if (days < 60) return false;
+    }
 
     // 2. Filtro di ricerca testuale esteso (tutte le colonne tranne quantità, utile netto, roi, stato)
     if (searchTerm) {
@@ -681,8 +800,8 @@ function getFilteredAndSortedProducts() {
       valA = costA > 0 ? (pA / costA) * 100 : 0;
       valB = costB > 0 ? (pB / costB) * 100 : 0;
     } else if (sortField === "date") {
-      valA = a.date || "";
-      valB = b.date || "";
+      valA = a.createdAt || a.date || "";
+      valB = b.createdAt || b.date || "";
       return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
     }
 
@@ -1052,6 +1171,26 @@ function renderTable() {
       `;
 
       if (isStockView) {
+        const ageDays = getProductAgeDays(item);
+        if (item.status === "stock" || item.status === "preorder") {
+          if (ageDays > 90) {
+            tr.classList.add("row-tint-danger");
+            tr.title = `In giacenza da ${ageDays} giorni (> 90 gg - Dead Stock)`;
+          } else if (ageDays >= 60) {
+            tr.classList.add("row-tint-warning");
+            tr.title = `In giacenza da ${ageDays} giorni (60-90 gg)`;
+          }
+        }
+
+        let ageTagHtml = "";
+        if (ageDays > 90) {
+          ageTagHtml = `<span class="dead-stock-tag critical" title="In giacenza da ${ageDays} giorni (> 90 gg)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${ageDays} gg</span>`;
+        } else if (ageDays >= 60) {
+          ageTagHtml = `<span class="dead-stock-tag warning" title="In giacenza da ${ageDays} giorni (60-90 gg)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${ageDays} gg</span>`;
+        } else {
+          ageTagHtml = `<span class="dead-stock-tag normal" title="In giacenza da ${ageDays} giorni">${ageDays} gg</span>`;
+        }
+
         tr.innerHTML = `
           ${checkboxTd}
           <td class="col-prod" title="${item.name}">
@@ -1065,10 +1204,13 @@ function renderTable() {
           <td class="col-buy">${formatMoney(item.purchasedPrice)}</td>
           <td class="col-place" style="color: var(--text-muted);">${item.purchasedPlace}</td>
           <td class="col-status col-center">
-            <span class="status-badge ${statusClass}">
-              <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
-              ${statusLabel}
-            </span>
+            <div style="display:inline-flex; flex-direction:column; align-items:center; gap:2px;">
+              <span class="status-badge ${statusClass}">
+                <span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:currentColor;"></span>
+                ${statusLabel}
+              </span>
+              ${ageTagHtml}
+            </div>
           </td>
           <td class="col-actions col-center">
             ${actionBtnsHtml}
@@ -4004,6 +4146,13 @@ document.addEventListener("DOMContentLoaded", () => {
       pill.classList.add("active");
       activeFilter = pill.getAttribute("data-filter");
 
+      if (filterDeadStockOnly && activeFilter !== "stock" && activeFilter !== "preorder") {
+        filterDeadStockOnly = false;
+        const btnText = document.getElementById("btnFilterDeadStockText");
+        if (btnText) btnText.textContent = "Filtra Dead Stock";
+        updateFilterIndicators();
+      }
+
       // Reset completo della modalità selezione passando da una tabella all'altra
       isSelectionModeActive = false;
       const btnToggle = document.getElementById("btnToggleSelect");
@@ -4032,6 +4181,13 @@ document.addEventListener("DOMContentLoaded", () => {
         activeFilter = "completed";
       } else {
         activeFilter = "all";
+      }
+
+      if (filterDeadStockOnly && activeFilter !== "stock" && activeFilter !== "preorder") {
+        filterDeadStockOnly = false;
+        const btnText = document.getElementById("btnFilterDeadStockText");
+        if (btnText) btnText.textContent = "Filtra Dead Stock";
+        updateFilterIndicators();
       }
 
       // Reset completo della modalità selezione passando da una tabella all'altra

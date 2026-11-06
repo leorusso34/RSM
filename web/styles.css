@@ -956,6 +956,151 @@ body {
 .data-table tbody tr.row-selected {
   background-color: rgba(59, 130, 246, 0.12) !important;
 }
+
+/* Dead Stock Soft Row Tint (60-90gg giallo, >90gg rosso) */
+.data-table tbody tr.row-tint-warning {
+  background-color: rgba(245, 158, 11, 0.05);
+}
+.data-table tbody tr.row-tint-warning:hover {
+  background-color: rgba(245, 158, 11, 0.09) !important;
+}
+.data-table tbody tr.row-tint-warning > td:first-child {
+  box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.65);
+}
+
+.data-table tbody tr.row-tint-danger {
+  background-color: rgba(244, 63, 94, 0.06);
+}
+.data-table tbody tr.row-tint-danger:hover {
+  background-color: rgba(244, 63, 94, 0.10) !important;
+}
+.data-table tbody tr.row-tint-danger > td:first-child {
+  box-shadow: inset 3px 0 0 rgba(244, 63, 94, 0.8);
+}
+
+.data-table tbody tr.row-selected.row-tint-warning,
+.data-table tbody tr.row-selected.row-tint-danger {
+  background-color: rgba(59, 130, 246, 0.14) !important;
+}
+
+/* Dead Stock Giacenza Tags */
+.dead-stock-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+.dead-stock-tag.warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.dead-stock-tag.critical {
+  background: rgba(244, 63, 94, 0.12);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+.dead-stock-tag.normal {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Dead Stock Alert Banner Dashboard */
+.dead-stock-alert-banner {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.07) 0%, rgba(17, 24, 39, 0.5) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 14px;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: fadeIn 0.2s ease;
+}
+.dead-stock-alert-banner.critical {
+  background: linear-gradient(90deg, rgba(244, 63, 94, 0.08) 0%, rgba(17, 24, 39, 0.5) 100%);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+.dead-stock-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dead-stock-banner-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dead-stock-alert-banner.critical .dead-stock-banner-icon {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.32);
+  color: #fb7185;
+}
+.dead-stock-banner-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+.dead-stock-banner-desc {
+  font-size: 12.5px;
+  color: var(--text-main);
+  margin-top: 1px;
+}
+.dead-stock-banner-desc strong {
+  color: #fbbf24;
+  font-weight: 700;
+}
+.dead-stock-alert-banner.critical .dead-stock-banner-desc strong {
+  color: #fb7185;
+}
+.dead-stock-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.btn-dead-stock-filter {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 5px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+.btn-dead-stock-filter:hover {
+  background: rgba(245, 158, 11, 0.22);
+}
+.dead-stock-alert-banner.critical .btn-dead-stock-filter {
+  border-color: rgba(244, 63, 94, 0.35);
+  background: rgba(244, 63, 94, 0.12);
+  color: #fb7185;
+}
+.dead-stock-alert-banner.critical .btn-dead-stock-filter:hover {
+  background: rgba(244, 63, 94, 0.22);
+}
 .data-table th.col-prod, .data-table td.col-prod { width: auto; min-width: 170px; }
 .data-table th.col-size, .data-table td.col-size { width: 60px; text-align: center; }
 .data-table th.col-qty, .data-table td.col-qty { width: 50px; text-align: center; }
