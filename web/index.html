@@ -1152,6 +1152,47 @@
     </div>
   </div>
 
+  <!-- ====================================================================
+       MODALE: MOTORE LOCALE NON RAGGIUNGIBILE (BRIDGE OFFLINE)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="bridgeOfflineModal">
+    <div class="modal-card" style="width: 520px; max-width: 94vw;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; color: #ef4444; flex-shrink: 0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div>
+            <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Motore Locale non Raggiungibile</h3>
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+              Il server bridge Python locale (porta 28472) non risponde alle chiamate.
+            </p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeBridgeOfflineModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+        <p style="font-size: 12px; color: #cbd5e1; line-height: 1.6; margin: 0;">
+          L'applicazione non riesce a comunicare con il backend locale. Se il motore Python non è riuscito ad avviarsi, consulta il file di log per individuare l'errore:
+        </p>
+        <div style="background: #0b101c; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; font-family: monospace; font-size: 11.5px; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>data/bridge.log</span>
+        </div>
+        <div style="font-size: 11px; color: var(--text-dim); line-height: 1.5;">
+          Possibili cause: permessi di esecuzione, librerie mancanti o porta occupata da un altro processo.
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-secondary" onclick="closeBridgeOfflineModal()">Continua Comunque</button>
+        <button type="button" class="btn btn-primary" id="btn-retry-bridge" style="background: #2563eb;" onclick="retryBridgeConnection()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          <span id="btn-retry-bridge-label">Riprova Connessione</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notifiche -->
   <div class="toast" id="toastNotification"></div>
 

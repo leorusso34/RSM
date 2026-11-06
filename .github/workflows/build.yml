@@ -57,7 +57,11 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           cd dist
-          zip -r -y ../${{ matrix.zip_name }} RSM/
+          if [ -d "RSM.app" ]; then
+            zip -r -y ../${{ matrix.zip_name }} RSM.app/
+          else
+            zip -r -y ../${{ matrix.zip_name }} RSM/
+          fi
           cd ..
 
       - name: Upload Artifact

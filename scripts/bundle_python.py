@@ -144,6 +144,14 @@ def bundle_python_macos(dist_dir: Path, target_py_dir: Path, tmp_dir: Path) -> N
     # Pulizia cache pip
     subprocess.run([str(py_bin), "-m", "pip", "cache", "purge"], capture_output=True, check=False)
 
+    # Se presente il bundle nativo macOS (RSM.app), sincronizza il runtime anche al suo interno
+    app_py_dir = dist_dir.parent / "RSM.app" / "Contents" / "Resources" / "python"
+    if (dist_dir.parent / "RSM.app").exists():
+        print(f"[BUNDLE] Sincronizzazione runtime Python anche dentro '{app_py_dir}'...")
+        if app_py_dir.exists():
+            shutil.rmtree(app_py_dir, ignore_errors=True)
+        shutil.copytree(target_py_dir, app_py_dir, symlinks=True)
+
 
 def bundle_python(project_root: Path) -> None:
     dist_dir = project_root / "dist" / "RSM"

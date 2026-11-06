@@ -147,6 +147,62 @@ def main() -> None:
         shutil.rmtree(src_target, ignore_errors=True)
     shutil.copytree(project_root / "src", src_target)
 
+    # 6.1 Struttura bundle nativo macOS (RSM.app con Info.plist ed icone)
+    if sys.platform == "darwin":
+        app_bundle = dist_root / "RSM.app"
+        contents_dir = app_bundle / "Contents"
+        macos_dir = contents_dir / "MacOS"
+        resources_dir = contents_dir / "Resources"
+        macos_dir.mkdir(parents=True, exist_ok=True)
+        resources_dir.mkdir(parents=True, exist_ok=True)
+
+        app_target_exe = macos_dir / "RSM"
+        shutil.copy2(compiled_exe, app_target_exe)
+        try:
+            app_target_exe.chmod(0o755)
+        except OSError:
+            pass
+
+        info_plist_path = contents_dir / "Info.plist"
+        plist_content = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>RSM</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.rsm.nextgen</string>
+    <key>CFBundleName</key>
+    <string>RSM</string>
+    <key>CFBundleDisplayName</key>
+    <string>RSM Next-Gen</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.6.2</string>
+    <key>CFBundleVersion</key>
+    <string>1.6.2</string>
+    <key>CFBundleIconFile</key>
+    <string>icon.icns</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>
+"""
+        info_plist_path.write_text(plist_content, encoding="utf-8")
+
+        icon_source = tauri_project_dir / "icons" / "icon.icns"
+        if icon_source.exists():
+            shutil.copy2(icon_source, resources_dir / "icon.icns")
+
+        bundle_src = resources_dir / "src"
+        if bundle_src.exists():
+            shutil.rmtree(bundle_src, ignore_errors=True)
+        shutil.copytree(project_root / "src", bundle_src)
+        print(f"[OK] Bundle nativo macOS configurato con successo in '{app_bundle}'")
+
     # 7. Garanzia presenza database SQLite in dist/RSM/data
     dist_data.mkdir(parents=True, exist_ok=True)
     dist_db = dist_data / "rsm_inventory.db"

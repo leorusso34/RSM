@@ -138,7 +138,9 @@ def run_level5_bulk_checks(page: Page, console_errors: list[str]) -> dict[str, A
 
     bundle_text = bundle_row.inner_text()
     assert "StockX" in bundle_text, "Canale StockX non presente nel bundle vendite attive"
-    assert "389,99" in bundle_text, "Prezzo totale € 389,99 non presente (o arrotondato erroneamente) nel bundle vendite attive"
+    assert "389,99" in bundle_text, (
+        "Prezzo totale € 389,99 non presente (o arrotondato erroneamente) nel bundle vendite attive"
+    )
     assert "In Vendita" in bundle_text, "Badge 'In Vendita' non presente nel bundle"
     assert "25,55" in bundle_text, "Spese di spedizione totali € 25,55 non presenti sulla riga del bundle"
 
@@ -150,7 +152,9 @@ def run_level5_bulk_checks(page: Page, console_errors: list[str]) -> dict[str, A
     # Prezzo e spese sono unici sulla riga del bundle: le sotto-righe mostrano '-' sia per prezzo che per spese
     for idx in range(2):
         child_sell_text = child_rows.nth(idx).locator("td.col-sell").inner_text().strip()
-        assert child_sell_text == "-", f"Il prezzo di vendita non deve essere ripartito sui prodotti: {child_sell_text!r}"
+        assert child_sell_text == "-", (
+            f"Il prezzo di vendita non deve essere ripartito sui prodotti: {child_sell_text!r}"
+        )
         child_fees_text = child_rows.nth(idx).locator("td.col-fees").inner_text().strip()
         assert child_fees_text == "-", f"Le spese non devono essere ripartite sui prodotti: {child_fees_text!r}"
     page.wait_for_timeout(800)

@@ -128,8 +128,9 @@ fn find_python_executable(work_dir: &Path) -> PathBuf {
     }
 }
 
+use std::fs::OpenOptions;
+use std::process::{Child, Stdio};
 use std::sync::Mutex;
-use std::process::Child;
 
 static CHILD_PROCESS: Mutex<Option<Child>> = Mutex::new(None);
 
@@ -144,6 +145,23 @@ fn ensure_bridge_server() {
         cmd.arg(&script);
         cmd.current_dir(&work_dir);
         cmd.env("RSM_APP_DIR", &work_dir);
+
+        // Reindirizza stdout e stderr nel file data/bridge.log per diagnostica completa
+        let log_path = work_dir.join("data").join("bridge.log");
+        if let Some(parent) = log_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(file) = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&log_path)
+        {
+            if let Ok(err_file) = file.try_clone() {
+                cmd.stdout(Stdio::from(file));
+                cmd.stderr(Stdio::from(err_file));
+            }
+        }
 
         #[cfg(target_os = "windows")]
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
@@ -160,6 +178,20 @@ fn ensure_bridge_server() {
         cmd.arg("src/services/bridge_server.py");
         cmd.env("RSM_APP_DIR", Path::new("."));
 
+        let log_path = Path::new("data").join("bridge.log");
+        let _ = std::fs::create_dir_all("data");
+        if let Ok(file) = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&log_path)
+        {
+            if let Ok(err_file) = file.try_clone() {
+                cmd.stdout(Stdio::from(file));
+                cmd.stderr(Stdio::from(err_file));
+            }
+        }
+
         #[cfg(target_os = "windows")]
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
@@ -170,11 +202,19 @@ fn ensure_bridge_server() {
         }
     }
 
-    // Attendi fino a 2 secondi per l'avvio del server
-    for _ in 0..20 {
+    // Attendi fino a 3.5 secondi per l'avvio del server controllando se il processo è ancora attivo
+    for _ in 0..35 {
         thread::sleep(Duration::from_millis(100));
         if is_bridge_running() {
             break;
+        }
+        if let Ok(mut lock) = CHILD_PROCESS.lock() {
+            if let Some(ref mut child) = *lock {
+                if let Ok(Some(_status)) = child.try_wait() {
+                    // Processo terminato prematuramente con errore
+                    break;
+                }
+            }
         }
     }
 }

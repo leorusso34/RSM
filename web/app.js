@@ -65,6 +65,7 @@ async function loadProductsFromBackend(retries = 6, delay = 500) {
         updateDashboardMetrics();
         initCharts();
         loadPlacesFromBackend();
+        closeBridgeOfflineModal();
         return true;
       }
     } catch (err) {
@@ -75,7 +76,45 @@ async function loadProductsFromBackend(retries = 6, delay = 500) {
       }
     }
   }
+  showBridgeOfflineModal();
   return false;
+}
+
+function showBridgeOfflineModal() {
+  const modal = document.getElementById("bridgeOfflineModal");
+  if (modal) {
+    modal.classList.add("open");
+  }
+}
+
+function closeBridgeOfflineModal() {
+  const modal = document.getElementById("bridgeOfflineModal");
+  if (modal) {
+    modal.classList.remove("open");
+  }
+}
+
+async function retryBridgeConnection() {
+  const btn = document.getElementById("btn-retry-bridge");
+  const label = document.getElementById("btn-retry-bridge-label");
+  if (btn) btn.disabled = true;
+  if (label) label.textContent = "Connessione in corso...";
+
+  try {
+    const ok = await loadProductsFromBackend(4, 400);
+    if (ok) {
+      closeBridgeOfflineModal();
+      pingBridgeLatency();
+      showToast("Connessione al motore locale stabilita con successo!");
+    } else {
+      showToast("Il motore locale non risponde ancora. Controlla data/bridge.log.");
+    }
+  } catch (err) {
+    showToast(`Errore: ${err.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (label) label.textContent = "Riprova Connessione";
+  }
 }
 
 let activeFilter = "all";
