@@ -202,28 +202,94 @@
 
         </section>
 
-        <!-- Banner Allerta Dead Stock (Capitale Immobilizzato & Giacenza) -->
-        <div id="deadStockAlertBanner" class="dead-stock-alert-banner" style="display: none;">
-          <div class="dead-stock-banner-left">
-            <div class="dead-stock-banner-icon" id="deadStockBannerIcon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-              </svg>
-            </div>
-            <div>
-              <div class="dead-stock-banner-title" id="deadStockBannerTitle">Allerta Dead Stock</div>
-              <div class="dead-stock-banner-desc" id="deadStockBannerDesc">
-                Hai <strong id="deadStockCapitalText">€ 0,00</strong> di capitale fermo su <span id="deadStockCountText">0 prodotti</span>.
+        <!-- Card Salute Magazzino & Allerta Dead Stock (Opzione B Collassabile con Health Bar) -->
+        <div id="stockHealthCard" class="stock-health-card" style="display: none;">
+          <!-- Header compatto con titolo, conteggio e controlli -->
+          <div class="stock-health-header" onclick="toggleStockHealthDetails()">
+            <div class="stock-health-info">
+              <div class="stock-health-title-wrap">
+                <div class="stock-health-icon" id="stockHealthIcon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="stock-health-title" id="stockHealthTitle">Salute Magazzino & Rotazione Giacenze</div>
+                  <div class="stock-health-subtitle" id="stockHealthSubtitle">
+                    Capitale fermo: <strong id="stockHealthImmobilizedText">€ 0,00</strong> su <span id="stockHealthTotalItems">0 prodotti</span>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <div class="stock-health-actions" onclick="event.stopPropagation()">
+              <button type="button" class="btn-dead-stock-filter" id="btnFilterDeadStock" onclick="toggleDeadStockFilter()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                <span id="btnFilterDeadStockText">Filtra Fermi (&gt;60gg)</span>
+              </button>
+              <button type="button" class="btn-stock-health-toggle" id="btnStockHealthToggle" onclick="toggleStockHealthDetails()" title="Mostra/Nascondi dettaglio macro-blocchi">
+                <svg id="stockHealthChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition: transform 0.2s ease;">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+            </div>
           </div>
-          <div class="dead-stock-banner-actions">
-            <button type="button" class="btn-dead-stock-filter" id="btnFilterDeadStock" onclick="toggleDeadStockFilter()">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-              </svg>
-              <span id="btnFilterDeadStockText">Filtra Dead Stock</span>
-            </button>
+
+          <!-- Barra di Progresso Segmentata (Health Bar sempre visibile) -->
+          <div class="stock-health-bar-wrap" onclick="toggleStockHealthDetails()" title="Clicca per espandere/comprimere il dettaglio macro-blocchi">
+            <div class="stock-health-bar">
+              <div id="healthBarNormal" class="health-bar-segment normal" style="width: 100%;" title="Regolare (<60gg)"></div>
+              <div id="healthBarWarning" class="health-bar-segment warning" style="width: 0%;" title="Attenzione (60-90gg)"></div>
+              <div id="healthBarCritical" class="health-bar-segment critical" style="width: 0%;" title="Dead Stock (>90gg)"></div>
+            </div>
+            <div class="stock-health-bar-legend">
+              <div class="legend-item"><span class="legend-dot normal"></span>&lt; 60 gg: <strong id="legendNormalText">€ 0,00</strong> (<span id="legendNormalCount">0 pz</span>)</div>
+              <div class="legend-item"><span class="legend-dot warning"></span>60-90 gg: <strong id="legendWarningText">€ 0,00</strong> (<span id="legendWarningCount">0 pz</span>)</div>
+              <div class="legend-item"><span class="legend-dot critical"></span>&gt; 90 gg: <strong id="legendCriticalText">€ 0,00</strong> (<span id="legendCriticalCount">0 pz</span>)</div>
+            </div>
+          </div>
+
+          <!-- Dettaglio 3 Macro-Blocchi a Scomparsa (apribile con la freccetta) -->
+          <div id="stockHealthDetails" class="stock-health-details" style="display: none;">
+            <div class="stock-health-grid">
+              <!-- Macro Blocco 1: Regolare (<60gg) -->
+              <div class="stock-macro-block normal" id="macroBlockNormal" onclick="filterByAgingBracket('normal')" title="Clicca per filtrare prodotti regolari (<60gg)">
+                <div class="macro-block-header">
+                  <span class="macro-badge normal">&lt; 60 giorni</span>
+                  <span class="macro-label">Regolare</span>
+                </div>
+                <div class="macro-capital" id="macroNormalCapital">€ 0,00</div>
+                <div class="macro-meta">
+                  <span class="macro-count" id="macroNormalCount">0 pz</span> • <span id="macroNormalPct">0%</span>
+                </div>
+              </div>
+
+              <!-- Macro Blocco 2: Attenzione (60-90gg) -->
+              <div class="stock-macro-block warning" id="macroBlockWarning" onclick="filterByAgingBracket('warning')" title="Clicca per filtrare prodotti in attenzione (60-90gg)">
+                <div class="macro-block-header">
+                  <span class="macro-badge warning">60 - 90 giorni</span>
+                  <span class="macro-label">Attenzione</span>
+                </div>
+                <div class="macro-capital" id="macroWarningCapital">€ 0,00</div>
+                <div class="macro-meta">
+                  <span class="macro-count" id="macroWarningCount">0 pz</span> • <span id="macroWarningPct">0%</span>
+                </div>
+              </div>
+
+              <!-- Macro Blocco 3: Dead Stock (>90gg) -->
+              <div class="stock-macro-block critical" id="macroBlockCritical" onclick="filterByAgingBracket('critical')" title="Clicca per filtrare prodotti dead stock (>90gg)">
+                <div class="macro-block-header">
+                  <span class="macro-badge critical">&gt; 90 giorni</span>
+                  <span class="macro-label">Dead Stock</span>
+                </div>
+                <div class="macro-capital" id="macroCriticalCapital">€ 0,00</div>
+                <div class="macro-meta">
+                  <span class="macro-count" id="macroCriticalCount">0 pz</span> • <span id="macroCriticalPct">0%</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -1010,71 +1010,108 @@ body {
   font-weight: 500;
 }
 
-/* Dead Stock Alert Banner Dashboard */
-.dead-stock-alert-banner {
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.07) 0%, rgba(17, 24, 39, 0.5) 100%);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-top: 14px;
-  margin-bottom: 2px;
+/* ==========================================================================
+   STOCK HEALTH & AGING CARD (Opzione B Collassabile con Health Bar)
+   ========================================================================== */
+.stock-health-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 14px 0; /* Spaziatura perfettamente simmetrica: 14px sopra, 14px sotto */
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  animation: fadeIn 0.2s ease;
+}
+
+.stock-health-card.has-warning {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.stock-health-card.has-critical {
+  border-color: rgba(244, 63, 94, 0.35);
+}
+
+.stock-health-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  animation: fadeIn 0.2s ease;
+  cursor: pointer;
+  user-select: none;
 }
-.dead-stock-alert-banner.critical {
-  background: linear-gradient(90deg, rgba(244, 63, 94, 0.08) 0%, rgba(17, 24, 39, 0.5) 100%);
-  border-color: rgba(244, 63, 94, 0.3);
+
+.stock-health-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
-.dead-stock-banner-left {
+
+.stock-health-title-wrap {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.dead-stock-banner-icon {
+
+.stock-health-icon {
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.28);
-  color: #fbbf24;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: all 0.15s ease;
 }
-.dead-stock-alert-banner.critical .dead-stock-banner-icon {
+
+.stock-health-card.has-warning .stock-health-icon {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.stock-health-card.has-critical .stock-health-icon {
   background: rgba(244, 63, 94, 0.12);
-  border-color: rgba(244, 63, 94, 0.32);
+  border-color: rgba(244, 63, 94, 0.35);
   color: #fb7185;
 }
-.dead-stock-banner-title {
+
+.stock-health-title {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
 }
-.dead-stock-banner-desc {
+
+.stock-health-subtitle {
   font-size: 12.5px;
   color: var(--text-main);
-  margin-top: 1px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.dead-stock-banner-desc strong {
-  color: #fbbf24;
+
+.stock-health-subtitle strong {
   font-weight: 700;
+  color: #fbbf24;
 }
-.dead-stock-alert-banner.critical .dead-stock-banner-desc strong {
+
+.stock-health-card.has-critical .stock-health-subtitle strong {
   color: #fb7185;
 }
-.dead-stock-banner-actions {
+
+.stock-health-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
+
 .btn-dead-stock-filter {
   height: 28px;
   padding: 0 10px;
@@ -1090,16 +1127,228 @@ body {
   gap: 5px;
   transition: all 0.15s ease;
 }
+
 .btn-dead-stock-filter:hover {
   background: rgba(245, 158, 11, 0.22);
 }
-.dead-stock-alert-banner.critical .btn-dead-stock-filter {
+
+.stock-health-card.has-critical .btn-dead-stock-filter {
   border-color: rgba(244, 63, 94, 0.35);
   background: rgba(244, 63, 94, 0.12);
   color: #fb7185;
 }
-.dead-stock-alert-banner.critical .btn-dead-stock-filter:hover {
+
+.stock-health-card.has-critical .btn-dead-stock-filter:hover {
   background: rgba(244, 63, 94, 0.22);
+}
+
+.btn-stock-health-toggle {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-stock-health-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Health Bar Progress */
+.stock-health-bar-wrap {
+  margin-top: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stock-health-bar {
+  width: 100%;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.health-bar-segment {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.health-bar-segment.normal {
+  background: #475569;
+}
+
+.health-bar-segment.warning {
+  background: #f59e0b;
+}
+
+.health-bar-segment.critical {
+  background: #f43f5e;
+}
+
+.stock-health-bar-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-dot.normal {
+  background: #64748b;
+}
+
+.legend-dot.warning {
+  background: #f59e0b;
+}
+
+.legend-dot.critical {
+  background: #f43f5e;
+}
+
+.legend-item strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+/* Macro-Blocchi a Scomparsa */
+.stock-health-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  animation: fadeIn 0.18s ease;
+}
+
+.stock-health-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.stock-macro-block {
+  padding: 10px 12px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stock-macro-block.normal {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.stock-macro-block.normal:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.stock-macro-block.warning {
+  background: rgba(245, 158, 11, 0.04);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.stock-macro-block.warning:hover {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.stock-macro-block.critical {
+  background: rgba(244, 63, 94, 0.05);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.stock-macro-block.critical:hover {
+  background: rgba(244, 63, 94, 0.09);
+  border-color: rgba(244, 63, 94, 0.5);
+}
+
+.stock-macro-block.active {
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.macro-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.macro-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.macro-badge.normal {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+}
+
+.macro-badge.warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.macro-badge.critical {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.macro-label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.macro-capital {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  font-family: inherit;
+}
+
+.stock-macro-block.warning .macro-capital {
+  color: #fbbf24;
+}
+
+.stock-macro-block.critical .macro-capital {
+  color: #fb7185;
+}
+
+.macro-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
 }
 .data-table th.col-prod, .data-table td.col-prod { width: auto; min-width: 170px; }
 .data-table th.col-size, .data-table td.col-size { width: 60px; text-align: center; }

@@ -147,6 +147,8 @@ let filterSellingPlace = "";
 let filterMinPrice = null;
 let filterMaxPrice = null;
 let filterDeadStockOnly = false;
+let filterAgingBracket = null; // 'normal' | 'warning' | 'critical'
+let isStockHealthExpanded = false;
 
 // Modalità Selezione Multipla & Operazioni Massive
 let isSelectionModeActive = false;
@@ -373,7 +375,8 @@ function updateFilterIndicators() {
     filterSellingPlace ||
     (filterMinPrice !== null && filterMinPrice !== undefined) ||
     (filterMaxPrice !== null && filterMaxPrice !== undefined) ||
-    filterDeadStockOnly
+    filterDeadStockOnly ||
+    filterAgingBracket
   );
 
   const hasAnyFilter = Boolean(hasActiveAdvanced || searchTerm);
@@ -411,8 +414,16 @@ function resetAllFilters() {
   if (maxInput) maxInput.value = "";
 
   filterDeadStockOnly = false;
+  filterAgingBracket = null;
   const btnFilterDeadStockText = document.getElementById("btnFilterDeadStockText");
-  if (btnFilterDeadStockText) btnFilterDeadStockText.textContent = "Filtra Dead Stock";
+  if (btnFilterDeadStockText) btnFilterDeadStockText.textContent = "Filtra Fermi (>60gg)";
+
+  const blkNorm = document.getElementById("macroBlockNormal");
+  const blkWarn = document.getElementById("macroBlockWarning");
+  const blkCrit = document.getElementById("macroBlockCritical");
+  if (blkNorm) blkNorm.classList.remove("active");
+  if (blkWarn) blkWarn.classList.remove("active");
+  if (blkCrit) blkCrit.classList.remove("active");
 
   sortField = "date";
   sortOrder = "desc";
@@ -545,11 +556,13 @@ function updateDashboardMetrics() {
   if (badgeActive) badgeActive.textContent = activeCount;
   if (badgeCompleted) badgeCompleted.textContent = completedCount;
 
-  // Calcolo Dead Stock (Capitale fermo su prodotti in magazzino e pre-ordini)
-  let deadStockCriticalCount = 0; // > 90 giorni (> 3 mesi)
-  let deadStockCriticalCapital = 0;
-  let deadStockWarningCount = 0;  // 60-90 giorni (2-3 mesi)
-  let deadStockWarningCapital = 0;
+  // Calcolo Giacenze Magazzino & Pre-ordini (Health Bar & 3 Macro-Blocchi)
+  let normalCount = 0;       // < 60 giorni (Regolare)
+  let normalCapital = 0;
+  let warningCount = 0;      // 60-90 giorni (Attenzione)
+  let warningCapital = 0;
+  let criticalCount = 0;     // > 90 giorni (Dead Stock)
+  let criticalCapital = 0;
 
   inventoryData.forEach((item) => {
     if (item.status === "stock" || item.status === "preorder") {
@@ -557,53 +570,164 @@ function updateDashboardMetrics() {
       const qty = item.quantity || 1;
       const cost = (item.purchasedPrice || 0) * qty;
       if (days > 90) {
-        deadStockCriticalCount += qty;
-        deadStockCriticalCapital += cost;
+        criticalCount += qty;
+        criticalCapital += cost;
       } else if (days >= 60) {
-        deadStockWarningCount += qty;
-        deadStockWarningCapital += cost;
+        warningCount += qty;
+        warningCapital += cost;
+      } else {
+        normalCount += qty;
+        normalCapital += cost;
       }
     }
   });
 
-  const totalDeadStockCount = deadStockCriticalCount + deadStockWarningCount;
-  const totalDeadStockCapital = deadStockCriticalCapital + deadStockWarningCapital;
+  const totalStockPreorderCount = normalCount + warningCount + criticalCount;
+  const totalStockPreorderCapital = normalCapital + warningCapital + criticalCapital;
 
-  const banner = document.getElementById("deadStockAlertBanner");
-  if (banner) {
-    if (totalDeadStockCount > 0) {
-      banner.style.display = "flex";
-      const isCritical = deadStockCriticalCount > 0;
-      banner.classList.toggle("critical", isCritical);
+  const card = document.getElementById("stockHealthCard");
+  if (card) {
+    if (totalStockPreorderCount > 0) {
+      card.style.display = "block";
+      const isCritical = criticalCount > 0;
+      const isWarning = warningCount > 0;
+      card.classList.toggle("has-critical", isCritical);
+      card.classList.toggle("has-warning", !isCritical && isWarning);
 
-      const titleEl = document.getElementById("deadStockBannerTitle");
-      const descEl = document.getElementById("deadStockBannerDesc");
-
-      if (titleEl) {
-        titleEl.textContent = isCritical ? "Allerta Dead Stock (> 3 Mesi)" : "Attenzione Giacenza (> 60 Giorni)";
-      }
-
-      if (descEl) {
+      // Subtitle con riepilogo
+      const subEl = document.getElementById("stockHealthSubtitle");
+      if (subEl) {
         if (isCritical) {
-          const formattedCapital = formatMoney(deadStockCriticalCapital);
-          let extra = "";
-          if (deadStockWarningCount > 0) {
-            extra = ` <span style="color: var(--text-muted); font-size: 11.5px;">(+ ${deadStockWarningCount} fermi da 60-90 gg)</span>`;
-          }
-          descEl.innerHTML = `Hai <strong>${formattedCapital}</strong> di capitale fermo da più di 3 mesi su <strong>${deadStockCriticalCount} ${deadStockCriticalCount === 1 ? "prodotto" : "prodotti"}</strong>.${extra}`;
+          let extra = warningCount > 0 ? ` <span style="color: var(--text-muted); font-size: 11px;">(+ ${warningCount} fermi da 60-90 gg)</span>` : "";
+          subEl.innerHTML = `Capitale fermo: <strong>${formatMoney(criticalCapital)}</strong> da &gt; 3 mesi su <strong>${criticalCount} ${criticalCount === 1 ? "prodotto" : "prodotti"}</strong>.${extra}`;
+        } else if (isWarning) {
+          subEl.innerHTML = `Capitale in attenzione: <strong>${formatMoney(warningCapital)}</strong> su <strong>${warningCount} ${warningCount === 1 ? "prodotto" : "prodotti"}</strong> fermi da 60-90 gg.`;
         } else {
-          const formattedCapital = formatMoney(deadStockWarningCapital);
-          descEl.innerHTML = `Hai <strong>${formattedCapital}</strong> di capitale fermo da oltre 60 giorni su <strong>${deadStockWarningCount} ${deadStockWarningCount === 1 ? "prodotto" : "prodotti"}</strong>.`;
+          subEl.innerHTML = `Magazzino in perfetta salute: tutti i <strong>${totalStockPreorderCount} prodotti</strong> hanno meno di 60 giorni di giacenza.`;
         }
       }
+
+      // Percentuali Health Bar
+      const pctNormal = totalStockPreorderCapital > 0 ? (normalCapital / totalStockPreorderCapital) * 100 : (totalStockPreorderCount > 0 ? (normalCount / totalStockPreorderCount) * 100 : 100);
+      const pctWarning = totalStockPreorderCapital > 0 ? (warningCapital / totalStockPreorderCapital) * 100 : 0;
+      const pctCritical = totalStockPreorderCapital > 0 ? (criticalCapital / totalStockPreorderCapital) * 100 : 0;
+
+      const barNormal = document.getElementById("healthBarNormal");
+      const barWarning = document.getElementById("healthBarWarning");
+      const barCritical = document.getElementById("healthBarCritical");
+
+      if (barNormal) barNormal.style.width = `${pctNormal}%`;
+      if (barWarning) barWarning.style.width = `${pctWarning}%`;
+      if (barCritical) barCritical.style.width = `${pctCritical}%`;
+
+      // Legenda rapida sotto la barra
+      const legNormTxt = document.getElementById("legendNormalText");
+      const legNormCnt = document.getElementById("legendNormalCount");
+      const legWarnTxt = document.getElementById("legendWarningText");
+      const legWarnCnt = document.getElementById("legendWarningCount");
+      const legCritTxt = document.getElementById("legendCriticalText");
+      const legCritCnt = document.getElementById("legendCriticalCount");
+
+      if (legNormTxt) legNormTxt.textContent = formatMoney(normalCapital);
+      if (legNormCnt) legNormCnt.textContent = `${normalCount} pz`;
+      if (legWarnTxt) legWarnTxt.textContent = formatMoney(warningCapital);
+      if (legWarnCnt) legWarnCnt.textContent = `${warningCount} pz`;
+      if (legCritTxt) legCritTxt.textContent = formatMoney(criticalCapital);
+      if (legCritCnt) legCritCnt.textContent = `${criticalCount} pz`;
+
+      // 3 Macro-Blocchi a Scomparsa
+      const macroNormCap = document.getElementById("macroNormalCapital");
+      const macroNormCnt = document.getElementById("macroNormalCount");
+      const macroNormPct = document.getElementById("macroNormalPct");
+
+      const macroWarnCap = document.getElementById("macroWarningCapital");
+      const macroWarnCnt = document.getElementById("macroWarningCount");
+      const macroWarnPct = document.getElementById("macroWarningPct");
+
+      const macroCritCap = document.getElementById("macroCriticalCapital");
+      const macroCritCnt = document.getElementById("macroCriticalCount");
+      const macroCritPct = document.getElementById("macroCriticalPct");
+
+      if (macroNormCap) macroNormCap.textContent = formatMoney(normalCapital);
+      if (macroNormCnt) macroNormCnt.textContent = `${normalCount} pz`;
+      if (macroNormPct) macroNormPct.textContent = `${pctNormal.toFixed(0)}%`;
+
+      if (macroWarnCap) macroWarnCap.textContent = formatMoney(warningCapital);
+      if (macroWarnCnt) macroWarnCnt.textContent = `${warningCount} pz`;
+      if (macroWarnPct) macroWarnPct.textContent = `${pctWarning.toFixed(0)}%`;
+
+      if (macroCritCap) macroCritCap.textContent = formatMoney(criticalCapital);
+      if (macroCritCnt) macroCritCnt.textContent = `${criticalCount} pz`;
+      if (macroCritPct) macroCritPct.textContent = `${pctCritical.toFixed(0)}%`;
+
+      // Evidenziazione blocco attivo se filtrato
+      const blkNorm = document.getElementById("macroBlockNormal");
+      const blkWarn = document.getElementById("macroBlockWarning");
+      const blkCrit = document.getElementById("macroBlockCritical");
+      if (blkNorm) blkNorm.classList.toggle("active", filterAgingBracket === "normal");
+      if (blkWarn) blkWarn.classList.toggle("active", filterAgingBracket === "warning");
+      if (blkCrit) blkCrit.classList.toggle("active", filterAgingBracket === "critical");
     } else {
-      banner.style.display = "none";
+      card.style.display = "none";
     }
+  }
+}
+
+function toggleStockHealthDetails() {
+  isStockHealthExpanded = !isStockHealthExpanded;
+  const details = document.getElementById("stockHealthDetails");
+  const chevron = document.getElementById("stockHealthChevron");
+  if (details) {
+    details.style.display = isStockHealthExpanded ? "block" : "none";
+  }
+  if (chevron) {
+    chevron.style.transform = isStockHealthExpanded ? "rotate(180deg)" : "rotate(0deg)";
+  }
+}
+
+function filterByAgingBracket(bracket) {
+  if (filterAgingBracket === bracket) {
+    filterAgingBracket = null;
+    showToast("Filtro giacenza rimosso");
+  } else {
+    filterAgingBracket = bracket;
+    filterDeadStockOnly = false;
+    const btnText = document.getElementById("btnFilterDeadStockText");
+    if (btnText) btnText.textContent = "Filtra Fermi (>60gg)";
+
+    if (activeFilter !== "stock" && activeFilter !== "preorder") {
+      activeFilter = "stock";
+      document.querySelectorAll(".table-tab-pill").forEach((p) => {
+        p.classList.toggle("active", p.getAttribute("data-filter") === "stock");
+      });
+      document.querySelectorAll(".nav-item").forEach((i) => {
+        i.classList.toggle("active", i.getAttribute("data-section") === "magazzino");
+      });
+    }
+    const label = bracket === "normal" ? "regolari (<60gg)" : bracket === "warning" ? "in attenzione (60-90gg)" : "dead stock (>90gg)";
+    showToast(`Filtro giacenza attivo: mostrati prodotti ${label}`);
+  }
+
+  // Aggiorna evidenziazione blocchi
+  const blkNorm = document.getElementById("macroBlockNormal");
+  const blkWarn = document.getElementById("macroBlockWarning");
+  const blkCrit = document.getElementById("macroBlockCritical");
+  if (blkNorm) blkNorm.classList.toggle("active", filterAgingBracket === "normal");
+  if (blkWarn) blkWarn.classList.toggle("active", filterAgingBracket === "warning");
+  if (blkCrit) blkCrit.classList.toggle("active", filterAgingBracket === "critical");
+
+  updateFilterIndicators();
+  renderTable();
+
+  const tableCard = document.querySelector(".table-card");
+  if (tableCard) {
+    tableCard.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
 function toggleDeadStockFilter() {
   filterDeadStockOnly = !filterDeadStockOnly;
+  filterAgingBracket = null;
 
   if (filterDeadStockOnly) {
     if (activeFilter !== "stock" && activeFilter !== "preorder") {
@@ -620,9 +744,17 @@ function toggleDeadStockFilter() {
     showToast("Filtro Dead Stock: mostrati capi con oltre 60 giorni di giacenza");
   } else {
     const btnText = document.getElementById("btnFilterDeadStockText");
-    if (btnText) btnText.textContent = "Filtra Dead Stock";
+    if (btnText) btnText.textContent = "Filtra Fermi (>60gg)";
     showToast("Filtro Dead Stock rimosso");
   }
+
+  // Deseleziona macro blocchi
+  const blkNorm = document.getElementById("macroBlockNormal");
+  const blkWarn = document.getElementById("macroBlockWarning");
+  const blkCrit = document.getElementById("macroBlockCritical");
+  if (blkNorm) blkNorm.classList.remove("active");
+  if (blkWarn) blkWarn.classList.remove("active");
+  if (blkCrit) blkCrit.classList.remove("active");
 
   updateFilterIndicators();
   renderTable();
@@ -658,8 +790,14 @@ function getFilteredAndSortedProducts() {
     // 1. Filtro per stato tab
     if (activeFilter !== "all" && item.status !== activeFilter) return false;
 
-    // Filtro rapido Dead Stock (> 60 giorni)
-    if (filterDeadStockOnly) {
+    // Filtro rapido Dead Stock o Macro-Bracket di Giacenza
+    if (filterAgingBracket) {
+      if (item.status !== "stock" && item.status !== "preorder") return false;
+      const days = getProductAgeDays(item);
+      if (filterAgingBracket === "normal" && days >= 60) return false;
+      if (filterAgingBracket === "warning" && (days < 60 || days > 90)) return false;
+      if (filterAgingBracket === "critical" && days <= 90) return false;
+    } else if (filterDeadStockOnly) {
       if (item.status !== "stock" && item.status !== "preorder") return false;
       const days = getProductAgeDays(item);
       if (days < 60) return false;
@@ -4146,10 +4284,17 @@ document.addEventListener("DOMContentLoaded", () => {
       pill.classList.add("active");
       activeFilter = pill.getAttribute("data-filter");
 
-      if (filterDeadStockOnly && activeFilter !== "stock" && activeFilter !== "preorder") {
+      if ((filterDeadStockOnly || filterAgingBracket) && activeFilter !== "stock" && activeFilter !== "preorder") {
         filterDeadStockOnly = false;
+        filterAgingBracket = null;
         const btnText = document.getElementById("btnFilterDeadStockText");
-        if (btnText) btnText.textContent = "Filtra Dead Stock";
+        if (btnText) btnText.textContent = "Filtra Fermi (>60gg)";
+        const blkNorm = document.getElementById("macroBlockNormal");
+        const blkWarn = document.getElementById("macroBlockWarning");
+        const blkCrit = document.getElementById("macroBlockCritical");
+        if (blkNorm) blkNorm.classList.remove("active");
+        if (blkWarn) blkWarn.classList.remove("active");
+        if (blkCrit) blkCrit.classList.remove("active");
         updateFilterIndicators();
       }
 
@@ -4183,10 +4328,17 @@ document.addEventListener("DOMContentLoaded", () => {
         activeFilter = "all";
       }
 
-      if (filterDeadStockOnly && activeFilter !== "stock" && activeFilter !== "preorder") {
+      if ((filterDeadStockOnly || filterAgingBracket) && activeFilter !== "stock" && activeFilter !== "preorder") {
         filterDeadStockOnly = false;
+        filterAgingBracket = null;
         const btnText = document.getElementById("btnFilterDeadStockText");
-        if (btnText) btnText.textContent = "Filtra Dead Stock";
+        if (btnText) btnText.textContent = "Filtra Fermi (>60gg)";
+        const blkNorm = document.getElementById("macroBlockNormal");
+        const blkWarn = document.getElementById("macroBlockWarning");
+        const blkCrit = document.getElementById("macroBlockCritical");
+        if (blkNorm) blkNorm.classList.remove("active");
+        if (blkWarn) blkWarn.classList.remove("active");
+        if (blkCrit) blkCrit.classList.remove("active");
         updateFilterIndicators();
       }
 
