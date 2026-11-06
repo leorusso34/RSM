@@ -240,6 +240,14 @@ fn close_window(window: tauri::Window) {
     let _ = window.close();
 }
 
+#[tauri::command]
+fn start_dragging(window: tauri::Window) {
+    if let Ok(true) = window.is_maximized() {
+        let _ = window.unmaximize();
+    }
+    let _ = window.start_dragging();
+}
+
 fn main() {
     #[cfg(target_os = "windows")]
     std::env::set_var(
@@ -253,7 +261,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             minimize_window,
             toggle_maximize_window,
-            close_window
+            close_window,
+            start_dragging
         ])
         .setup(|app| {
             if let Some(window) = app.get_window("main") {

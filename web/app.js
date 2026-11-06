@@ -4636,3 +4636,26 @@ function updateMaximizeButtonIcon() {
 
 window.addEventListener("resize", updateMaximizeButtonIcon);
 
+function initTitlebarDrag() {
+  const titlebar = document.getElementById("customTitlebar");
+  if (!titlebar) return;
+  titlebar.addEventListener("mousedown", (e) => {
+    // Non avviare il trascinamento se il click avviene sui pulsanti finestra
+    if (e.target.closest(".window-ctrl-btn")) return;
+    if (e.buttons === 1) {
+      if (e.detail === 2) {
+        toggleMaximizeWindow();
+      } else if (window.__TAURI__ && window.__TAURI__.invoke) {
+        window.__TAURI__.invoke("start_dragging").catch(() => {});
+      }
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initTitlebarDrag);
+} else {
+  initTitlebarDrag();
+}
+
+
