@@ -594,19 +594,6 @@ function updateDashboardMetrics() {
       card.classList.toggle("has-critical", isCritical);
       card.classList.toggle("has-warning", !isCritical && isWarning);
 
-      // Subtitle con riepilogo
-      const subEl = document.getElementById("stockHealthSubtitle");
-      if (subEl) {
-        if (isCritical) {
-          let extra = warningCount > 0 ? ` <span style="color: var(--text-muted); font-size: 11px;">(+ ${warningCount} fermi da 60-90 gg)</span>` : "";
-          subEl.innerHTML = `Capitale fermo: <strong>${formatMoney(criticalCapital)}</strong> da &gt; 3 mesi su <strong>${criticalCount} ${criticalCount === 1 ? "prodotto" : "prodotti"}</strong>.${extra}`;
-        } else if (isWarning) {
-          subEl.innerHTML = `Capitale in attenzione: <strong>${formatMoney(warningCapital)}</strong> su <strong>${warningCount} ${warningCount === 1 ? "prodotto" : "prodotti"}</strong> fermi da 60-90 gg.`;
-        } else {
-          subEl.innerHTML = `Magazzino in perfetta salute: tutti i <strong>${totalStockPreorderCount} prodotti</strong> hanno meno di 60 giorni di giacenza.`;
-        }
-      }
-
       // Percentuali Health Bar
       const pctNormal = totalStockPreorderCapital > 0 ? (normalCapital / totalStockPreorderCapital) * 100 : (totalStockPreorderCount > 0 ? (normalCount / totalStockPreorderCount) * 100 : 100);
       const pctWarning = totalStockPreorderCapital > 0 ? (warningCapital / totalStockPreorderCapital) * 100 : 0;
@@ -677,11 +664,15 @@ function toggleStockHealthDetails() {
   isStockHealthExpanded = !isStockHealthExpanded;
   const details = document.getElementById("stockHealthDetails");
   const chevron = document.getElementById("stockHealthChevron");
+  const label = document.getElementById("stockHealthToggleLabel");
   if (details) {
     details.style.display = isStockHealthExpanded ? "block" : "none";
   }
   if (chevron) {
     chevron.style.transform = isStockHealthExpanded ? "rotate(180deg)" : "rotate(0deg)";
+  }
+  if (label) {
+    label.textContent = isStockHealthExpanded ? "Chiudi" : "Dettagli";
   }
 }
 

@@ -202,42 +202,9 @@
 
         </section>
 
-        <!-- Card Salute Magazzino & Allerta Dead Stock (Opzione B Collassabile con Health Bar) -->
+        <!-- Card Salute Magazzino & Allerta Dead Stock (Design Ultra-Sottile: Grafico a Righe + Legenda + Freccetta Sotto) -->
         <div id="stockHealthCard" class="stock-health-card" style="display: none;">
-          <!-- Header compatto con titolo, conteggio e controlli -->
-          <div class="stock-health-header" onclick="toggleStockHealthDetails()">
-            <div class="stock-health-info">
-              <div class="stock-health-title-wrap">
-                <div class="stock-health-icon" id="stockHealthIcon">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                  </svg>
-                </div>
-                <div>
-                  <div class="stock-health-title" id="stockHealthTitle">Salute Magazzino & Rotazione Giacenze</div>
-                  <div class="stock-health-subtitle" id="stockHealthSubtitle">
-                    Capitale fermo: <strong id="stockHealthImmobilizedText">€ 0,00</strong> su <span id="stockHealthTotalItems">0 prodotti</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="stock-health-actions" onclick="event.stopPropagation()">
-              <button type="button" class="btn-dead-stock-filter" id="btnFilterDeadStock" onclick="toggleDeadStockFilter()">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-                </svg>
-                <span id="btnFilterDeadStockText">Filtra Fermi (&gt;60gg)</span>
-              </button>
-              <button type="button" class="btn-stock-health-toggle" id="btnStockHealthToggle" onclick="toggleStockHealthDetails()" title="Mostra/Nascondi dettaglio macro-blocchi">
-                <svg id="stockHealthChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition: transform 0.2s ease;">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Barra di Progresso Segmentata (Health Bar sempre visibile) -->
+          <!-- Barra di Progresso Segmentata (Health Bar a tutta larghezza) -->
           <div class="stock-health-bar-wrap" onclick="toggleStockHealthDetails()" title="Clicca per espandere/comprimere il dettaglio macro-blocchi">
             <div class="stock-health-bar">
               <div id="healthBarNormal" class="health-bar-segment normal" style="width: 100%;" title="Regolare (<60gg)"></div>
@@ -249,6 +216,16 @@
               <div class="legend-item"><span class="legend-dot warning"></span>60-90 gg: <strong id="legendWarningText">€ 0,00</strong> (<span id="legendWarningCount">0 pz</span>)</div>
               <div class="legend-item"><span class="legend-dot critical"></span>&gt; 90 gg: <strong id="legendCriticalText">€ 0,00</strong> (<span id="legendCriticalCount">0 pz</span>)</div>
             </div>
+          </div>
+
+          <!-- Freccettina discreta posizionata sotto le scritte -->
+          <div class="stock-health-toggle-wrap">
+            <button type="button" class="btn-stock-health-toggle-under" id="btnStockHealthToggle" onclick="toggleStockHealthDetails()" title="Espandi / Comprimi dettagli">
+              <span id="stockHealthToggleLabel">Dettagli</span>
+              <svg id="stockHealthChevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition: transform 0.2s ease;">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
           </div>
 
           <!-- Dettaglio 3 Macro-Blocchi a Scomparsa (apribile con la freccetta) -->

@@ -1011,13 +1011,13 @@ body {
 }
 
 /* ==========================================================================
-   STOCK HEALTH & AGING CARD (Opzione B Collassabile con Health Bar)
+   STOCK HEALTH & AGING CARD (Proposta 2 Ultra-Sottile: Health Bar + Legenda + Freccetta Sotto)
    ========================================================================== */
 .stock-health-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  padding: 12px 16px;
+  padding: 10px 14px 6px 14px;
   margin: 14px 0; /* Spaziatura perfettamente simmetrica: 14px sopra, 14px sotto */
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   animation: fadeIn 0.2s ease;
@@ -1031,140 +1031,8 @@ body {
   border-color: rgba(244, 63, 94, 0.35);
 }
 
-.stock-health-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.stock-health-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.stock-health-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.stock-health-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-}
-
-.stock-health-card.has-warning .stock-health-icon {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #fbbf24;
-}
-
-.stock-health-card.has-critical .stock-health-icon {
-  background: rgba(244, 63, 94, 0.12);
-  border-color: rgba(244, 63, 94, 0.35);
-  color: #fb7185;
-}
-
-.stock-health-title {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-}
-
-.stock-health-subtitle {
-  font-size: 12.5px;
-  color: var(--text-main);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stock-health-subtitle strong {
-  font-weight: 700;
-  color: #fbbf24;
-}
-
-.stock-health-card.has-critical .stock-health-subtitle strong {
-  color: #fb7185;
-}
-
-.stock-health-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.btn-dead-stock-filter {
-  height: 28px;
-  padding: 0 10px;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 5px;
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  background: rgba(245, 158, 11, 0.12);
-  color: #fbbf24;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  transition: all 0.15s ease;
-}
-
-.btn-dead-stock-filter:hover {
-  background: rgba(245, 158, 11, 0.22);
-}
-
-.stock-health-card.has-critical .btn-dead-stock-filter {
-  border-color: rgba(244, 63, 94, 0.35);
-  background: rgba(244, 63, 94, 0.12);
-  color: #fb7185;
-}
-
-.stock-health-card.has-critical .btn-dead-stock-filter:hover {
-  background: rgba(244, 63, 94, 0.22);
-}
-
-.btn-stock-health-toggle {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-stock-health-toggle:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-main);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
 /* Health Bar Progress */
 .stock-health-bar-wrap {
-  margin-top: 10px;
   cursor: pointer;
   user-select: none;
 }
@@ -1201,7 +1069,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 11px;
   color: var(--text-muted);
 }
@@ -1236,10 +1104,37 @@ body {
   font-weight: 600;
 }
 
+/* Freccetta centrata sotto le scritte */
+.stock-health-toggle-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 3px;
+}
+
+.btn-stock-health-toggle-under {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  user-select: none;
+}
+
+.btn-stock-health-toggle-under:hover {
+  color: var(--text-main);
+}
+
 /* Macro-Blocchi a Scomparsa */
 .stock-health-details {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 8px;
+  padding-top: 10px;
+  padding-bottom: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   animation: fadeIn 0.18s ease;
 }
