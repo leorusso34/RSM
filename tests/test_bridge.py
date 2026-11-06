@@ -308,8 +308,10 @@ def test_bridge_bulk_operations(tmp_path):
         prod2 = db.get(id2)
         assert prod1["status"] == STATUS_SOLD
         assert prod1["is_completed"] == 0
-        assert prod1["sold_price"] == Decimal("200.00")
-        # Le spese sono uniche: registrate per intero sul primo prodotto, non divise
+        # Prezzo e spese sono unici: registrati per intero sul primo prodotto, non divisi
+        assert prod1["sold_price"] == Decimal("400.00")
+        assert prod2["sold_price"] == Decimal("0.00")
+        assert prod1["sold_price"] + prod2["sold_price"] == Decimal("400.00")
         assert prod1["fees"] == Decimal("30.00")
         assert prod2["fees"] == Decimal("0.00")
         assert prod1["fees"] + prod2["fees"] == Decimal("30.00")
@@ -664,8 +666,8 @@ def test_bridge_settings_email_sync(tmp_path, monkeypatch):
         server.server_close()
 
 
-def test_bridge_bundle_fees_are_single_not_split(tmp_path):
-    """Con un bundle dispari (3 prodotti) le spese restano uniche e non vengono divise/arrotondate."""
+def test_bridge_bundle_fees_and_price_are_single_not_split(tmp_path):
+    """Con un bundle dispari (3 prodotti) e importi decimali dispari (es. 389.99€) prezzo e spese restano unici senza arrotondamenti."""
     test_db = tmp_path / "test_bundle_fees.db"
     db = InventoryDatabase(test_db)
     ids = [
@@ -701,7 +703,7 @@ def test_bridge_bundle_fees_are_single_not_split(tmp_path):
                 {
                     "ids": ids,
                     "status": "active-sale",
-                    "sold_price_total": 300.0,
+                    "sold_price_total": 389.99,
                     "fees_total": 10.0,
                     "selling_place": "Vinted",
                 }
@@ -711,6 +713,10 @@ def test_bridge_bundle_fees_are_single_not_split(tmp_path):
         )
         with request.urlopen(req) as resp:
             assert json.loads(resp.read().decode("utf-8"))["success"] is True
+
+        prices = [db.get(i)["sold_price"] for i in ids]
+        assert prices == [Decimal("389.99"), Decimal("0.00"), Decimal("0.00")]
+        assert sum(prices) == Decimal("389.99")
 
         fees = [db.get(i)["fees"] for i in ids]
         assert fees == [Decimal("10.00"), Decimal("0.00"), Decimal("0.00")]

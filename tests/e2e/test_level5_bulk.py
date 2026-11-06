@@ -120,15 +120,15 @@ def run_level5_bulk_checks(page: Page, console_errors: list[str]) -> dict[str, A
     page.wait_for_selector("#bulkSaleModal.open", timeout=5000)
     page.wait_for_timeout(500)
 
-    page.fill("#bulk-sale-total-price", "500.00")
-    page.fill("#bulk-sale-total-fees", "40.00")
+    page.fill("#bulk-sale-total-price", "389.99")
+    page.fill("#bulk-sale-total-fees", "25.55")
     page.fill("#bulk-sale-place", "StockX")
     page.wait_for_timeout(600)
 
     page.click('#bulkSaleForm button[type="submit"]')
     page.wait_for_selector("#bulkSaleModal", state="hidden", timeout=5000)
     page.wait_for_timeout(800)
-    details.append("Vendita multipla configurata: Totale € 500,00, Spese € 40,00 su StockX")
+    details.append("Vendita multipla configurata: Totale € 389,99, Spese € 25,55 su StockX")
 
     # 8. Verifica Bundle in 'Vendite Attive'
     page.click('button.table-tab-pill[data-filter="active-sale"]')
@@ -138,17 +138,19 @@ def run_level5_bulk_checks(page: Page, console_errors: list[str]) -> dict[str, A
 
     bundle_text = bundle_row.inner_text()
     assert "StockX" in bundle_text, "Canale StockX non presente nel bundle vendite attive"
-    assert "500" in bundle_text, "Prezzo totale € 500 non presente nel bundle vendite attive"
+    assert "389,99" in bundle_text, "Prezzo totale € 389,99 non presente (o arrotondato erroneamente) nel bundle vendite attive"
     assert "In Vendita" in bundle_text, "Badge 'In Vendita' non presente nel bundle"
-    assert "40" in bundle_text, "Spese di spedizione totali € 40 non presenti sulla riga del bundle"
+    assert "25,55" in bundle_text, "Spese di spedizione totali € 25,55 non presenti sulla riga del bundle"
 
     # Espansione bundle
     bundle_row.click()
     page.wait_for_timeout(500)
     child_rows = page.locator("#inventory-table-body tr.bundle-child-row")
     expect(child_rows).to_have_count(2, timeout=5000)
-    # Le spese sono uniche: le sotto-righe non mostrano alcuna quota (es. 20,00 + 20,00)
+    # Prezzo e spese sono unici sulla riga del bundle: le sotto-righe mostrano '-' sia per prezzo che per spese
     for idx in range(2):
+        child_sell_text = child_rows.nth(idx).locator("td.col-sell").inner_text().strip()
+        assert child_sell_text == "-", f"Il prezzo di vendita non deve essere ripartito sui prodotti: {child_sell_text!r}"
         child_fees_text = child_rows.nth(idx).locator("td.col-fees").inner_text().strip()
         assert child_fees_text == "-", f"Le spese non devono essere ripartite sui prodotti: {child_fees_text!r}"
     page.wait_for_timeout(800)
@@ -180,11 +182,11 @@ def run_level5_bulk_checks(page: Page, console_errors: list[str]) -> dict[str, A
     expect(page.locator("#capsuleTotalCost")).to_contain_text("330")
     expect(page.locator("#capsuleAvgCost")).to_contain_text("165")
     expect(page.locator("#capsuleSalesStats")).to_be_visible()
-    expect(page.locator("#capsuleTotalSale")).to_contain_text("500")
-    expect(page.locator("#capsuleTotalProfit")).to_contain_text("130")
-    expect(page.locator("#capsuleRoiBadge")).to_contain_text("39.4%")
+    expect(page.locator("#capsuleTotalSale")).to_contain_text("389,99")
+    expect(page.locator("#capsuleTotalProfit")).to_contain_text("34,44")
+    expect(page.locator("#capsuleRoiBadge")).to_contain_text("10.4%")
     details.append(
-        "Pillola Flottante a vendita conclusa validata: 2 sel., Spesa € 330, Media € 165, Vendita € 500, Utile Netto +€ 130,00, ROI +39.4%"
+        "Pillola Flottante a vendita conclusa validata: 2 sel., Spesa € 330, Media € 165, Vendita € 389,99, Utile Netto +€ 34,44, ROI +10.4%"
     )
 
     # 11. Pulizia finale: Eliminazione Bundle dal Menu Contestuale

@@ -877,17 +877,17 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     extra: dict[str, Any] = {}
                     sp_total = body.get("sold_price_total")
                     fees_total = body.get("fees_total", 0)
-                    count_dec = Decimal(str(len(ids))) if ids else Decimal(1)
-
-                    if sp_total is not None and str(sp_total).strip() != "":
-                        sp_dec = Decimal(str(sp_total))
-                        extra["sold_price"] = (sp_dec / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-                    # Le spese di spedizione sono uniche per l'intera vendita: nei bundle NON vengono
-                    # divise per il numero di prodotti (evita errori di arrotondamento con quantita' dispari).
-                    # Vengono registrate per intero sul primo prodotto del bundle; gli altri hanno 0.
-                    fees_dec = Decimal(str(fees_total or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                     is_bundle_sale = len(ids) > 1
+
+                    sp_dec = Decimal("0.00")
+                    if sp_total is not None and str(sp_total).strip() != "":
+                        sp_dec = Decimal(str(sp_total)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    extra["sold_price"] = Decimal("0.00") if is_bundle_sale else sp_dec
+
+                    # Prezzo di vendita e spese nei bundle NON vengono divisi per il numero di prodotti
+                    # (evita qualsiasi errore di arrotondamento con importi dispari o frazionari).
+                    # Vengono registrati per intero sul primo prodotto del bundle; gli altri hanno 0.
+                    fees_dec = Decimal(str(fees_total or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                     extra["fees"] = Decimal("0.00") if is_bundle_sale else fees_dec
 
                     if "selling_place" in body:
@@ -945,8 +945,8 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                         )
                         if is_bundle_sale:
                             self.db.connection.execute(
-                                "UPDATE products SET fees_cents = ? WHERE id = ?",
-                                (money_to_cents(fees_dec), ids[0]),
+                                "UPDATE products SET sold_price_cents = ?, fees_cents = ? WHERE id = ?",
+                                (money_to_cents(sp_dec), money_to_cents(fees_dec), ids[0]),
                             )
                     self._send_json({"success": True, "updated_count": len(ids)})
                     return

@@ -931,7 +931,7 @@ function renderTable() {
               </td>
               <td class="col-qty col-center">${child.quantity} pz</td>
               <td class="col-buy">${formatMoney(child.purchasedPrice)}</td>
-              <td class="col-sell" style="color: var(--text-dim); font-size: 11.5px;">(in bundle)</td>
+              <td class="col-sell" style="color: var(--text-dim); font-size: 11.5px;">-</td>
               <td class="col-channel"><span style="font-size: 11.5px; color: var(--text-dim);">${child.sellingPlace || "-"}</span></td>
               <td class="col-fees" style="color: var(--text-dim); font-size: 11.5px;">-</td>
               <td class="col-profit" style="color: var(--text-dim);">-</td>
@@ -2565,7 +2565,7 @@ function openBulkSaleModal(targetIds = null) {
     }
   } else {
     if (titleEl) titleEl.textContent = `Metti in Vendita (${bulkSaleTargetIds.length} Prodotti)`;
-    if (subtitleEl) subtitleEl.textContent = "Stai per mettere in vendita i prodotti selezionati insieme come bundle. Il prezzo totale verrà ripartito equamente, mentre le spese restano uniche e vengono mostrate una sola volta sul bundle.";
+    if (subtitleEl) subtitleEl.textContent = "Stai per mettere in vendita i prodotti selezionati insieme come bundle. Il prezzo totale e le spese restano unici e vengono mostrati una sola volta sulla riga del bundle.";
     if (priceLabel) priceLabel.textContent = "Prezzo di Vendita TOTALE (€) *";
     if (qtyGroup) qtyGroup.style.display = "none";
   }
