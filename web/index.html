@@ -51,27 +51,18 @@
          ==================================================================== -->
     <aside class="sidebar" id="appSidebar">
       <div>
-        <!-- Intestazione Sidebar con solo il Logo del Progetto e Pulsante Chiudi -->
-        <div class="brand-section">
-          <div class="brand-left">
-            <div class="brand-logo">
-              <img src="app_icon.png" alt="RSM Logo" class="brand-logo-img" />
-            </div>
-          </div>
-          <button class="sidebar-toggle-btn" id="closeSidebarBtn" title="Nascondi barra laterale" onclick="toggleSidebar(false)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Pulsante Nuovo Prodotto (Singolo a tutta larghezza) -->
-        <div class="sidebar-action-wrap">
-          <button class="btn-sidebar-add" onclick="openAddProductModal()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <!-- Testata Sidebar: Pulsante Nuovo Prodotto e Chiusura Tendina -->
+        <div class="sidebar-top-row">
+          <button class="btn-sidebar-add" onclick="openAddProductModal()" title="Aggiungi prodotto all'inventario">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
             <span>Nuovo Prodotto</span>
+          </button>
+          <button class="sidebar-toggle-btn" id="closeSidebarBtn" title="Nascondi barra laterale" onclick="toggleSidebar(false)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+            </svg>
           </button>
         </div>
 

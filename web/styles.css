@@ -251,50 +251,58 @@ body {
   pointer-events: none;
 }
 
-/* Sidebar Header: Logo on left, Close button on right */
-.brand-section {
+/* Sidebar Header: Compact top row with Nuovo Prodotto + Close Button */
+.sidebar-top-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 2px 4px 14px 4px;
+  gap: 8px;
+  padding: 0 2px 14px 2px;
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 14px;
 }
 
-.brand-left {
+.sidebar-top-row .btn-sidebar-add {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-primary);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
 }
 
-.brand-logo {
+.sidebar-top-row .btn-sidebar-add:hover {
+  background: var(--accent-primary-hover);
+}
+
+.sidebar-top-row .sidebar-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
   width: 32px;
   height: 32px;
+  min-width: 32px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.brand-logo-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-}
-
-.brand-text h1 {
-  font-size: 15px;
-  font-weight: 700;
+.sidebar-top-row .sidebar-toggle-btn:hover {
+  background: var(--bg-card);
   color: #fff;
-  line-height: 1.1;
-}
-
-.brand-text p {
-  font-size: 10.5px;
-  color: var(--text-dim);
+  border-color: var(--border-light);
 }
 
 .sidebar-toggle-btn {
@@ -317,7 +325,7 @@ body {
   border-color: var(--border-light);
 }
 
-/* Quick Action Button in Sidebar */
+/* Quick Action Button in Sidebar (Fallback) */
 .sidebar-action-wrap {
   margin-bottom: 14px;
   padding: 0 2px;
