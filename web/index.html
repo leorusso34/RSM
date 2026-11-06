@@ -8,6 +8,34 @@
   <script src="chart.min.js"></script>
 </head>
 <body>
+  <!-- ====================================================================
+       BARRA SUPERIORE FRAMELESS (CUSTOM WINDOW TITLEBAR)
+       ==================================================================== -->
+  <header class="custom-titlebar" id="customTitlebar">
+    <div class="titlebar-left" data-tauri-drag-region ondblclick="toggleMaximizeWindow()">
+      <img src="app_icon.png" alt="RSM" class="titlebar-icon" />
+      <span class="titlebar-title">RSM</span>
+    </div>
+    <div class="titlebar-drag-region" data-tauri-drag-region ondblclick="toggleMaximizeWindow()"></div>
+    <div class="titlebar-controls">
+      <button type="button" class="window-ctrl-btn" id="windowMinBtn" title="Riduci a icona" onclick="minimizeWindow()" aria-label="Riduci a icona">
+        <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor">
+          <rect width="10" height="1"/>
+        </svg>
+      </button>
+      <button type="button" class="window-ctrl-btn" id="windowMaxBtn" title="Ingrandisci" onclick="toggleMaximizeWindow()" aria-label="Ingrandisci o Ripristina">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect width="9" height="9" x="0.5" y="0.5"/>
+        </svg>
+      </button>
+      <button type="button" class="window-ctrl-btn close" id="windowCloseBtn" title="Chiudi" onclick="closeWindow()" aria-label="Chiudi finestra">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M1 1l8 8M9 1L1 9"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
   <!-- Layout Applicativo Principale -->
   <div class="app-layout">
     

@@ -91,12 +91,106 @@ body {
   height: 100vh;
   overflow: hidden;
   user-select: none;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+   CUSTOM FRAMELESS TITLEBAR (34PX ZERO-LAG NATIVE CHROME)
+   ========================================================================== */
+.custom-titlebar {
+  height: 34px;
+  min-height: 34px;
+  background-color: #0b0f19;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  z-index: 1000;
+  position: relative;
+  width: 100%;
+  padding: 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  height: 100%;
+  cursor: default;
+}
+
+.titlebar-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.titlebar-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #cbd5e1;
+  letter-spacing: 0.3px;
+  pointer-events: none;
+}
+
+.titlebar-drag-region {
+  flex: 1;
+  height: 100%;
+  cursor: default;
+}
+
+.titlebar-controls {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.window-ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  outline: none;
+}
+
+.window-ctrl-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.window-ctrl-btn.close:hover {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.window-ctrl-btn:active {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.window-ctrl-btn.close:active {
+  background-color: #dc2626 !important;
 }
 
 /* App Container Layout */
 .app-layout {
   display: flex;
-  height: 100vh;
+  flex: 1;
+  height: calc(100vh - 34px);
   width: 100vw;
   overflow: hidden;
   position: relative;
@@ -418,7 +512,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
   background-color: var(--bg-app);
   transition: all 0.22s ease;

@@ -3,7 +3,8 @@
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
     "devPath": "../web",
-    "distDir": "../web"
+    "distDir": "../web",
+    "withGlobalTauri": true
   },
   "package": {
     "productName": "RSM Next-Gen",
@@ -45,7 +46,7 @@
         "minHeight": 680,
         "resizable": true,
         "fullscreen": false,
-        "decorations": true,
+        "decorations": false,
         "transparent": false,
         "center": true,
         "visible": false,

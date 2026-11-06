@@ -4585,3 +4585,54 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+// =============================================================================
+// GESTIONE FINESTRA FRAMELESS TAURI (CUSTOM TITLEBAR)
+// =============================================================================
+function minimizeWindow() {
+  if (window.__TAURI__) {
+    if (window.__TAURI__.invoke) {
+      window.__TAURI__.invoke("minimize_window").catch(() => {});
+    } else if (window.__TAURI__.window && window.__TAURI__.window.appWindow) {
+      window.__TAURI__.window.appWindow.minimize();
+    }
+  }
+}
+
+function toggleMaximizeWindow() {
+  if (window.__TAURI__) {
+    if (window.__TAURI__.invoke) {
+      window.__TAURI__.invoke("toggle_maximize_window").catch(() => {});
+    } else if (window.__TAURI__.window && window.__TAURI__.window.appWindow) {
+      window.__TAURI__.window.appWindow.toggleMaximize();
+    }
+  }
+}
+
+function closeWindow() {
+  if (window.__TAURI__) {
+    if (window.__TAURI__.invoke) {
+      window.__TAURI__.invoke("close_window").catch(() => {});
+    } else if (window.__TAURI__.window && window.__TAURI__.window.appWindow) {
+      window.__TAURI__.window.appWindow.close();
+    }
+  }
+}
+
+function updateMaximizeButtonIcon() {
+  const maxBtn = document.getElementById("windowMaxBtn");
+  if (!maxBtn) return;
+  const isMax = window.innerWidth >= screen.availWidth - 10 && window.innerHeight >= screen.availHeight - 48;
+  if (isMax) {
+    maxBtn.setAttribute("title", "Ripristina");
+    maxBtn.innerHTML =
+      '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><path d="M2.5 0.5h7v7h-2v2h-7v-7h2v-2z"/><path d="M0.5 2.5h7v7h-7z"/></svg>';
+  } else {
+    maxBtn.setAttribute("title", "Ingrandisci");
+    maxBtn.innerHTML =
+      '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect width="9" height="9" x="0.5" y="0.5"/></svg>';
+  }
+}
+
+window.addEventListener("resize", updateMaximizeButtonIcon);
+
