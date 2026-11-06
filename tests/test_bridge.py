@@ -309,7 +309,10 @@ def test_bridge_bulk_operations(tmp_path):
         assert prod1["status"] == STATUS_SOLD
         assert prod1["is_completed"] == 0
         assert prod1["sold_price"] == Decimal("200.00")
-        assert prod1["fees"] == Decimal("15.00")
+        # Le spese sono uniche: registrate per intero sul primo prodotto, non divise
+        assert prod1["fees"] == Decimal("30.00")
+        assert prod2["fees"] == Decimal("0.00")
+        assert prod1["fees"] + prod2["fees"] == Decimal("30.00")
         assert prod1["selling_place"] == "Vinted"
         assert prod1["bundle_id"] != ""
         assert prod1["bundle_id"] == prod2["bundle_id"]
@@ -656,6 +659,86 @@ def test_bridge_settings_email_sync(tmp_path, monkeypatch):
 
         assert db.get_setting("email_sync_address") == "utente@gmail.com"
         assert db.get_setting("email_sync_app_password") == "abcd efgh ijkl mnop"
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_bridge_bundle_fees_are_single_not_split(tmp_path):
+    """Con un bundle dispari (3 prodotti) le spese restano uniche e non vengono divise/arrotondate."""
+    test_db = tmp_path / "test_bundle_fees.db"
+    db = InventoryDatabase(test_db)
+    ids = [
+        db.save(
+            {
+                "name": f"Prodotto {n}",
+                "size": "42",
+                "quantity": 1,
+                "purchased_price": Decimal("50.00"),
+                "purchased_place": "Nike",
+                "status": STATUS_STOCK,
+            }
+        )
+        for n in range(3)
+    ]
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        req = request.Request(
+            f"http://127.0.0.1:{port}/api/products/bulk-status",
+            data=json.dumps(
+                {
+                    "ids": ids,
+                    "status": "active-sale",
+                    "sold_price_total": 300.0,
+                    "fees_total": 10.0,
+                    "selling_place": "Vinted",
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req) as resp:
+            assert json.loads(resp.read().decode("utf-8"))["success"] is True
+
+        fees = [db.get(i)["fees"] for i in ids]
+        assert fees == [Decimal("10.00"), Decimal("0.00"), Decimal("0.00")]
+        assert sum(fees) == Decimal("10.00")
+        assert len({db.get(i)["bundle_id"] for i in ids}) == 1
+
+        # Vendita singola: le spese restano sul prodotto
+        single_id = db.save(
+            {
+                "name": "Singolo",
+                "size": "43",
+                "quantity": 1,
+                "purchased_price": Decimal("80.00"),
+                "purchased_place": "Nike",
+                "status": STATUS_STOCK,
+            }
+        )
+        req_single = request.Request(
+            f"http://127.0.0.1:{port}/api/products/bulk-status",
+            data=json.dumps(
+                {"ids": [single_id], "status": "active-sale", "sold_price_total": 120.0, "fees_total": 7.5}
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req_single) as resp:
+            assert json.loads(resp.read().decode("utf-8"))["success"] is True
+        assert db.get(single_id)["fees"] == Decimal("7.50")
     finally:
         server.shutdown()
         server.server_close()

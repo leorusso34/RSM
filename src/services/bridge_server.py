@@ -34,6 +34,7 @@ from src.config import (
     STATUS_STOCK,
 )
 from src.database import InventoryDatabase
+from src.utils import money_to_cents
 
 PORT = 28472
 HOST = "127.0.0.1"
@@ -882,8 +883,12 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                         sp_dec = Decimal(str(sp_total))
                         extra["sold_price"] = (sp_dec / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-                    fees_dec = Decimal(str(fees_total or 0))
-                    extra["fees"] = (fees_dec / count_dec).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    # Le spese di spedizione sono uniche per l'intera vendita: nei bundle NON vengono
+                    # divise per il numero di prodotti (evita errori di arrotondamento con quantita' dispari).
+                    # Vengono registrate per intero sul primo prodotto del bundle; gli altri hanno 0.
+                    fees_dec = Decimal(str(fees_total or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    is_bundle_sale = len(ids) > 1
+                    extra["fees"] = Decimal("0.00") if is_bundle_sale else fees_dec
 
                     if "selling_place" in body:
                         extra["selling_place"] = str(body["selling_place"]).strip()
@@ -938,6 +943,11 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                             f"UPDATE products SET is_completed = 0 WHERE id IN ({placeholders})",
                             ids,
                         )
+                        if is_bundle_sale:
+                            self.db.connection.execute(
+                                "UPDATE products SET fees_cents = ? WHERE id = ?",
+                                (money_to_cents(fees_dec), ids[0]),
+                            )
                     self._send_json({"success": True, "updated_count": len(ids)})
                     return
             except Exception as e:  # noqa: BLE001

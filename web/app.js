@@ -933,7 +933,7 @@ function renderTable() {
               <td class="col-buy">${formatMoney(child.purchasedPrice)}</td>
               <td class="col-sell" style="color: var(--text-dim); font-size: 11.5px;">(in bundle)</td>
               <td class="col-channel"><span style="font-size: 11.5px; color: var(--text-dim);">${child.sellingPlace || "-"}</span></td>
-              <td class="col-fees" style="color: var(--text-dim); font-size: 11.5px;">${child.fees ? formatMoney(child.fees) : "-"}</td>
+              <td class="col-fees" style="color: var(--text-dim); font-size: 11.5px;">-</td>
               <td class="col-profit" style="color: var(--text-dim);">-</td>
               <td class="col-roi col-center" style="color: var(--text-dim);">-</td>
               <td class="col-status col-center"><span style="color: var(--text-dim); font-size: 11px;">(incluso)</span></td>
@@ -2565,7 +2565,7 @@ function openBulkSaleModal(targetIds = null) {
     }
   } else {
     if (titleEl) titleEl.textContent = `Metti in Vendita (${bulkSaleTargetIds.length} Prodotti)`;
-    if (subtitleEl) subtitleEl.textContent = "Stai per mettere in vendita i prodotti selezionati insieme come bundle. Il prezzo totale e le commissioni verranno ripartiti equamente e verrà visualizzato un unico gruppo di vendita.";
+    if (subtitleEl) subtitleEl.textContent = "Stai per mettere in vendita i prodotti selezionati insieme come bundle. Il prezzo totale verrà ripartito equamente, mentre le spese restano uniche e vengono mostrate una sola volta sul bundle.";
     if (priceLabel) priceLabel.textContent = "Prezzo di Vendita TOTALE (€) *";
     if (qtyGroup) qtyGroup.style.display = "none";
   }

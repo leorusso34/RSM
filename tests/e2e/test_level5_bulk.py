@@ -140,12 +140,17 @@ def run_level5_bulk_checks(page: Page, console_errors: list[str]) -> dict[str, A
     assert "StockX" in bundle_text, "Canale StockX non presente nel bundle vendite attive"
     assert "500" in bundle_text, "Prezzo totale € 500 non presente nel bundle vendite attive"
     assert "In Vendita" in bundle_text, "Badge 'In Vendita' non presente nel bundle"
+    assert "40" in bundle_text, "Spese di spedizione totali € 40 non presenti sulla riga del bundle"
 
     # Espansione bundle
     bundle_row.click()
     page.wait_for_timeout(500)
     child_rows = page.locator("#inventory-table-body tr.bundle-child-row")
     expect(child_rows).to_have_count(2, timeout=5000)
+    # Le spese sono uniche: le sotto-righe non mostrano alcuna quota (es. 20,00 + 20,00)
+    for idx in range(2):
+        child_fees_text = child_rows.nth(idx).locator("td.col-fees").inner_text().strip()
+        assert child_fees_text == "-", f"Le spese non devono essere ripartite sui prodotti: {child_fees_text!r}"
     page.wait_for_timeout(800)
     details.append("Bundle raggruppato in 'Vendite Attive' verificato ed espanso (2 sotto-righe prodotto)")
 
