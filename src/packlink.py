@@ -197,6 +197,7 @@ def fallback_regex_parse_address(raw_text: str) -> dict[str, Any]:
         "length": 34.0,
         "width": 23.0,
         "height": 13.0,
+        "content": "Scarpe / Sneakers",
     }
 
     # Estrazione email
@@ -213,6 +214,48 @@ def fallback_regex_parse_address(raw_text: str) -> dict[str, Any]:
     zip_m = re.search(r"\b\d{5}\b", text)
     if zip_m:
         result["zip"] = zip_m.group(0)
+
+    # Estrazione Nome e Cognome (es. "a Luca Bianchi" o "destinatario Marco Rossi" o inizio riga)
+    name_m = re.search(
+        r"(?:a|destinatario|per|invia a|spedisci a|sig\.?|nome:?)\s+([A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)?)",
+        text,
+        re.IGNORECASE,
+    )
+    if name_m:
+        extracted_name = name_m.group(1).strip()
+        if " " in extracted_name:
+            parts = extracted_name.split(" ", 1)
+            result["name"] = parts[0].title()
+            result["surname"] = parts[1].title()
+        else:
+            result["name"] = extracted_name.title()
+
+    # Estrazione indirizzo (via, viale, corso, piazza, largo, strada con civico)
+    street_m = re.search(
+        r"(?:via|viale|corso|piazza|largo|strada|vicolo|c\.so|v\.le)\s+[^,\n\r]+?(?:\d+[a-zA-Z]?)",
+        text,
+        re.IGNORECASE,
+    )
+    if street_m:
+        result["street1"] = street_m.group(0).strip().title()
+
+    # Dettagli interni o scala
+    detail_m = re.search(
+        r"\b(?:scala\s+[a-zA-Z0-9]+|int(?:erno)?\s*\.?\s*\d+|piano\s+\d+|cit(?:ofono)?\s+[^,\n\r]+)",
+        text,
+        re.IGNORECASE,
+    )
+    if detail_m:
+        result["street2"] = detail_m.group(0).strip().title()
+
+    # Estrazione città (parola prima o dopo il CAP, es. "00185 Roma" o "Milano 20121")
+    city_m = re.search(r"\b\d{5}\s+([A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)?)\b", text)
+    if city_m:
+        result["city"] = city_m.group(1).strip().title()
+    else:
+        city_before = re.search(r"\b([A-Za-zÀ-ÖØ-öø-ÿ]+)\s+\d{5}\b", text)
+        if city_before:
+            result["city"] = city_before.group(1).strip().title()
 
     # Estrazione peso se presente (es. 1.5kg o 500g)
     weight_kg = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:kg|chili)\b", text, re.IGNORECASE)

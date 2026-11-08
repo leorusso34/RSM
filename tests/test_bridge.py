@@ -865,7 +865,7 @@ def test_bridge_packlink_endpoints(tmp_path, monkeypatch):
     test_config = tmp_path / "test_config.json"
     monkeypatch.setattr("src.database.CONFIG_JSON_PATH", test_config)
     test_db = tmp_path / "test_bridge_packlink.db"
-    db = InventoryDatabase(test_db)
+    InventoryDatabase(test_db)
 
     class TestBridgeHandler(RSMBridgeHandler):
         @property

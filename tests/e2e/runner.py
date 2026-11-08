@@ -31,6 +31,7 @@ from tests.e2e.test_level3_flow import run_level3_flow_checks
 from tests.e2e.test_level4_advanced import run_level4_advanced_checks
 from tests.e2e.test_level5_bulk import run_level5_bulk_checks
 from tests.e2e.test_level6_undo_partial_sale import run_level6_undo_partial_sale_checks
+from tests.e2e.test_level7_packlink_shipping import run_level7_packlink_shipping_checks
 
 
 def extract_error_info(exc: Exception) -> tuple[str, str | None, int | None]:
@@ -60,8 +61,8 @@ def main() -> int:
         "--level",
         "-l",
         type=int,
-        choices=[1, 2, 3, 4, 5, 6],
-        help="Esegue esclusivamente il livello indicato (1: Smoke, 2: CRUD, 3: Ciclo Vendita, 4: Avanzato, 5: Vendita Multipla, 6: Undo Vendita Parziale)",
+        choices=[1, 2, 3, 4, 5, 6, 7],
+        help="Esegue esclusivamente il livello indicato (1: Smoke, 2: CRUD, 3: Ciclo Vendita, 4: Avanzato, 5: Vendita Multipla, 6: Undo Vendita Parziale, 7: Spedizioni Packlink)",
     )
     parser.add_argument(
         "--output",
@@ -78,7 +79,7 @@ def main() -> int:
     print("================================================================================")
     print("🚀 [RSM E2E] AVVIO SUITE DI COLLAUDO AUTOMATIZZATA (CHROMIUM HEADLESS)")
     print(
-        f"📍 Modalità: {'Cascata Completa (Livelli 1 -> 2 -> 3 -> 4 -> 5 -> 6)' if not args.level else f'Livello Singolo ({args.level})'}"
+        f"📍 Modalità: {'Cascata Completa (Livelli 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7)' if not args.level else f'Livello Singolo ({args.level})'}"
     )
     print("🛡️  Regole: Zero-Code-Touch | Isolamento Sandbox :28475 | Fail-Fast per Livello")
     print(f"📄 Report Target: {report_target}")
@@ -405,6 +406,61 @@ def main() -> int:
                     LevelResult(
                         level_id=6,
                         name="Undo Vendita Parziale (Ctrl+Z) & Pulizia Record Duplicati",
+                        status="SKIPPED",
+                        details=[
+                            "Livello saltato automaticamente a causa del fallimento di un livello precedente (Fail-Fast)."
+                        ],
+                    )
+                )
+
+            # ------------------------------------------------------------------
+            # LIVELLO 7: MODALE SPEDIZIONI PACKLINK PRO & SMART PASTE GEMINI AI
+            # ------------------------------------------------------------------
+            if (args.level is None and not has_failed) or args.level == 7:
+                print("📦 [LIVELLO 7] Esecuzione: Modale Spedizioni Packlink PRO & Smart Paste AI...")
+                start_t = time.time()
+                mgr7 = E2EContextManager(playwright, "level7_packlink_shipping")
+                try:
+                    with mgr7 as (page, console_errors):
+                        chk7 = run_level7_packlink_shipping_checks(page, console_errors)
+
+                    elapsed = time.time() - start_t
+                    res7 = LevelResult(
+                        level_id=7,
+                        name="Spedizioni Packlink PRO & Smart Paste AI",
+                        status="PASSED",
+                        duration=elapsed,
+                        screenshot_path=chk7["screenshot_path"],
+                        video_path=mgr7.final_video_path or VIDEOS_DIR / "level7_packlink_shipping.webm",
+                        details=chk7["details"],
+                    )
+                    results.append(res7)
+                    print(
+                        f"   ✅ LIVELLO 7 SUPERATO in {elapsed:.2f}s (modale, estrazione AI e preset validati)\n"
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    elapsed = time.time() - start_t
+                    err_msg, f_path, line_no = extract_error_info(exc)
+                    res7 = LevelResult(
+                        level_id=7,
+                        name="Spedizioni Packlink PRO & Smart Paste AI",
+                        status="FAILED",
+                        duration=elapsed,
+                        error_message=err_msg,
+                        file_path=f_path,
+                        line_number=line_no,
+                        video_path=mgr7.final_video_path or VIDEOS_DIR / "level7_packlink_shipping.webm",
+                        details=["Fallimento durante l'apertura modale o estrazione AI nel Livello 7."],
+                    )
+                    results.append(res7)
+                    has_failed = True
+                    print(f"   ❌ LIVELLO 7 FALLITO in {elapsed:.2f}s:")
+                    print(f"      {err_msg}\n")
+            elif args.level is None and has_failed:
+                results.append(
+                    LevelResult(
+                        level_id=7,
+                        name="Spedizioni Packlink PRO & Smart Paste AI",
                         status="SKIPPED",
                         details=[
                             "Livello saltato automaticamente a causa del fallimento di un livello precedente (Fail-Fast)."
