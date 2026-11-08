@@ -897,6 +897,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                                     "success": True,
                                     "updated_count": 1,
                                     "new_stock_id": new_id,
+                                    "new_id": new_id,
                                     "split": True,
                                 }
                             )
@@ -967,6 +968,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                                     "updated_count": 1,
                                     "partial": True,
                                     "new_id": new_id,
+                                    "new_sold_id": new_id,
                                     "remaining": remaining,
                                 }
                             )

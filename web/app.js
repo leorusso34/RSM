@@ -2919,7 +2919,8 @@ async function handleBulkSaleSubmit(e) {
     const json = await res.json();
     if (json.success) {
       const createdIds = [];
-      if (json.new_sold_id) createdIds.push(json.new_sold_id);
+      const newId = json.new_sold_id || json.new_id;
+      if (newId) createdIds.push(newId);
 
       pushUndo({
         type: "restore_records",
@@ -3072,7 +3073,8 @@ async function handleConfirmStockSubmit(e) {
     const json = await res.json();
     if (json.success) {
       const createdIds = [];
-      if (json.new_stock_id) createdIds.push(json.new_stock_id);
+      const newId = json.new_stock_id || json.new_id;
+      if (newId) createdIds.push(newId);
 
       pushUndo({
         type: "restore_records",
