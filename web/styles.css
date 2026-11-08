@@ -2510,8 +2510,8 @@ textarea:-webkit-autofill {
 }
 
 .pk-preset-btn.active {
-  background: rgba(16, 185, 129, 0.15) !important;
-  color: #10b981 !important;
-  border-color: rgba(16, 185, 129, 0.45) !important;
+  background: rgba(99, 102, 241, 0.2) !important;
+  color: #818cf8 !important;
+  border-color: rgba(99, 102, 241, 0.5) !important;
   font-weight: 700;
 }

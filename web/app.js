@@ -4345,9 +4345,9 @@ async function openPacklinkModal() {
     if (banner) banner.style.display = "none";
     if (badge) {
       badge.textContent = `PRO Attivo (${status.masked_key || "v1"})`;
-      badge.style.color = "#10b981";
-      badge.style.background = "rgba(16, 185, 129, 0.15)";
-      badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+      badge.style.color = "#818cf8";
+      badge.style.background = "rgba(99, 102, 241, 0.15)";
+      badge.style.borderColor = "rgba(99, 102, 241, 0.3)";
     }
     if (bannerText) {
       bannerText.textContent = `Chiave API configurata: ${status.masked_key}`;
@@ -4403,9 +4403,9 @@ async function savePacklinkApiKey() {
       const badge = document.getElementById("packlink-api-badge");
       if (badge) {
         badge.textContent = "PRO Attivo (v1)";
-        badge.style.color = "#10b981";
-        badge.style.background = "rgba(16, 185, 129, 0.15)";
-        badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+        badge.style.color = "#818cf8";
+        badge.style.background = "rgba(99, 102, 241, 0.15)";
+        badge.style.borderColor = "rgba(99, 102, 241, 0.3)";
       }
     } else {
       showToast(`Errore salvataggio: ${json.error || "Operazione non riuscita"}`);
@@ -4475,7 +4475,7 @@ async function handlePacklinkAiExtract() {
   }
   if (hint) {
     hint.textContent = "Analisi e normalizzazione recapiti con Google Gemini in corso...";
-    hint.style.color = "#10b981";
+    hint.style.color = "#818cf8";
   }
 
   try {
@@ -4509,7 +4509,7 @@ async function handlePacklinkAiExtract() {
       showToast("Recapiti estratti e compilati con successo dall'AI!");
       if (hint) {
         hint.textContent = "Dati estratti e verificati con successo. Controlla e conferma.";
-        hint.style.color = "#10b981";
+        hint.style.color = "#818cf8";
       }
     } else {
       showToast(`Analisi fallita: ${json.error || "Riprova o inserisci manualmente"}`);

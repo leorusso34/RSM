@@ -136,7 +136,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
               <span>Spedizioni Packlink</span>
             </div>
-            <span id="packlink-nav-badge" class="nav-badge" style="display: none; background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700; font-size: 9px; padding: 2px 5px;">PRO</span>
+            <span id="packlink-nav-badge" class="nav-badge" style="display: none; background: rgba(99, 102, 241, 0.2); color: #c7d2fe; font-weight: 700; font-size: 9px; padding: 2px 5px;">PRO</span>
           </li>
           <li class="nav-item" id="nav-item-updater" onclick="checkForUpdates(true)">
             <div class="nav-item-left">
@@ -1234,8 +1234,8 @@
     <div class="modal-card" style="max-width: 980px; width: 95vw;">
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <h3 style="margin: 0;">Nuova Spedizione Packlink PRO</h3>
-          <span id="packlink-api-badge" style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">REST API v1</span>
+          <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #fff;">Nuova Spedizione Packlink PRO</h3>
+          <span id="packlink-api-badge" style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">REST API v1</span>
         </div>
         <button class="modal-close-btn" onclick="closePacklinkModal()">&times;</button>
       </div>
@@ -1248,7 +1248,7 @@
         </div>
         <div style="display: flex; gap: 8px;">
           <input type="password" id="pk-api-key-input" class="form-input" placeholder="Incolla qui la tua API Key di Packlink PRO..." style="font-size: 11px; padding: 6px 10px;" />
-          <button type="button" class="btn btn-primary" onclick="savePacklinkApiKey()" style="font-size: 11px; padding: 6px 14px; white-space: nowrap; background: #10b981; border-color: #10b981;">Salva Chiave</button>
+          <button type="button" class="btn btn-primary" onclick="savePacklinkApiKey()" style="font-size: 11px; padding: 6px 14px; white-space: nowrap;">Salva Chiave</button>
         </div>
       </div>
 
@@ -1256,11 +1256,11 @@
         <div class="modal-body" style="padding: 16px 20px; max-height: calc(85vh - 120px); overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
           
           <!-- 1. HERO BOX: INCOLLA RAPIDO CON AI (A TUTTA LARGHEZZA) -->
-          <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px;">
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
-                <span style="font-size: 11px; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">Incolla Rapido con AI (Google Gemini)</span>
+                <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #818cf8;"></span>
+                <span style="font-size: 11px; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 0.5px;">Incolla Rapido con AI (Google Gemini)</span>
                 <span style="font-size: 10.5px; color: var(--text-dim); margin-left: 4px;">— Chat WhatsApp, Vinted, eBay, Instagram o testo libero</span>
               </div>
               <span id="pk-ai-status-hint" style="font-size: 10.5px; color: var(--text-dim);">Incolla il testo grezzo e clicca il pulsante per compilare i campi del destinatario in automatico.</span>
@@ -1269,7 +1269,7 @@
             <div style="display: grid; grid-template-columns: 1fr 220px; gap: 12px; align-items: stretch;">
               <textarea id="pk-smart-paste" class="form-input" rows="3" placeholder="Incolla qui l'intero testo dell'ordine (es. 'Spedisci a Marco Rossi, via roma 14 scala B int 3, cap 20121 Milano, tel 333 1234567, email marco.rossi@email.it, pacco scarpe 1.2kg')..." style="font-size: 11.5px; height: 78px; resize: none;"></textarea>
               
-              <button type="button" class="btn btn-primary" id="btn-pk-ai-extract" onclick="handlePacklinkAiExtract()" style="width: 100%; height: 100%; min-height: 78px; background: #10b981; border: 1px solid #059669; color: #fff; font-weight: 700; font-size: 12px; padding: 10px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s ease; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);">
+              <button type="button" class="btn btn-primary" id="btn-pk-ai-extract" onclick="handlePacklinkAiExtract()" style="width: 100%; height: 100%; min-height: 78px; font-weight: 700; font-size: 12px; padding: 10px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s ease;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
                 <span>Invia a Gemini &amp; Compila Campi</span>
               </button>
@@ -1280,7 +1280,7 @@
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch;">
             
             <!-- COLONNA 1: DATI DESTINATARIO -->
-            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; margin-bottom: 10px;">
                   <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
@@ -1341,7 +1341,7 @@
             </div>
 
             <!-- COLONNA 2: DATI PACCO & PRESET RAPIDI -->
-            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; margin-bottom: 10px;">
                   <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
@@ -1373,7 +1373,7 @@
                 <!-- Peso -->
                 <div class="form-group" style="margin-bottom: 10px;">
                   <label class="form-label">Peso Effettivo (kg) *</label>
-                  <input type="number" id="pk-weight" class="form-input" value="1.2" step="0.1" min="0.1" style="font-size: 12px; font-weight: 600; color: #10b981;" required />
+                  <input type="number" id="pk-weight" class="form-input" value="1.2" step="0.1" min="0.1" style="font-size: 12px; font-weight: 600;" required />
                 </div>
 
                 <!-- Misure Grid -->
@@ -1401,8 +1401,8 @@
                 </div>
               </div>
 
-              <div style="padding: 8px 10px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); font-size: 10.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+              <div style="padding: 8px 10px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-sm); font-size: 10.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
                 <span>Genera la bozza con calcolo automatico tariffe corrieri.</span>
               </div>
             </div>
@@ -1413,13 +1413,13 @@
 
         <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;">
           <div style="font-size: 10.5px; color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #10b981;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #818cf8;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             <span>Genera bozza su Packlink PRO per pagamento ed etichetta</span>
           </div>
           <div style="display: flex; gap: 8px;">
             <button type="button" class="btn btn-secondary" onclick="togglePacklinkConfigBanner()" id="btnTogglePkKey" style="font-size: 11px;">Chiave API</button>
             <button type="button" class="btn btn-secondary" onclick="closePacklinkModal()">Annulla</button>
-            <button type="submit" class="btn btn-primary" id="btnPacklinkSubmit" style="background: #10b981; border-color: #10b981; font-weight: 600;">
+            <button type="submit" class="btn btn-primary" id="btnPacklinkSubmit" style="font-weight: 600;">
               Crea Bozza Packlink
             </button>
           </div>

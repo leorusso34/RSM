@@ -68,8 +68,8 @@ def run_level7_packlink_shipping_checks(page: Page, console_errors: list[str]) -
     # 5. Click su 'Invia a Gemini & Compila Campi'
     extract_btn.click()
 
-    # Attesa che i campi vengano popolati automaticamente dall'AI
-    page.wait_for_function("document.getElementById('pk-name').value.trim().length > 0", timeout=8000)
+    # Attesa che i campi vengano popolati automaticamente dall'AI (con margine per latenza rete proxy)
+    page.wait_for_function("document.getElementById('pk-name').value.trim().length > 0", timeout=15000)
     page.wait_for_timeout(600)
 
     # Asserzione campi compilati

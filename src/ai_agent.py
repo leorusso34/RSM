@@ -350,7 +350,7 @@ def parse_shipping_address_with_ai(raw_text: str) -> dict[str, Any]:
         w_headers["X-RSM-Auth"] = RSM_AUTH_KEY.strip()
 
     conn_cls = http.client.HTTPSConnection if parsed_w.scheme == "https" else http.client.HTTPConnection
-    conn = conn_cls(w_host, timeout=30)
+    conn = conn_cls(w_host, timeout=10)
     try:
         conn.request("POST", w_path, body=data, headers=w_headers)
         response = conn.getresponse()
