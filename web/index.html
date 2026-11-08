@@ -1228,10 +1228,10 @@
   </div>
 
   <!-- ====================================================================
-       MODALE: SPEDIZIONI PACKLINK PRO (OPZIONE A: MODALE A 2 COLONNE)
+       MODALE: SPEDIZIONI PACKLINK PRO (OPZIONE 1: TOP HERO WIDE 980PX + 2 COLONNE)
        ==================================================================== -->
   <div class="modal-backdrop" id="packlinkModal">
-    <div class="modal-card" style="max-width: 760px; width: 94vw;">
+    <div class="modal-card" style="max-width: 980px; width: 95vw;">
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 8px;">
           <h3 style="margin: 0;">Nuova Spedizione Packlink PRO</h3>
@@ -1253,130 +1253,158 @@
       </div>
 
       <form id="packlinkForm" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onsubmit="handlePacklinkSubmit(event)">
-        <div class="modal-body" style="padding: 16px 20px; max-height: calc(85vh - 120px); overflow-y: auto;">
+        <div class="modal-body" style="padding: 16px 20px; max-height: calc(85vh - 120px); overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
           
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+          <!-- 1. HERO BOX: INCOLLA RAPIDO CON AI (A TUTTA LARGHEZZA) -->
+          <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
+                <span style="font-size: 11px; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">Incolla Rapido con AI (Google Gemini)</span>
+                <span style="font-size: 10.5px; color: var(--text-dim); margin-left: 4px;">— Chat WhatsApp, Vinted, eBay, Instagram o testo libero</span>
+              </div>
+              <span id="pk-ai-status-hint" style="font-size: 10.5px; color: var(--text-dim);">Incolla il testo grezzo e clicca il pulsante per compilare i campi del destinatario in automatico.</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 220px; gap: 12px; align-items: stretch;">
+              <textarea id="pk-smart-paste" class="form-input" rows="3" placeholder="Incolla qui l'intero testo dell'ordine (es. 'Spedisci a Marco Rossi, via roma 14 scala B int 3, cap 20121 Milano, tel 333 1234567, email marco.rossi@email.it, pacco scarpe 1.2kg')..." style="font-size: 11.5px; height: 78px; resize: none;"></textarea>
+              
+              <button type="button" class="btn btn-primary" id="btn-pk-ai-extract" onclick="handlePacklinkAiExtract()" style="width: 100%; height: 100%; min-height: 78px; background: #10b981; border: 1px solid #059669; color: #fff; font-weight: 700; font-size: 12px; padding: 10px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s ease; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+                <span>Invia a Gemini &amp; Compila Campi</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. BLOCCHI INFERIORI: 2 COLONNE IDENTICHE E SIMMETRICHE (50% / 50%) -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch;">
             
             <!-- COLONNA 1: DATI DESTINATARIO -->
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">
-                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Dati Destinatario</span>
-                <span style="font-size: 10px; color: var(--text-dim);">Mittente da account</span>
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label">Nome e Cognome / Ragione Sociale *</label>
-                <input type="text" id="pk-name" class="form-input" placeholder="Mario Rossi" required />
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label">Indirizzo (Via/Piazza e Civico) *</label>
-                <input type="text" id="pk-street1" class="form-input" placeholder="Via Roma 14" required />
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label">Interno / Scala / Citofono (Opzionale)</label>
-                <input type="text" id="pk-street2" class="form-input" placeholder="Scala B, Int. 4" />
-              </div>
-
-              <div style="display: grid; grid-template-columns: 100px 1fr; gap: 8px;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">CAP *</label>
-                  <input type="text" id="pk-zip" class="form-input" placeholder="20121" maxlength="10" required />
+            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; margin-bottom: 10px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Dati Destinatario
+                  </span>
+                  <span style="font-size: 10px; color: var(--text-dim);">Mittente da account</span>
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">Città *</label>
-                  <input type="text" id="pk-city" class="form-input" placeholder="Milano" required />
-                </div>
-              </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 80px; gap: 8px;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">Provincia</label>
-                  <input type="text" id="pk-state" class="form-input" placeholder="MI" maxlength="4" />
+                <div class="form-group" style="margin-bottom: 8px;">
+                  <label class="form-label">Nome e Cognome / Ragione Sociale *</label>
+                  <input type="text" id="pk-name" class="form-input" placeholder="Mario Rossi" required />
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">Nazione</label>
-                  <input type="text" id="pk-country" class="form-input" value="IT" maxlength="2" />
-                </div>
-              </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">Telefono *</label>
-                  <input type="tel" id="pk-phone" class="form-input" placeholder="+39 333 1234567" required />
+                <div class="form-group" style="margin-bottom: 8px;">
+                  <label class="form-label">Indirizzo (Via/Piazza e Civico) *</label>
+                  <input type="text" id="pk-street1" class="form-input" placeholder="Via Roma 14" required />
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">Email (Opzionale)</label>
-                  <input type="email" id="pk-email" class="form-input" placeholder="cliente@email.it" />
+
+                <div class="form-group" style="margin-bottom: 8px;">
+                  <label class="form-label">Interno / Scala / Citofono (Opzionale)</label>
+                  <input type="text" id="pk-street2" class="form-input" placeholder="Scala B, Int. 4" />
+                </div>
+
+                <div style="display: grid; grid-template-columns: 110px 1fr; gap: 8px; margin-bottom: 8px;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">CAP *</label>
+                    <input type="text" id="pk-zip" class="form-input" placeholder="20121" maxlength="10" required />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Città *</label>
+                    <input type="text" id="pk-city" class="form-input" placeholder="Milano" required />
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 80px; gap: 8px; margin-bottom: 8px;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Provincia</label>
+                    <input type="text" id="pk-state" class="form-input" placeholder="MI" maxlength="4" />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Nazione</label>
+                    <input type="text" id="pk-country" class="form-input" value="IT" maxlength="2" />
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Telefono *</label>
+                    <input type="tel" id="pk-phone" class="form-input" placeholder="+39 333 1234567" required />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Email (Opzionale)</label>
+                    <input type="email" id="pk-email" class="form-input" placeholder="cliente@email.it" />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- COLONNA 2: SMART PASTE AI & DATI PACCO -->
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-              
-              <!-- Box Smart Paste AI -->
-              <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); padding: 10px 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-size: 11px; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">Incolla Rapido con AI</span>
-                  <span style="font-size: 10px; color: var(--text-dim);">Google Gemini</span>
-                </div>
-                <textarea id="pk-smart-paste" class="form-input" rows="3" placeholder="Incolla qui il testo dell'ordine (es. chat WhatsApp, Vinted, eBay, Instagram DM)..." style="font-size: 11px; resize: none; margin-bottom: 6px;"></textarea>
-                
-                <button type="button" class="btn btn-primary" id="btn-pk-ai-extract" onclick="handlePacklinkAiExtract()" style="width: 100%; background: #10b981; border: 1px solid #059669; color: #fff; font-weight: 600; font-size: 11.5px; padding: 7px 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s ease;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
-                  <span>Invia a Gemini &amp; Compila Campi</span>
-                </button>
-                <span id="pk-ai-status-hint" style="font-size: 10px; color: var(--text-dim); display: block; margin-top: 5px;">Incolla il testo grezzo e clicca il pulsante per compilare i campi del destinatario in automatico.</span>
-              </div>
-
-              <!-- Dati Collo e Dimensioni -->
-              <div style="display: flex; flex-direction: column; gap: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">
-                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Dati Pacco &amp; Preset</span>
+            <!-- COLONNA 2: DATI PACCO & PRESET RAPIDI -->
+            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; margin-bottom: 10px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    Dati Pacco &amp; Preset
+                  </span>
                   <span style="font-size: 10px; color: var(--text-dim);">1 collo</span>
                 </div>
 
                 <!-- Preset Buttons -->
-                <div style="display: flex; gap: 6px;">
-                  <button type="button" class="btn btn-secondary pk-preset-btn active" id="btnPresetShoes" onclick="setPacklinkPreset('shoes')" style="flex: 1; font-size: 10.5px; padding: 4px 6px; text-align: center;">
-                    Scarpe (1.2 kg)
-                  </button>
-                  <button type="button" class="btn btn-secondary pk-preset-btn" id="btnPresetEnvelope" onclick="setPacklinkPreset('envelope')" style="flex: 1; font-size: 10.5px; padding: 4px 6px; text-align: center;">
-                    Busta (0.3 kg)
-                  </button>
-                  <button type="button" class="btn btn-secondary pk-preset-btn" id="btnPresetCustom" onclick="setPacklinkPreset('custom')" style="flex: 1; font-size: 10.5px; padding: 4px 6px; text-align: center;">
-                    Custom
-                  </button>
+                <div style="margin-bottom: 12px;">
+                  <label class="form-label" style="margin-bottom: 6px;">Preset Rapidi Formato</label>
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                    <button type="button" class="btn btn-secondary pk-preset-btn active" id="btnPresetShoes" onclick="setPacklinkPreset('shoes')" style="padding: 7px 6px; text-align: center; font-size: 11px;">
+                      <div style="font-weight: 600;">Scarpe</div>
+                      <div style="font-size: 9.5px; opacity: 0.75;">1.2 kg • 34x23x13</div>
+                    </button>
+                    <button type="button" class="btn btn-secondary pk-preset-btn" id="btnPresetEnvelope" onclick="setPacklinkPreset('envelope')" style="padding: 7px 6px; text-align: center; font-size: 11px;">
+                      <div style="font-weight: 600;">Busta</div>
+                      <div style="font-size: 9.5px; opacity: 0.75;">0.3 kg • 25x20x5</div>
+                    </button>
+                    <button type="button" class="btn btn-secondary pk-preset-btn" id="btnPresetCustom" onclick="setPacklinkPreset('custom')" style="padding: 7px 6px; text-align: center; font-size: 11px;">
+                      <div style="font-weight: 600;">Custom</div>
+                      <div style="font-size: 9.5px; opacity: 0.75;">Personalizzato</div>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Peso -->
+                <div class="form-group" style="margin-bottom: 10px;">
+                  <label class="form-label">Peso Effettivo (kg) *</label>
+                  <input type="number" id="pk-weight" class="form-input" value="1.2" step="0.1" min="0.1" style="font-size: 12px; font-weight: 600; color: #10b981;" required />
                 </div>
 
                 <!-- Misure Grid -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" style="font-size: 10px;">Peso (kg)</label>
-                    <input type="number" id="pk-weight" class="form-input" value="1.2" step="0.1" min="0.1" style="text-align: center; font-size: 11.5px; padding: 5px 2px;" required />
-                  </div>
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" style="font-size: 10px;">Lung. (cm)</label>
-                    <input type="number" id="pk-length" class="form-input" value="34" step="1" min="1" style="text-align: center; font-size: 11.5px; padding: 5px 2px;" required />
-                  </div>
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" style="font-size: 10px;">Larg. (cm)</label>
-                    <input type="number" id="pk-width" class="form-input" value="23" step="1" min="1" style="text-align: center; font-size: 11.5px; padding: 5px 2px;" required />
-                  </div>
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" style="font-size: 10px;">Alt. (cm)</label>
-                    <input type="number" id="pk-height" class="form-input" value="13" step="1" min="1" style="text-align: center; font-size: 11.5px; padding: 5px 2px;" required />
+                <div class="form-group" style="margin-bottom: 10px;">
+                  <label class="form-label">Dimensioni Pacco (L &times; W &times; H cm) *</label>
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                    <div style="position: relative;">
+                      <input type="number" id="pk-length" class="form-input" value="34" step="1" min="1" style="text-align: center; font-size: 12px; padding: 6px 2px;" required />
+                      <span style="position: absolute; right: 6px; top: 7px; font-size: 9.5px; color: var(--text-dim); pointer-events: none;">L</span>
+                    </div>
+                    <div style="position: relative;">
+                      <input type="number" id="pk-width" class="form-input" value="23" step="1" min="1" style="text-align: center; font-size: 12px; padding: 6px 2px;" required />
+                      <span style="position: absolute; right: 6px; top: 7px; font-size: 9.5px; color: var(--text-dim); pointer-events: none;">W</span>
+                    </div>
+                    <div style="position: relative;">
+                      <input type="number" id="pk-height" class="form-input" value="13" step="1" min="1" style="text-align: center; font-size: 12px; padding: 6px 2px;" required />
+                      <span style="position: absolute; right: 6px; top: 7px; font-size: 9.5px; color: var(--text-dim); pointer-events: none;">H</span>
+                    </div>
                   </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">Descrizione Contenuto</label>
+                  <label class="form-label">Descrizione Contenuto per Corriere</label>
                   <input type="text" id="pk-content" class="form-input" value="Scarpe / Sneakers" placeholder="Es. Abbigliamento, Sneakers..." />
                 </div>
               </div>
 
+              <div style="padding: 8px 10px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); font-size: 10.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                <span>Genera la bozza con calcolo automatico tariffe corrieri.</span>
+              </div>
             </div>
 
           </div>
@@ -1384,6 +1412,21 @@
         </div>
 
         <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;">
+          <div style="font-size: 10.5px; color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #10b981;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Genera bozza su Packlink PRO per pagamento ed etichetta</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary" onclick="togglePacklinkConfigBanner()" id="btnTogglePkKey" style="font-size: 11px;">Chiave API</button>
+            <button type="button" class="btn btn-secondary" onclick="closePacklinkModal()">Annulla</button>
+            <button type="submit" class="btn btn-primary" id="btnPacklinkSubmit" style="background: #10b981; border-color: #10b981; font-weight: 600;">
+              Crea Bozza Packlink
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
           <div style="font-size: 10.5px; color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #10b981;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             <span>Genera bozza su Packlink PRO per pagamento ed etichetta</span>
