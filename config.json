@@ -1,4 +1,5 @@
 {
   "email_sync_address": "",
-  "email_sync_app_password": ""
+  "email_sync_app_password": "",
+  "packlink_api_key": ""
 }
