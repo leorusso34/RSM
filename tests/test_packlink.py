@@ -18,31 +18,34 @@ def test_create_packlink_draft_validation_missing_key():
 
 def test_create_packlink_draft_validation_missing_fields():
     """Verifica la validazione dei campi anagrafici minimi obbligatori."""
-    key = "valid-test-key-12345"
+    dummy_auth = "mock_test_token"
 
     # Senza nome
-    r1 = create_packlink_draft(key, {"name": ""})
+    r1 = create_packlink_draft(dummy_auth, {"name": ""})
     assert r1["success"] is False
     assert "nome" in r1["error"].lower()
 
     # Senza indirizzo
-    r2 = create_packlink_draft(key, {"name": "Mario Rossi", "street1": ""})
+    r2 = create_packlink_draft(dummy_auth, {"name": "Mario Rossi", "street1": ""})
     assert r2["success"] is False
     assert "indirizzo" in r2["error"].lower()
 
     # Senza CAP
-    r3 = create_packlink_draft(key, {"name": "Mario Rossi", "street1": "Via Roma 1", "zip": ""})
+    r3 = create_packlink_draft(dummy_auth, {"name": "Mario Rossi", "street1": "Via Roma 1", "zip": ""})
     assert r3["success"] is False
     assert "cap" in r3["error"].lower()
 
     # Senza città
-    r4 = create_packlink_draft(key, {"name": "Mario Rossi", "street1": "Via Roma 1", "zip": "20121", "city": ""})
+    r4 = create_packlink_draft(
+        dummy_auth, {"name": "Mario Rossi", "street1": "Via Roma 1", "zip": "20121", "city": ""}
+    )
     assert r4["success"] is False
     assert "città" in r4["error"].lower()
 
     # Senza telefono
     r5 = create_packlink_draft(
-        key, {"name": "Mario Rossi", "street1": "Via Roma 1", "zip": "20121", "city": "Milano", "phone": ""}
+        dummy_auth,
+        {"name": "Mario Rossi", "street1": "Via Roma 1", "zip": "20121", "city": "Milano", "phone": ""},
     )
     assert r5["success"] is False
     assert "telefono" in r5["error"].lower()
@@ -81,7 +84,7 @@ def test_create_packlink_draft_success(mock_conn_cls):
         "height": 14.0,
     }
 
-    res = create_packlink_draft("pk_test_api_key_secret", recipient, package_info, content="Sneakers Nike")
+    res = create_packlink_draft("mock_test_token", recipient, package_info, content="Sneakers Nike")
     assert res["success"] is True
     assert res["draft_id"] == "673891024bcde"
     assert res["reference"] == "IT2026PACKLINK001"

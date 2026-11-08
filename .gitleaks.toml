@@ -1,0 +1,7 @@
+# Gitleaks Configuration - Allowlist mock tokens and test fixtures
+[allowlist]
+description = "Allowlist test directories containing mock credentials"
+paths = [
+    '''(?i)^tests/''',
+    '''(?i)\.pytest_cache/''',
+]

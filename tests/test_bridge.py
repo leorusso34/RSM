@@ -888,9 +888,10 @@ def test_bridge_packlink_endpoints(tmp_path, monkeypatch):
             assert data["configured"] is False
 
         # 2. POST /api/packlink/config salva la chiave
+        dummy_token = "mock_test_token"
         req_cfg = request.Request(
             f"http://127.0.0.1:{port}/api/packlink/config",
-            data=json.dumps({"api_key": "pk_live_secret12345"}).encode("utf-8"),
+            data=json.dumps({"api_key": dummy_token}).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
@@ -904,7 +905,7 @@ def test_bridge_packlink_endpoints(tmp_path, monkeypatch):
             data = json.loads(resp.read().decode("utf-8"))
             assert data["success"] is True
             assert data["configured"] is True
-            assert "pk_l" in data["masked_key"]
+            assert "mock" in data["masked_key"]
 
         # 3. POST /api/packlink/parse-address
         req_parse = request.Request(
