@@ -859,3 +859,96 @@ def test_bridge_partial_stock_move_from_preorder(tmp_path):
         server.shutdown()
         server.server_close()
 
+
+def test_bridge_packlink_endpoints(tmp_path, monkeypatch):
+    """Verifica gli endpoint bridge dedicati a Packlink PRO (/status, /config, /parse-address, /create-draft)."""
+    test_config = tmp_path / "test_config.json"
+    monkeypatch.setattr("src.database.CONFIG_JSON_PATH", test_config)
+    test_db = tmp_path / "test_bridge_packlink.db"
+    db = InventoryDatabase(test_db)
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        # 1. GET /api/packlink/status inizialmente non configurata
+        req = request.Request(f"http://127.0.0.1:{port}/api/packlink/status")
+        with request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["configured"] is False
+
+        # 2. POST /api/packlink/config salva la chiave
+        req_cfg = request.Request(
+            f"http://127.0.0.1:{port}/api/packlink/config",
+            data=json.dumps({"api_key": "pk_live_secret12345"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req_cfg) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+
+        # Verifica stato aggiornato
+        req_status2 = request.Request(f"http://127.0.0.1:{port}/api/packlink/status")
+        with request.urlopen(req_status2) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["configured"] is True
+            assert "pk_l" in data["masked_key"]
+
+        # 3. POST /api/packlink/parse-address
+        req_parse = request.Request(
+            f"http://127.0.0.1:{port}/api/packlink/parse-address",
+            data=json.dumps({"text": "Mario Rossi via roma 1 20121 milano tel 3331234567"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req_parse) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["data"]["zip"] == "20121"
+
+        # 4. POST /api/packlink/create-draft con mock
+        with patch("src.packlink.create_packlink_draft") as mock_create:
+            mock_create.return_value = {
+                "success": True,
+                "draft_id": "draft_mock_99",
+                "reference": "IT2026MOCK99",
+                "web_url": "https://pro.packlink.it/private/shipments/drafts",
+            }
+            req_draft = request.Request(
+                f"http://127.0.0.1:{port}/api/packlink/create-draft",
+                data=json.dumps(
+                    {
+                        "recipient": {
+                            "name": "Mario Rossi",
+                            "street1": "Via Roma 1",
+                            "zip": "20121",
+                            "city": "Milano",
+                            "phone": "+393331234567",
+                        },
+                        "package": {"weight": 1.2},
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(req_draft) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                assert data["success"] is True
+                assert data["draft_id"] == "draft_mock_99"
+                assert data["reference"] == "IT2026MOCK99"
+    finally:
+        server.shutdown()
+        server.server_close()
+

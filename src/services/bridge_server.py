@@ -412,12 +412,31 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if path == "/api/settings":
             email_addr = self.db.get_setting("email_sync_address", "")
             app_pwd = self.db.get_setting("email_sync_app_password", "")
+            pk_key = self.db.get_setting("packlink_api_key", "").strip()
+            masked_pk = f"{pk_key[:4]}...{pk_key[-4:]}" if len(pk_key) >= 8 else ("***" if pk_key else "")
             self._send_json(
                 {
                     "success": True,
                     "email_sync_address": email_addr,
                     "email_sync_app_password": app_pwd,
                     "has_app_password": bool(app_pwd),
+                    "packlink_api_key": pk_key,
+                    "has_packlink_key": bool(pk_key),
+                    "packlink_masked_key": masked_pk,
+                }
+            )
+            return
+
+        # Stato configurazione Packlink PRO
+        if path == "/api/packlink/status":
+            pk_key = self.db.get_setting("packlink_api_key", "").strip()
+            has_key = bool(pk_key)
+            masked = f"{pk_key[:4]}...{pk_key[-4:]}" if len(pk_key) >= 8 else ("***" if has_key else "")
+            self._send_json(
+                {
+                    "success": True,
+                    "configured": has_key,
+                    "masked_key": masked,
                 }
             )
             return
@@ -689,7 +708,65 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self.db.set_setting("email_sync_address", body["email_sync_address"].strip())
             if "email_sync_app_password" in body and body["email_sync_app_password"].strip():
                 self.db.set_setting("email_sync_app_password", body["email_sync_app_password"].strip())
+            if "packlink_api_key" in body:
+                self.db.set_setting("packlink_api_key", body["packlink_api_key"].strip())
             self._send_json({"success": True, "message": "Impostazioni salvate con successo!"})
+            return
+
+        # Salvataggio rapido chiave API Packlink PRO
+        if path == "/api/packlink/config":
+            pk_key = str(body.get("api_key", "")).strip()
+            self.db.set_setting("packlink_api_key", pk_key)
+            self._send_json({"success": True, "message": "Chiave API Packlink PRO salvata con successo!"})
+            return
+
+        # Analisi AI recapiti e dati spedizione per Packlink PRO
+        if path == "/api/packlink/parse-address":
+            raw_text = str(body.get("text", "")).strip()
+            if not raw_text:
+                self._send_error("Testo recapiti richiesto per l'analisi.")
+                return
+            try:
+                from src.ai_agent import parse_shipping_address_with_ai
+
+                parsed = parse_shipping_address_with_ai(raw_text)
+                self._send_json({"success": True, "data": parsed})
+            except Exception as e:  # noqa: BLE001
+                self._send_error(f"Errore analisi indirizzo: {e}")
+            return
+
+        # Creazione bozza di spedizione su Packlink PRO (POST /v1/drafts)
+        if path == "/api/packlink/create-draft":
+            api_key = self.db.get_setting("packlink_api_key", "").strip()
+            if not api_key and body.get("api_key"):
+                api_key = str(body.get("api_key")).strip()
+                self.db.set_setting("packlink_api_key", api_key)
+
+            if not api_key:
+                self._send_error("Chiave API Packlink PRO non configurata. Inseriscila per procedere.")
+                return
+
+            recipient = body.get("recipient", {})
+            package_info = body.get("package", {})
+            content = body.get("content", "Abbigliamento / Calzature")
+            sender = body.get("sender")
+
+            try:
+                from src.packlink import create_packlink_draft
+
+                res = create_packlink_draft(
+                    api_key=api_key,
+                    recipient=recipient,
+                    package_info=package_info,
+                    content=content,
+                    sender=sender,
+                )
+                if res.get("success"):
+                    self._send_json(res)
+                else:
+                    self._send_error(res.get("error", "Errore sconosciuto durante la creazione della bozza Packlink."))
+            except Exception as e:  # noqa: BLE001
+                self._send_error(f"Errore creazione bozza Packlink: {e}")
             return
 
         if path == "/api/products":

@@ -2501,3 +2501,17 @@ textarea:-webkit-autofill {
   color: #f87171;
   transform: scale(1.08);
 }
+
+/* ==========================================================================
+   PACKLINK PRO MODAL PRESET BUTTONS
+   ========================================================================== */
+.pk-preset-btn {
+  transition: all 0.15s ease;
+}
+
+.pk-preset-btn.active {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  font-weight: 700;
+}

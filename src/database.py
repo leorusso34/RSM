@@ -350,7 +350,11 @@ class InventoryDatabase:
     def _write_config_json(self, key: str, value: str) -> None:
         """Aggiorna il file config.json mantenendo sincronizzate le impostazioni."""
         try:
-            current_data = {"email_sync_address": "", "email_sync_app_password": ""}
+            current_data = {
+                "email_sync_address": "",
+                "email_sync_app_password": "",
+                "packlink_api_key": "",
+            }
             if CONFIG_JSON_PATH.exists():
                 try:
                     with open(CONFIG_JSON_PATH, "r", encoding="utf-8") as f:

@@ -131,6 +131,13 @@
               <span>Canali & Luoghi</span>
             </div>
           </li>
+          <li class="nav-item" onclick="openPacklinkModal()">
+            <div class="nav-item-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              <span>Spedizioni Packlink</span>
+            </div>
+            <span id="packlink-nav-badge" class="nav-badge" style="display: none; background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700; font-size: 9px; padding: 2px 5px;">PRO</span>
+          </li>
           <li class="nav-item" id="nav-item-updater" onclick="checkForUpdates(true)">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
@@ -1217,6 +1224,176 @@
       <div class="modal-footer" style="display: flex; justify-content: flex-end;">
         <button type="button" class="btn btn-secondary" onclick="closeManagePlacesModal()">Chiudi</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODALE: SPEDIZIONI PACKLINK PRO (OPZIONE A: MODALE A 2 COLONNE)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="packlinkModal">
+    <div class="modal-card" style="max-width: 760px; width: 94vw;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h3 style="margin: 0;">Nuova Spedizione Packlink PRO</h3>
+          <span id="packlink-api-badge" style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">REST API v1</span>
+        </div>
+        <button class="modal-close-btn" onclick="closePacklinkModal()">&times;</button>
+      </div>
+
+      <!-- Banner Configurazione API Key (visibile se non configurata o al click su Chiave API) -->
+      <div id="pk-api-key-banner" style="background: rgba(245, 158, 11, 0.08); border-bottom: 1px solid rgba(245, 158, 11, 0.2); padding: 10px 20px; font-size: 11px; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span id="pk-banner-status-text" style="color: #f59e0b; font-weight: 600;">Configura Chiave API Packlink PRO</span>
+          <span style="color: var(--text-dim); font-size: 10px;">Salvata localmente nel tuo config.json personale</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <input type="password" id="pk-api-key-input" class="form-input" placeholder="Incolla qui la tua API Key di Packlink PRO..." style="font-size: 11px; padding: 6px 10px;" />
+          <button type="button" class="btn btn-primary" onclick="savePacklinkApiKey()" style="font-size: 11px; padding: 6px 14px; white-space: nowrap; background: #10b981; border-color: #10b981;">Salva Chiave</button>
+        </div>
+      </div>
+
+      <form id="packlinkForm" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onsubmit="handlePacklinkSubmit(event)">
+        <div class="modal-body" style="padding: 16px 20px; max-height: calc(85vh - 120px); overflow-y: auto;">
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+            
+            <!-- COLONNA 1: DATI DESTINATARIO -->
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Dati Destinatario</span>
+                <span style="font-size: 10px; color: var(--text-dim);">Mittente da account</span>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Nome e Cognome / Ragione Sociale *</label>
+                <input type="text" id="pk-name" class="form-input" placeholder="Mario Rossi" required />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Indirizzo (Via/Piazza e Civico) *</label>
+                <input type="text" id="pk-street1" class="form-input" placeholder="Via Roma 14" required />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Interno / Scala / Citofono (Opzionale)</label>
+                <input type="text" id="pk-street2" class="form-input" placeholder="Scala B, Int. 4" />
+              </div>
+
+              <div style="display: grid; grid-template-columns: 100px 1fr; gap: 8px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">CAP *</label>
+                  <input type="text" id="pk-zip" class="form-input" placeholder="20121" maxlength="10" required />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Città *</label>
+                  <input type="text" id="pk-city" class="form-input" placeholder="Milano" required />
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 80px; gap: 8px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Provincia</label>
+                  <input type="text" id="pk-state" class="form-input" placeholder="MI" maxlength="4" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Nazione</label>
+                  <input type="text" id="pk-country" class="form-input" value="IT" maxlength="2" />
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Telefono *</label>
+                  <input type="tel" id="pk-phone" class="form-input" placeholder="+39 333 1234567" required />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Email (Opzionale)</label>
+                  <input type="email" id="pk-email" class="form-input" placeholder="cliente@email.it" />
+                </div>
+              </div>
+            </div>
+
+            <!-- COLONNA 2: SMART PASTE AI & DATI PACCO -->
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              
+              <!-- Box Smart Paste AI -->
+              <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); padding: 10px 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 11px; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">Incolla Rapido con AI</span>
+                  <button type="button" class="btn btn-secondary" id="btn-pk-ai-extract" onclick="handlePacklinkAiExtract()" style="font-size: 10.5px; padding: 3px 8px; border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+                    Estrai con AI
+                  </button>
+                </div>
+                <textarea id="pk-smart-paste" class="form-input" rows="3" placeholder="Incolla qui il testo dell'ordine (es. chat WhatsApp, Vinted, eBay, Instagram DM)..." style="font-size: 11px; resize: none; margin-bottom: 4px;"></textarea>
+                <span id="pk-ai-status-hint" style="font-size: 10px; color: var(--text-dim); display: block;">L'AI estrae automaticamente nome, indirizzo, CAP, telefono e dettagli pacco.</span>
+              </div>
+
+              <!-- Dati Collo e Dimensioni -->
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Dati Pacco &amp; Preset</span>
+                  <span style="font-size: 10px; color: var(--text-dim);">1 collo</span>
+                </div>
+
+                <!-- Preset Buttons -->
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" class="btn btn-secondary pk-preset-btn active" id="btnPresetShoes" onclick="setPacklinkPreset('shoes')" style="flex: 1; font-size: 10.5px; padding: 4px 6px; text-align: center;">
+                    Scarpe (1.2 kg)
+                  </button>
+                  <button type="button" class="btn btn-secondary pk-preset-btn" id="btnPresetEnvelope" onclick="setPacklinkPreset('envelope')" style="flex: 1; font-size: 10.5px; padding: 4px 6px; text-align: center;">
+                    Busta (0.3 kg)
+                  </button>
+                  <button type="button" class="btn btn-secondary pk-preset-btn" id="btnPresetCustom" onclick="setPacklinkPreset('custom')" style="flex: 1; font-size: 10.5px; padding: 4px 6px; text-align: center;">
+                    Custom
+                  </button>
+                </div>
+
+                <!-- Misure Grid -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 10px;">Peso (kg)</label>
+                    <input type="number" id="pk-weight" class="form-input" value="1.2" step="0.1" min="0.1" style="text-align: center; font-size: 11.5px; padding: 5px 2px;" required />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 10px;">Lung. (cm)</label>
+                    <input type="number" id="pk-length" class="form-input" value="34" step="1" min="1" style="text-align: center; font-size: 11.5px; padding: 5px 2px;" required />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 10px;">Larg. (cm)</label>
+                    <input type="number" id="pk-width" class="form-input" value="23" step="1" min="1" style="text-align: center; font-size: 11.5px; padding: 5px 2px;" required />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 10px;">Alt. (cm)</label>
+                    <input type="number" id="pk-height" class="form-input" value="13" step="1" min="1" style="text-align: center; font-size: 11.5px; padding: 5px 2px;" required />
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Descrizione Contenuto</label>
+                  <input type="text" id="pk-content" class="form-input" value="Scarpe / Sneakers" placeholder="Es. Abbigliamento, Sneakers..." />
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;">
+          <div style="font-size: 10.5px; color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #10b981;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Genera bozza su Packlink PRO per pagamento ed etichetta</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary" onclick="togglePacklinkConfigBanner()" id="btnTogglePkKey" style="font-size: 11px;">Chiave API</button>
+            <button type="button" class="btn btn-secondary" onclick="closePacklinkModal()">Annulla</button>
+            <button type="submit" class="btn btn-primary" id="btnPacklinkSubmit" style="background: #10b981; border-color: #10b981; font-weight: 600;">
+              Crea Bozza Packlink
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 

@@ -4303,6 +4303,307 @@ async function pingBridgeLatency() {
 }
 
 // ==========================================================================
+// MODALE: SPEDIZIONI PACKLINK PRO (REST API v1)
+// ==========================================================================
+let isPacklinkConfigured = false;
+
+async function checkPacklinkStatus() {
+  try {
+    const res = await callApi("/packlink/status");
+    const json = await res.json();
+    isPacklinkConfigured = Boolean(json.configured);
+    const navBadge = document.getElementById("packlink-nav-badge");
+    if (navBadge) {
+      navBadge.style.display = isPacklinkConfigured ? "inline-block" : "none";
+    }
+    return json;
+  } catch (_) {
+    return { configured: false };
+  }
+}
+
+async function openPacklinkModal() {
+  closeDrawer();
+  closeModal();
+  const modal = document.getElementById("packlinkModal");
+  if (!modal) return;
+
+  const status = await checkPacklinkStatus();
+  const banner = document.getElementById("pk-api-key-banner");
+  const badge = document.getElementById("packlink-api-badge");
+  const bannerText = document.getElementById("pk-banner-status-text");
+
+  if (!status.configured) {
+    if (banner) banner.style.display = "block";
+    if (badge) {
+      badge.textContent = "Chiave Assente";
+      badge.style.color = "#f59e0b";
+      badge.style.background = "rgba(245, 158, 11, 0.15)";
+      badge.style.borderColor = "rgba(245, 158, 11, 0.3)";
+    }
+  } else {
+    if (banner) banner.style.display = "none";
+    if (badge) {
+      badge.textContent = `PRO Attivo (${status.masked_key || "v1"})`;
+      badge.style.color = "#10b981";
+      badge.style.background = "rgba(16, 185, 129, 0.15)";
+      badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+    }
+    if (bannerText) {
+      bannerText.textContent = `Chiave API configurata: ${status.masked_key}`;
+    }
+  }
+
+  // Preset iniziale predefinito
+  setPacklinkPreset("shoes");
+  modal.classList.add("open");
+
+  const nameInput = document.getElementById("pk-name");
+  if (nameInput) setTimeout(() => nameInput.focus(), 80);
+}
+
+function closePacklinkModal() {
+  const modal = document.getElementById("packlinkModal");
+  if (modal) modal.classList.remove("open");
+  const banner = document.getElementById("pk-api-key-banner");
+  if (banner) banner.style.display = "none";
+}
+
+function togglePacklinkConfigBanner() {
+  const banner = document.getElementById("pk-api-key-banner");
+  if (!banner) return;
+  banner.style.display = banner.style.display === "none" ? "block" : "none";
+  if (banner.style.display === "block") {
+    const input = document.getElementById("pk-api-key-input");
+    if (input) setTimeout(() => input.focus(), 60);
+  }
+}
+
+async function savePacklinkApiKey() {
+  const input = document.getElementById("pk-api-key-input");
+  if (!input) return;
+  const key = input.value.trim();
+  if (!key) {
+    showToast("Inserisci una chiave API valida generata su Packlink PRO.");
+    return;
+  }
+
+  try {
+    const res = await callApi("/packlink/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ api_key: key }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast("Chiave API Packlink PRO salvata con successo!");
+      input.value = "";
+      togglePacklinkConfigBanner();
+      await checkPacklinkStatus();
+      const badge = document.getElementById("packlink-api-badge");
+      if (badge) {
+        badge.textContent = "PRO Attivo (v1)";
+        badge.style.color = "#10b981";
+        badge.style.background = "rgba(16, 185, 129, 0.15)";
+        badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+      }
+    } else {
+      showToast(`Errore salvataggio: ${json.error || "Operazione non riuscita"}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  }
+}
+
+function setPacklinkPreset(type) {
+  document.querySelectorAll(".pk-preset-btn").forEach((btn) => btn.classList.remove("active"));
+  const weightInput = document.getElementById("pk-weight");
+  const lengthInput = document.getElementById("pk-length");
+  const widthInput = document.getElementById("pk-width");
+  const heightInput = document.getElementById("pk-height");
+  const contentInput = document.getElementById("pk-content");
+
+  if (type === "shoes") {
+    const btn = document.getElementById("btnPresetShoes");
+    if (btn) btn.classList.add("active");
+    if (weightInput) weightInput.value = "1.2";
+    if (lengthInput) lengthInput.value = "34";
+    if (widthInput) widthInput.value = "23";
+    if (heightInput) heightInput.value = "13";
+    if (contentInput) contentInput.value = "Scarpe / Sneakers";
+  } else if (type === "envelope") {
+    const btn = document.getElementById("btnPresetEnvelope");
+    if (btn) btn.classList.add("active");
+    if (weightInput) weightInput.value = "0.3";
+    if (lengthInput) lengthInput.value = "25";
+    if (widthInput) widthInput.value = "20";
+    if (heightInput) heightInput.value = "5";
+    if (contentInput) contentInput.value = "Abbigliamento";
+  } else if (type === "custom") {
+    const btn = document.getElementById("btnPresetCustom");
+    if (btn) btn.classList.add("active");
+    if (weightInput) weightInput.value = "1.0";
+    if (lengthInput) lengthInput.value = "30";
+    if (widthInput) widthInput.value = "20";
+    if (heightInput) heightInput.value = "15";
+    if (contentInput) contentInput.value = "Merchandise";
+  }
+}
+
+async function handlePacklinkAiExtract() {
+  const pasteEl = document.getElementById("pk-smart-paste");
+  const btn = document.getElementById("btn-pk-ai-extract");
+  const hint = document.getElementById("pk-ai-status-hint");
+  if (!pasteEl) return;
+  const rawText = pasteEl.value.trim();
+  if (!rawText) {
+    showToast("Incolla prima il messaggio dell'acquirente nella casella!");
+    pasteEl.focus();
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  if (hint) {
+    hint.textContent = "Analisi e normalizzazione recapiti con Google Gemini in corso...";
+    hint.style.color = "#10b981";
+  }
+
+  try {
+    const res = await callApi("/packlink/parse-address", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: rawText }),
+    });
+    const json = await res.json();
+    if (json.success && json.data) {
+      const d = json.data;
+      if (d.name) {
+        const full = [d.name, d.surname].filter(Boolean).join(" ").trim();
+        document.getElementById("pk-name").value = full || d.name;
+      }
+      if (d.street1) document.getElementById("pk-street1").value = d.street1;
+      if (d.street2) document.getElementById("pk-street2").value = d.street2;
+      if (d.zip) document.getElementById("pk-zip").value = d.zip;
+      if (d.city) document.getElementById("pk-city").value = d.city;
+      if (d.state) document.getElementById("pk-state").value = d.state;
+      if (d.country) document.getElementById("pk-country").value = d.country;
+      if (d.phone) document.getElementById("pk-phone").value = d.phone;
+      if (d.email) document.getElementById("pk-email").value = d.email;
+
+      if (d.weight) document.getElementById("pk-weight").value = d.weight;
+      if (d.length) document.getElementById("pk-length").value = d.length;
+      if (d.width) document.getElementById("pk-width").value = d.width;
+      if (d.height) document.getElementById("pk-height").value = d.height;
+      if (d.content) document.getElementById("pk-content").value = d.content;
+
+      showToast("Recapiti estratti e compilati con successo dall'AI!");
+      if (hint) {
+        hint.textContent = "Dati estratti e verificati con successo. Controlla e conferma.";
+        hint.style.color = "#10b981";
+      }
+    } else {
+      showToast(`Analisi fallita: ${json.error || "Riprova o inserisci manualmente"}`);
+      if (hint) {
+        hint.textContent = "Non è stato possibile estrarre i dati. Compila i campi manualmente.";
+        hint.style.color = "#f59e0b";
+      }
+    }
+  } catch (err) {
+    showToast(`Errore di rete durante l'analisi AI: ${err.message}`);
+    if (hint) {
+      hint.textContent = "Errore di connessione. Inserisci i campi manualmente.";
+      hint.style.color = "#ef4444";
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function handlePacklinkSubmit(e) {
+  if (e && typeof e.preventDefault === "function") {
+    e.preventDefault();
+  }
+
+  const nameVal = document.getElementById("pk-name").value.trim();
+  const street1Val = document.getElementById("pk-street1").value.trim();
+  const street2Val = document.getElementById("pk-street2").value.trim();
+  const zipVal = document.getElementById("pk-zip").value.trim();
+  const cityVal = document.getElementById("pk-city").value.trim();
+  const stateVal = document.getElementById("pk-state").value.trim();
+  const countryVal = document.getElementById("pk-country").value.trim() || "IT";
+  const phoneVal = document.getElementById("pk-phone").value.trim();
+  const emailVal = document.getElementById("pk-email").value.trim();
+
+  const weightVal = parseFloat(document.getElementById("pk-weight").value) || 1.2;
+  const lengthVal = parseFloat(document.getElementById("pk-length").value) || 34;
+  const widthVal = parseFloat(document.getElementById("pk-width").value) || 23;
+  const heightVal = parseFloat(document.getElementById("pk-height").value) || 13;
+  const contentVal = document.getElementById("pk-content").value.trim() || "Abbigliamento / Calzature";
+
+  if (!nameVal || !street1Val || !zipVal || !cityVal || !phoneVal) {
+    showToast("Compila tutti i campi obbligatori contrassegnati da *!");
+    return;
+  }
+
+  const submitBtn = document.getElementById("btnPacklinkSubmit");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Creazione bozza in corso...";
+  }
+
+  const payload = {
+    recipient: {
+      name: nameVal,
+      street1: street1Val,
+      street2: street2Val,
+      zip: zipVal,
+      city: cityVal,
+      state: stateVal,
+      country: countryVal,
+      phone: phoneVal,
+      email: emailVal,
+    },
+    package: {
+      weight: weightVal,
+      length: lengthVal,
+      width: widthVal,
+      height: heightVal,
+    },
+    content: contentVal,
+  };
+
+  try {
+    const res = await callApi("/packlink/create-draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (json.success) {
+      closePacklinkModal();
+      showToast(`Bozza Packlink creata con successo! Rif: ${json.reference || json.draft_id}`);
+      if (json.web_url) {
+        setTimeout(() => {
+          window.open(json.web_url, "_blank");
+        }, 600);
+      }
+    } else {
+      showToast(`Errore Packlink PRO: ${json.error || "Impossibile creare la bozza"}`);
+      if (json.error && (json.error.includes("Chiave") || json.error.includes("401"))) {
+        togglePacklinkConfigBanner();
+      }
+    }
+  } catch (err) {
+    showToast(`Errore di connessione: ${err.message}`);
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Crea Bozza Packlink";
+    }
+  }
+}
+
+// ==========================================================================
 // EVENT LISTENERS & INIZIALIZZAZIONE
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
@@ -4353,6 +4654,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(pingBridgeLatency, 10000);
   loadProductsFromBackend();
   loadPlacesFromBackend();
+  checkPacklinkStatus();
   initAllAutocompletes();
   initCharts();
   updateDashboardMetrics();
@@ -4521,6 +4823,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (backdrop.id === "updateModal" && isApplyingUpdate) return;
         closeModal();
         closeBulkSaleModal();
+        closeConfirmStockModal();
+        closePacklinkModal();
         closeUpdateModal();
       }
     });
@@ -4563,6 +4867,8 @@ document.addEventListener("DOMContentLoaded", () => {
       closeDrawer();
       closeModal();
       closeBulkSaleModal();
+      closeConfirmStockModal();
+      closePacklinkModal();
       closeUpdateModal();
       hideContextMenu();
       if (selectedProductIds.size > 0) {

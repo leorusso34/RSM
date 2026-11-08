@@ -269,3 +269,106 @@ def parse_excel_with_ai(raw_text: str, user_hint: str = "") -> list[dict[str, An
         raise RuntimeError(f"Errore proxy AI Excel import: {e!s}") from e
     finally:
         conn.close()
+
+
+def parse_shipping_address_with_ai(raw_text: str) -> dict[str, Any]:
+    """Estrae dati anagrafici destinatario e dettagli pacco da un testo libero
+
+    (es. chat WhatsApp, Vinted, eBay, Instagram DM) tramite Google Gemini.
+    In caso di indisponibilità del proxy, esegue il fallback euristico regex locale.
+    """
+    cleaned = raw_text.strip()
+    if not cleaned:
+        raise ValueError("Testo indirizzo vuoto.")
+
+    from .packlink import fallback_regex_parse_address
+
+    if not WORKER_URL:
+        return fallback_regex_parse_address(cleaned)
+
+    address_schema = {
+        "type": "OBJECT",
+        "properties": {
+            "name": {"type": "STRING", "description": "Nome del destinatario"},
+            "surname": {"type": "STRING", "description": "Cognome del destinatario. Se non esplicitato metti '.'"},
+            "street1": {"type": "STRING", "description": "Via/Piazza e numero civico principale"},
+            "street2": {
+                "type": "STRING",
+                "description": "Dettagli aggiuntivi come scala, piano, interno, citofono se presenti",
+            },
+            "zip": {"type": "STRING", "description": "Codice di avviamento postale (CAP a 5 cifre)"},
+            "city": {"type": "STRING", "description": "Città / Comune di destinazione"},
+            "country": {"type": "STRING", "description": "Codice paese a 2 lettere (default 'IT')"},
+            "phone": {"type": "STRING", "description": "Numero di telefono con prefisso internazionale pulito"},
+            "email": {"type": "STRING", "description": "Indirizzo email se presente"},
+            "weight": {"type": "NUMBER", "description": "Peso in kg stimato (se non specificato usa 1.2)"},
+            "length": {"type": "NUMBER", "description": "Lunghezza in cm del pacco (default 34.0)"},
+            "width": {"type": "NUMBER", "description": "Larghezza in cm del pacco (default 23.0)"},
+            "height": {"type": "NUMBER", "description": "Altezza in cm del pacco (default 13.0)"},
+            "content": {"type": "STRING", "description": "Breve descrizione del contenuto del pacco"},
+        },
+        "required": ["name", "street1", "zip", "city", "phone"],
+    }
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": f"Estrai con massima precisione i dati per la spedizione dal seguente testo:\n\n{cleaned}"
+                    }
+                ]
+            }
+        ],
+        "systemInstruction": {
+            "parts": [
+                {
+                    "text": (
+                        "Sei un assistente logistico per e-commerce. Estrai i dati di spedizione per un corriere italiano. "
+                        "Separa accuratamente via e civico (street1) da citofono/interno (street2). "
+                        "Formatta il numero di telefono in formato internazionale (+39...). "
+                        "Se il peso o le misure non sono indicati, applica come default una scatola di scarpe (1.2 kg, 34x23x13 cm). "
+                        "Restituisci esclusivamente un JSON conforme allo schema."
+                    )
+                }
+            ]
+        },
+        "generationConfig": {
+            "temperature": 0.1,
+            "maxOutputTokens": 2048,
+            "responseMimeType": "application/json",
+            "responseSchema": address_schema,
+        },
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+    parsed_w = urllib.parse.urlparse(WORKER_URL.strip())
+    w_host = parsed_w.netloc
+    w_path = f"{parsed_w.path.rstrip('/')}/api/gemini/generate"
+    w_headers = {"Content-Type": "application/json"}
+    if RSM_AUTH_KEY:
+        w_headers["X-RSM-Auth"] = RSM_AUTH_KEY.strip()
+
+    conn_cls = http.client.HTTPSConnection if parsed_w.scheme == "https" else http.client.HTTPConnection
+    conn = conn_cls(w_host, timeout=30)
+    try:
+        conn.request("POST", w_path, body=data, headers=w_headers)
+        response = conn.getresponse()
+        resp_data = response.read().decode("utf-8")
+        if response.status != 200:
+            return fallback_regex_parse_address(cleaned)
+        result = json.loads(resp_data)
+        if "candidates" in result and len(result["candidates"]) > 0:
+            content_text = result["candidates"][0]["content"]["parts"][0]["text"]
+            try:
+                parsed_json = json.loads(content_text)
+                if isinstance(parsed_json, dict):
+                    return parsed_json
+            except json.JSONDecodeError:
+                pass
+        return fallback_regex_parse_address(cleaned)
+    except Exception:  # noqa: BLE001
+        return fallback_regex_parse_address(cleaned)
+    finally:
+        conn.close()
+
