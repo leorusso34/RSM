@@ -1260,10 +1260,9 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #818cf8;"></span>
-                <span style="font-size: 11px; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 0.5px;">Incolla Rapido con AI (Google Gemini)</span>
-                <span style="font-size: 10.5px; color: var(--text-dim); margin-left: 4px;">— Chat WhatsApp, Vinted, eBay, Instagram o testo libero</span>
+                <span style="font-size: 11px; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 0.5px;">Incolla Rapido con AI</span>
               </div>
-              <span id="pk-ai-status-hint" style="font-size: 10.5px; color: var(--text-dim);">Incolla il testo grezzo e clicca il pulsante per compilare i campi del destinatario in automatico.</span>
+              <span id="pk-ai-status-hint" style="font-size: 11px; color: var(--text-dim);">Incolla il testo grezzo dell'ordine e clicca il pulsante per compilare automaticamente tutti i campi del destinatario.</span>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 220px; gap: 12px; align-items: stretch;">
@@ -1373,7 +1372,7 @@
                 <!-- Peso -->
                 <div class="form-group" style="margin-bottom: 10px;">
                   <label class="form-label">Peso Effettivo (kg) *</label>
-                  <input type="number" id="pk-weight" class="form-input" value="1.2" step="0.1" min="0.1" style="font-size: 12px; font-weight: 600;" required />
+                  <input type="number" id="pk-weight" class="form-input" value="1.2" step="0.1" min="0.1" placeholder="0.0" style="font-size: 12px; font-weight: 600;" required />
                 </div>
 
                 <!-- Misure Grid -->
@@ -1381,15 +1380,15 @@
                   <label class="form-label">Dimensioni Pacco (L &times; W &times; H cm) *</label>
                   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                     <div style="position: relative;">
-                      <input type="number" id="pk-length" class="form-input" value="34" step="1" min="1" style="text-align: center; font-size: 12px; padding: 6px 2px;" required />
+                      <input type="number" id="pk-length" class="form-input" value="34" step="1" min="1" placeholder="0" style="text-align: center; font-size: 12px; padding: 6px 2px;" required />
                       <span style="position: absolute; right: 6px; top: 7px; font-size: 9.5px; color: var(--text-dim); pointer-events: none;">L</span>
                     </div>
                     <div style="position: relative;">
-                      <input type="number" id="pk-width" class="form-input" value="23" step="1" min="1" style="text-align: center; font-size: 12px; padding: 6px 2px;" required />
+                      <input type="number" id="pk-width" class="form-input" value="23" step="1" min="1" placeholder="0" style="text-align: center; font-size: 12px; padding: 6px 2px;" required />
                       <span style="position: absolute; right: 6px; top: 7px; font-size: 9.5px; color: var(--text-dim); pointer-events: none;">W</span>
                     </div>
                     <div style="position: relative;">
-                      <input type="number" id="pk-height" class="form-input" value="13" step="1" min="1" style="text-align: center; font-size: 12px; padding: 6px 2px;" required />
+                      <input type="number" id="pk-height" class="form-input" value="13" step="1" min="1" placeholder="0" style="text-align: center; font-size: 12px; padding: 6px 2px;" required />
                       <span style="position: absolute; right: 6px; top: 7px; font-size: 9.5px; color: var(--text-dim); pointer-events: none;">H</span>
                     </div>
                   </div>

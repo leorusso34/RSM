@@ -103,6 +103,20 @@ def run_level7_packlink_shipping_checks(page: Page, console_errors: list[str]) -
     assert page.locator("#pk-height").input_value() == "13", "Preset Scarpe: altezza errata"
     details.append("Preset 'Scarpe (1.2 kg)' collaudato (peso 1.2 kg, scatola 34x23x13 cm)")
 
+    page.click("#btnPresetCustom")
+    page.wait_for_timeout(300)
+    expect(page.locator("#btnPresetCustom")).to_have_class(re.compile(r"active"))
+    assert page.locator("#pk-weight").input_value() == "", "Preset Custom: peso deve essere vuoto"
+    assert page.locator("#pk-length").input_value() == "", "Preset Custom: lunghezza deve essere vuota"
+    assert page.locator("#pk-width").input_value() == "", "Preset Custom: larghezza deve essere vuota"
+    assert page.locator("#pk-height").input_value() == "", "Preset Custom: altezza deve essere vuota"
+    assert page.locator("#pk-content").input_value() == "", "Preset Custom: contenuto deve essere vuoto"
+    details.append("Preset 'Custom' collaudato (tutti i campi pacco resettati a vuoto)")
+
+    # Ripristino preset scarpe
+    page.click("#btnPresetShoes")
+    page.wait_for_timeout(200)
+
     # 7. Verifica banner Chiave API (visibile inizialmente se chiave assente)
     expect(page.locator("#pk-api-key-banner")).to_be_visible()
     details.append("Banner configurazione Chiave API visibile inizialmente (chiave non impostata)")

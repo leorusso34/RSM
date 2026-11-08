@@ -4442,11 +4442,12 @@ function setPacklinkPreset(type) {
   } else if (type === "custom") {
     const btn = document.getElementById("btnPresetCustom");
     if (btn) btn.classList.add("active");
-    if (weightInput) weightInput.value = "1.0";
-    if (lengthInput) lengthInput.value = "30";
-    if (widthInput) widthInput.value = "20";
-    if (heightInput) heightInput.value = "15";
-    if (contentInput) contentInput.value = "Merchandise";
+    if (weightInput) weightInput.value = "";
+    if (lengthInput) lengthInput.value = "";
+    if (widthInput) widthInput.value = "";
+    if (heightInput) heightInput.value = "";
+    if (contentInput) contentInput.value = "";
+    if (weightInput) setTimeout(() => weightInput.focus(), 50);
   }
 }
 
