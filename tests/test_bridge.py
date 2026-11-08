@@ -793,3 +793,69 @@ def test_products_api_returns_created_at_for_dead_stock(tmp_path):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_bridge_partial_stock_move_from_preorder(tmp_path):
+    """Verifica lo split parziale di quantità nello spostamento da preordine a magazzino."""
+    test_db = tmp_path / "test_partial_stock.db"
+    db = InventoryDatabase(test_db)
+
+    # Prodotto iniziale: 10 pezzi in pre-ordine
+    pid = db.save(
+        {
+            "name": "Yeezy Boost 350",
+            "size": "44",
+            "quantity": 10,
+            "purchased_price": Decimal("220.00"),
+            "purchased_place": "Confirmed",
+            "status": STATUS_PREORDER,
+        }
+    )
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        # Sposta 4 pezzi su 10 in Magazzino
+        req = request.Request(
+            f"http://127.0.0.1:{port}/api/products/bulk-status",
+            data=json.dumps(
+                {
+                    "ids": [pid],
+                    "status": "stock",
+                    "quantity_to_stock": 4,
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["split"] is True
+            new_id = data["new_stock_id"]
+
+        # 1. Il record originale rimane in pre-ordine con 6 pezzi
+        orig_row = db.get(pid)
+        assert orig_row["status"] == STATUS_PREORDER
+        assert orig_row["quantity"] == 6
+
+        # 2. Il nuovo record è in magazzino con 4 pezzi
+        new_row = db.get(new_id)
+        assert new_row["status"] == STATUS_STOCK
+        assert new_row["quantity"] == 4
+        assert new_row["purchased_price"] == Decimal("220.00")
+        assert new_row["size"] == "44"
+    finally:
+        server.shutdown()
+        server.server_close()
+

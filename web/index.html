@@ -1131,6 +1131,39 @@
   </div>
 
   <!-- ====================================================================
+       MODALE: CONFERMA IN MAGAZZINO (SPOSTAMENTO DA PRE-ORDINE)
+       ==================================================================== -->
+  <div class="modal-backdrop" id="confirmStockModal">
+    <div class="modal-card" style="max-width: 460px;">
+      <div class="modal-header">
+        <h3 id="confirmStockModalTitle">Conferma in Magazzino</h3>
+        <button class="modal-close-btn" onclick="closeConfirmStockModal()">&times;</button>
+      </div>
+      <form id="confirmStockForm" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onsubmit="handleConfirmStockSubmit(event)">
+        <div class="modal-body">
+          <p id="confirmStockModalSubtitle" style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
+            Conferma l'arrivo dei prodotti in magazzino per renderli disponibili per la vendita.
+          </p>
+
+          <div class="form-group" id="confirm-stock-qty-group" style="margin-bottom: 12px; display: none;">
+            <label class="form-label">Quantità arrivata in Magazzino</label>
+            <select id="confirm-stock-qty-select" class="form-input"></select>
+            <span id="confirm-stock-qty-hint" style="display: block; font-size: 10.5px; color: var(--text-dim); margin-top: 4px;"></span>
+          </div>
+
+          <div id="confirm-stock-single-hint" style="font-size: 11px; color: var(--text-muted); padding: 10px 12px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); margin-bottom: 8px;">
+            Il prodotto selezionato passerà dallo stato di Pre-ordine a Disponibile in Magazzino.
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeConfirmStockModal()">Annulla</button>
+          <button type="submit" class="btn btn-primary" id="btnConfirmStockSubmit">Conferma Spostamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
        MODALE: GESTIONE CANALI E LUOGHI DINAMICI (CUSTOM PLACES MANAGER)
        ==================================================================== -->
   <div class="modal-backdrop" id="managePlacesModal">

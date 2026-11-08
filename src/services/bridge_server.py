@@ -865,6 +865,43 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     return
 
                 if target_status == "stock":
+                    qty_to_stock = body.get("quantity_to_stock") or body.get("quantity")
+                    if len(ids) == 1 and qty_to_stock:
+                        chosen_qty = int(qty_to_stock)
+                        prod_id = ids[0]
+                        rec = self.db.get(prod_id)
+                        if rec and 0 < chosen_qty < (rec.get("quantity", 1) or 1):
+                            original_qty = rec.get("quantity", 1) or 1
+                            remaining = original_qty - chosen_qty
+
+                            # Aggiorna record originale lasciando rimanenza nello stato preorder
+                            updated_orig = dict(rec)
+                            updated_orig["quantity"] = remaining
+                            self.db.save(updated_orig, prod_id)
+
+                            # Crea nuovo record per la quota arrivata in Magazzino
+                            new_stock = dict(rec)
+                            new_stock.pop("id", None)
+                            new_stock["quantity"] = chosen_qty
+                            new_stock["status"] = STATUS_STOCK
+                            new_stock["is_completed"] = 0
+                            new_stock["selling_price"] = None
+                            new_stock["sold_price"] = None
+                            new_stock["fees"] = Decimal("0.00")
+                            new_stock["selling_place"] = ""
+                            new_stock["sold_date"] = ""
+                            new_stock["bundle_id"] = ""
+                            new_id = self.db.save(new_stock)
+                            self._send_json(
+                                {
+                                    "success": True,
+                                    "updated_count": 1,
+                                    "new_stock_id": new_id,
+                                    "split": True,
+                                }
+                            )
+                            return
+
                     self.db.update_status_many(ids, STATUS_STOCK)
                     self._send_json({"success": True, "updated_count": len(ids)})
                     return

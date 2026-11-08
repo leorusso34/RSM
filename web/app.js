@@ -175,6 +175,14 @@ async function performUndo() {
   const action = undoStack.pop();
   try {
     if (action.type === "restore_records" && action.records && action.records.length > 0) {
+      // Se l'azione originale aveva generato record secondari (es. vendita parziale o arrivo parziale magazzino), eliminali prima
+      if (action.created_ids && action.created_ids.length > 0) {
+        await callApi("/products/bulk-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: action.created_ids }),
+        });
+      }
       const res = await callApi("/undo/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2537,7 +2545,7 @@ function showContextMenu(x, y) {
   const canEdit = count === 1 && selectedRecords[0] && selectedRecords[0].status !== "completed";
   const canDuplicate = true;
   const canSell = selectedRecords.some((i) => i.status === "stock" || i.status === "preorder");
-  const canStock = selectedRecords.some((i) => i.status === "preorder" || i.status === "active-sale");
+  const canStock = selectedRecords.length > 0 && selectedRecords.every((i) => i.status === "preorder");
   const canComplete = selectedRecords.some((i) => i.status === "active-sale");
   const canSearchEbay = true;
   const canEbayPrices = count === 1;
@@ -2635,50 +2643,10 @@ function ctxActionSell() {
   openBulkSaleModal(ids);
 }
 
-async function ctxActionStock() {
+function ctxActionStock() {
   const ids = Array.from(selectedProductIds);
   hideContextMenu();
-  if (ids.length === 0) return;
-  if (!confirm(`Spostare ${ids.length} prodotti in Magazzino?`)) {
-    if (!isSelectionModeActive) {
-      selectedProductIds.clear();
-      updateSelectionBadge();
-      renderTable();
-    }
-    return;
-  }
-
-  const snapshots = inventoryData
-    .filter((i) => ids.includes(i.id))
-    .map((i) => JSON.parse(JSON.stringify(i)));
-
-  try {
-    const res = await callApi("/products/bulk-status", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids, status: "stock" }),
-    });
-    const json = await res.json();
-    if (json.success) {
-      pushUndo({
-        type: "restore_records",
-        desc: `Spostamento in Magazzino (${snapshots.length} prodotti)`,
-        records: snapshots,
-      });
-      selectedProductIds.clear();
-      updateSelectionBadge();
-      activeFilter = "stock";
-      document.querySelectorAll(".table-tab-pill").forEach((pill) => {
-        pill.classList.toggle("active", pill.getAttribute("data-filter") === "stock");
-      });
-      await loadProductsFromBackend();
-      showToast(`${ids.length} prodotti spostati in Magazzino!`);
-    } else {
-      showToast(`Errore spostamento: ${json.error}`);
-    }
-  } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
-  }
+  openConfirmStockModal(ids);
 }
 
 async function ctxActionComplete() {
@@ -2950,10 +2918,14 @@ async function handleBulkSaleSubmit(e) {
     });
     const json = await res.json();
     if (json.success) {
+      const createdIds = [];
+      if (json.new_sold_id) createdIds.push(json.new_sold_id);
+
       pushUndo({
         type: "restore_records",
         desc: `Messa in vendita (${snapshots.length} prodotti)`,
         records: snapshots,
+        created_ids: createdIds,
       });
       bulkSaleTargetIds = [];
       closeBulkSaleModal();
@@ -2967,6 +2939,160 @@ async function handleBulkSaleSubmit(e) {
       showToast(`${ids.length === 1 ? "Prodotto messo" : ids.length + " prodotti messi"} in vendita con successo!`);
     } else {
       showToast(`Errore vendita: ${json.error}`);
+    }
+  } catch (err) {
+    showToast(`Errore di rete: ${err.message}`);
+  }
+}
+
+// ==========================================================================
+// MODALE: CONFERMA IN MAGAZZINO (ARRIVO PRE-ORDINE & SPLIT QUANTITÀ)
+// ==========================================================================
+let confirmStockTargetIds = [];
+
+function openConfirmStockModal(targetIds = null) {
+  const modal = document.getElementById("confirmStockModal");
+  if (!modal) return;
+
+  if (Array.isArray(targetIds) && targetIds.length > 0) {
+    confirmStockTargetIds = Array.from(targetIds);
+  } else if (selectedProductIds.size > 0) {
+    confirmStockTargetIds = Array.from(selectedProductIds);
+  } else {
+    confirmStockTargetIds = [];
+  }
+
+  const count = confirmStockTargetIds.length;
+  if (count === 0) return;
+
+  const titleEl = document.getElementById("confirmStockModalTitle");
+  const subtitleEl = document.getElementById("confirmStockModalSubtitle");
+  const qtyGroup = document.getElementById("confirm-stock-qty-group");
+  const qtySelect = document.getElementById("confirm-stock-qty-select");
+  const qtyHint = document.getElementById("confirm-stock-qty-hint");
+  const singleHint = document.getElementById("confirm-stock-single-hint");
+
+  if (confirmStockTargetIds.length === 1) {
+    const singleId = confirmStockTargetIds[0];
+    const item = inventoryData.find((p) => p.id === singleId);
+    if (titleEl) titleEl.textContent = "Conferma in Magazzino";
+    if (subtitleEl) {
+      subtitleEl.textContent = `Conferma l'arrivo dei pezzi per "${item ? item.name : "il prodotto selezionato"}" in magazzino.`;
+    }
+
+    if (item && item.quantity > 1) {
+      if (qtyGroup) qtyGroup.style.display = "block";
+      if (singleHint) singleHint.style.display = "none";
+      if (qtySelect) {
+        qtySelect.innerHTML = "";
+        for (let q = 1; q <= item.quantity; q++) {
+          const opt = document.createElement("option");
+          opt.value = q;
+          opt.textContent = `${q} di ${item.quantity} pz`;
+          if (q === item.quantity) opt.selected = true;
+          qtySelect.appendChild(opt);
+        }
+        qtySelect.onchange = () => {
+          const chosen = parseInt(qtySelect.value, 10);
+          if (qtyHint) {
+            const remaining = item.quantity - chosen;
+            if (remaining > 0) {
+              qtyHint.textContent = `${chosen} pz andranno in Magazzino, ${remaining} pz rimarranno in pre-ordine.`;
+            } else {
+              qtyHint.textContent = `Tutti i ${chosen} pz verranno spostati in magazzino.`;
+            }
+          }
+        };
+        qtySelect.dispatchEvent(new Event("change"));
+      }
+    } else {
+      if (qtyGroup) qtyGroup.style.display = "none";
+      if (singleHint) {
+        singleHint.style.display = "block";
+        singleHint.textContent = "Il prodotto selezionato passerà dallo stato di Pre-ordine a Disponibile in Magazzino.";
+      }
+    }
+  } else {
+    if (titleEl) titleEl.textContent = `Conferma in Magazzino (${confirmStockTargetIds.length} Prodotti)`;
+    if (subtitleEl) {
+      subtitleEl.textContent = "Stai per confermare l'arrivo in magazzino di tutti i prodotti in pre-ordine selezionati.";
+    }
+    if (qtyGroup) qtyGroup.style.display = "none";
+    if (singleHint) {
+      singleHint.style.display = "block";
+      singleHint.textContent = `Tutti i ${confirmStockTargetIds.length} pre-ordini selezionati verranno spostati contemporaneamente in Magazzino.`;
+    }
+  }
+
+  modal.classList.add("open");
+}
+
+function closeConfirmStockModal() {
+  const modal = document.getElementById("confirmStockModal");
+  if (modal) modal.classList.remove("open");
+  if (!isSelectionModeActive && selectedProductIds.size > 0) {
+    selectedProductIds.clear();
+    updateSelectionBadge();
+    renderTable();
+  }
+  confirmStockTargetIds = [];
+}
+
+async function handleConfirmStockSubmit(e) {
+  if (e && typeof e.preventDefault === "function") {
+    e.preventDefault();
+  }
+  const ids = confirmStockTargetIds.length > 0 ? Array.from(confirmStockTargetIds) : Array.from(selectedProductIds);
+  if (ids.length === 0) {
+    showToast("Nessun prodotto selezionato per lo spostamento.");
+    return;
+  }
+
+  const payload = {
+    ids,
+    status: "stock",
+  };
+
+  const qtyGroup = document.getElementById("confirm-stock-qty-group");
+  const qtySelect = document.getElementById("confirm-stock-qty-select");
+  if (ids.length === 1 && qtyGroup && qtyGroup.style.display !== "none" && qtySelect) {
+    payload.quantity_to_stock = parseInt(qtySelect.value, 10);
+  }
+
+  const snapshots = inventoryData
+    .filter((i) => ids.includes(i.id))
+    .map((i) => JSON.parse(JSON.stringify(i)));
+
+  try {
+    const res = await callApi("/products/bulk-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (json.success) {
+      const createdIds = [];
+      if (json.new_stock_id) createdIds.push(json.new_stock_id);
+
+      pushUndo({
+        type: "restore_records",
+        desc: `Spostamento in Magazzino (${snapshots.length} prodotti)`,
+        records: snapshots,
+        created_ids: createdIds,
+      });
+
+      confirmStockTargetIds = [];
+      closeConfirmStockModal();
+      selectedProductIds.clear();
+      updateSelectionBadge();
+      activeFilter = "stock";
+      document.querySelectorAll(".table-tab-pill").forEach((pill) => {
+        pill.classList.toggle("active", pill.getAttribute("data-filter") === "stock");
+      });
+      await loadProductsFromBackend();
+      showToast(`${payload.quantity_to_stock ? payload.quantity_to_stock + " pz spostati" : (ids.length === 1 ? "Prodotto spostato" : ids.length + " prodotti spostati")} in Magazzino con successo!`);
+    } else {
+      showToast(`Errore spostamento: ${json.error}`);
     }
   } catch (err) {
     showToast(`Errore di rete: ${err.message}`);
