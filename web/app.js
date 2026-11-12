@@ -2081,7 +2081,7 @@ function renderDrawerTrackingOrTimeline(item, isEditing = false) {
           Inserisci la lettera di vettura per monitorare le tappe del corriere in tempo reale con 17TRACK.
         </div>
 
-        <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 8px; margin-bottom: 10px; text-align: left;">
+        <div style="display: grid; grid-template-columns: 1.4fr 1.1fr; gap: 8px; margin-bottom: 10px; text-align: left;">
           <div>
             <label style="display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px;">Codice Spedizione *</label>
             <input type="text" id="drawerTrackingInput" value="${currentNum}" placeholder="es. 179090188502104" style="width: 100%; font-family: monospace; font-size: 11.5px; padding: 6px 8px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; outline: none;">
@@ -4685,6 +4685,10 @@ async function checkPacklinkStatus() {
     if (navBadge) {
       navBadge.style.display = isPacklinkConfigured ? "inline-block" : "none";
     }
+    const keyInput = document.getElementById("pk-api-key-input");
+    if (keyInput && json.api_key) {
+      keyInput.value = json.api_key;
+    }
     return json;
   } catch (_) {
     return { configured: false };
@@ -4701,6 +4705,16 @@ async function openPacklinkModal() {
   const banner = document.getElementById("pk-api-key-banner");
   const badge = document.getElementById("packlink-api-badge");
   const bannerText = document.getElementById("pk-banner-status-text");
+  const keyInput = document.getElementById("pk-api-key-input");
+  const showKeyCheckbox = document.getElementById("pk-show-key");
+
+  if (showKeyCheckbox) showKeyCheckbox.checked = false;
+  if (keyInput) {
+    keyInput.type = "password";
+    if (status.api_key) {
+      keyInput.value = status.api_key;
+    }
+  }
 
   if (!status.configured) {
     if (banner) banner.style.display = "block";
@@ -4748,6 +4762,13 @@ function togglePacklinkConfigBanner() {
   }
 }
 
+function togglePacklinkKeyVisibility(show) {
+  const input = document.getElementById("pk-api-key-input");
+  if (input) {
+    input.type = show ? "text" : "password";
+  }
+}
+
 async function savePacklinkApiKey() {
   const input = document.getElementById("pk-api-key-input");
   if (!input) return;
@@ -4766,7 +4787,9 @@ async function savePacklinkApiKey() {
     const json = await res.json();
     if (json.success) {
       showToast("Chiave API Packlink PRO salvata con successo!");
-      input.value = "";
+      const showKeyCheckbox = document.getElementById("pk-show-key");
+      if (showKeyCheckbox) showKeyCheckbox.checked = false;
+      input.type = "password";
       togglePacklinkConfigBanner();
       await checkPacklinkStatus();
       const badge = document.getElementById("packlink-api-badge");

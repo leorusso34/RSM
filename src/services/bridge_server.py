@@ -519,6 +519,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     "success": True,
                     "configured": has_key,
                     "masked_key": masked,
+                    "api_key": pk_key,
                 }
             )
             return

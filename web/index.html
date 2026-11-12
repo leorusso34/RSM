@@ -1249,8 +1249,11 @@
           <span id="pk-banner-status-text" style="color: #f59e0b; font-weight: 600;">Configura Chiave API Packlink PRO</span>
           <span style="color: var(--text-dim); font-size: 10px;">Salvata localmente nel tuo config.json personale</span>
         </div>
-        <div style="display: flex; gap: 8px;">
-          <input type="password" id="pk-api-key-input" class="form-input" placeholder="Incolla qui la tua API Key di Packlink PRO..." style="font-size: 11px; padding: 6px 10px;" />
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="password" id="pk-api-key-input" class="form-input" placeholder="Incolla qui la tua API Key di Packlink PRO..." style="font-size: 11px; padding: 6px 10px; flex: 1;" />
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; white-space: nowrap; user-select: none;">
+            <input type="checkbox" id="pk-show-key" onchange="togglePacklinkKeyVisibility(this.checked)" /> Mostra
+          </label>
           <button type="button" class="btn btn-primary" onclick="savePacklinkApiKey()" style="font-size: 11px; padding: 6px 14px; white-space: nowrap;">Salva Chiave</button>
         </div>
       </div>
