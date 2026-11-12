@@ -75,7 +75,11 @@ def fetch_tracking_info(
 
     query_params: dict[str, str] = {"number": clean_number}
     if clean_carrier:
-        query_params["carrier"] = clean_carrier
+        # Assicura che 'inpost' punti specificamente al corriere InPost Italy (17TRACK provider 100469)
+        if clean_carrier in ("inpost", "inpost-it", "inpost_it", "inpost-italy"):
+            query_params["carrier"] = "inpost-it"
+        else:
+            query_params["carrier"] = clean_carrier
 
     query_str = urllib.parse.urlencode(query_params)
     path = f"/api/tracking?{query_str}"

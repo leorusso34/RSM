@@ -2093,7 +2093,7 @@ function renderDrawerTrackingOrTimeline(item, isEditing = false) {
               <option value="brt" ${currentCarrier === "brt" ? "selected" : ""}>BRT Bartolini</option>
               <option value="poste" ${currentCarrier === "poste" ? "selected" : ""}>Poste / SDA</option>
               <option value="gls" ${currentCarrier === "gls" ? "selected" : ""}>GLS Italy</option>
-              <option value="inpost" ${currentCarrier === "inpost" ? "selected" : ""}>InPost</option>
+              <option value="inpost-it" ${currentCarrier === "inpost-it" || currentCarrier === "inpost" ? "selected" : ""}>InPost Italy</option>
               <option value="ups" ${currentCarrier === "ups" ? "selected" : ""}>UPS</option>
               <option value="dhl" ${currentCarrier === "dhl" ? "selected" : ""}>DHL</option>
             </select>
