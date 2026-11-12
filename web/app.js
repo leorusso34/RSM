@@ -2039,7 +2039,7 @@ function renderDrawerTrackingOrTimeline(item, isEditing = false) {
 
     timelineHtml += `
       <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
-        <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="renderDrawerTrackingOrTimeline(currentDrawerItem, true)">
+        <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="editDrawerTracking(${item.id})">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon></svg>
           <span>Aggiungi Tracciamento 17TRACK</span>
         </button>
@@ -2101,7 +2101,7 @@ function renderDrawerTrackingOrTimeline(item, isEditing = false) {
         </div>
 
         <div style="display: flex; gap: 6px;">
-          ${hasTracking ? `<button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; padding: 6px;" onclick="renderDrawerTrackingOrTimeline(currentDrawerItem, false)">Annulla</button>` : ""}
+          ${hasTracking ? `<button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; padding: 6px;" onclick="cancelDrawerTrackingEdit(${item.id})">Annulla</button>` : ""}
           <button type="button" id="btnSaveDrawerTracking" class="btn btn-primary" style="flex: 2; font-size: 11px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="saveDrawerTracking(${item.id})">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
             <span>Salva e Monitora</span>
@@ -2236,7 +2236,7 @@ function renderTrackingCardContent(item, data, isRefreshing = false) {
               <path d="M16 21h5v-5"></path>
             </svg>
           </button>
-          <button type="button" class="tracking-icon-btn" onclick="renderDrawerTrackingOrTimeline(currentDrawerItem, true)" title="Modifica codice / corriere">
+          <button type="button" class="tracking-icon-btn" onclick="editDrawerTracking(${item.id})" title="Modifica codice / corriere">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
             </svg>
@@ -2281,6 +2281,20 @@ function copyTrackingCode(code) {
   }).catch(() => {
     showToast(`Codice: ${code}`);
   });
+}
+
+function editDrawerTracking(productId) {
+  const item = inventoryData.find((i) => i.id === productId) || currentDrawerItem;
+  if (item) {
+    renderDrawerTrackingOrTimeline(item, true);
+  }
+}
+
+function cancelDrawerTrackingEdit(productId) {
+  const item = inventoryData.find((i) => i.id === productId) || currentDrawerItem;
+  if (item) {
+    renderDrawerTrackingOrTimeline(item, false);
+  }
 }
 
 async function saveDrawerTracking(productId) {
@@ -2347,11 +2361,15 @@ async function refreshDrawerTracking(productId) {
     item.carrier = json.carrier || item.carrier;
     item.tracking_cache = json.data;
     currentDrawerItem = item;
-    renderTrackingCardContent(item, json.data, false);
+    if (!document.getElementById("drawerTrackingInput")) {
+      renderTrackingCardContent(item, json.data, false);
+    }
     showToast("Stato spedizione aggiornato!");
   } catch (err) {
     showToast(`Aggiornamento non riuscito: ${err.message}`);
-    renderTrackingCardContent(item, currentCache, false);
+    if (!document.getElementById("drawerTrackingInput")) {
+      renderTrackingCardContent(item, currentCache, false);
+    }
   }
 }
 

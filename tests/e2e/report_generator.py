@@ -65,16 +65,11 @@ def generate_e2e_html_report(
 
     # Mappatura Base64 dei media
     videos_b64: dict[int, str] = {}
-    screenshots_b64: dict[int, str] = {}
     for r in results:
         if r.video_path:
             v_b64 = file_to_base64(r.video_path, "video/webm")
             if v_b64:
                 videos_b64[r.level_id] = v_b64
-        if r.screenshot_path:
-            s_b64 = file_to_base64(r.screenshot_path, "image/png")
-            if s_b64:
-                screenshots_b64[r.level_id] = s_b64
 
     # Generazione markup schede livelli
     level_cards_html = []
@@ -142,36 +137,6 @@ def generate_e2e_html_report(
           </div>
           <div class="video-wrapper-box">
             {"".join(video_players_html)}
-          </div>
-        </section>
-        """
-
-    # Generazione screenshot gallery
-    screenshot_items_html = []
-    for r in results:
-        s_src = screenshots_b64.get(r.level_id)
-        if s_src:
-            screenshot_items_html.append(f"""
-            <div class="screenshot-item" onclick="openLightbox('{s_src}', 'Livello {r.level_id}: {html.escape(r.name)}')">
-              <div class="screenshot-img-wrap">
-                <img src="{s_src}" alt="Screenshot Livello {r.level_id}" loading="lazy" />
-              </div>
-              <div class="screenshot-caption">
-                <strong>Livello {r.level_id}</strong>: {html.escape(r.name)}
-              </div>
-            </div>
-            """)
-
-    screenshot_section_html = ""
-    if screenshot_items_html:
-        screenshot_section_html = f"""
-        <section class="report-section">
-          <div class="section-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            <h2>Galleria Screenshot ai Checkpoint</h2>
-          </div>
-          <div class="screenshots-grid">
-            {"".join(screenshot_items_html)}
           </div>
         </section>
         """
@@ -509,41 +474,6 @@ def generate_e2e_html_report(
       display: block;
       outline: none;
     }}
-    .screenshots-grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
-    }}
-    .screenshot-item {{
-      background: #090d16;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }}
-    .screenshot-item:hover {{
-      border-color: var(--border-accent);
-      transform: scale(1.01);
-    }}
-    .screenshot-img-wrap {{
-      height: 180px;
-      background: #000;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }}
-    .screenshot-img-wrap img {{
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }}
-    .screenshot-caption {{
-      padding: 10px 12px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }}
     .error-card {{
       background: rgba(239, 68, 68, 0.05);
       border: 1px solid rgba(239, 68, 68, 0.25);
@@ -596,47 +526,6 @@ def generate_e2e_html_report(
       display: block;
       overflow-x: auto;
     }}
-    /* Lightbox Modal */
-    .lightbox-modal {{
-      display: none;
-      position: fixed;
-      z-index: 99999;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.88);
-      backdrop-filter: blur(8px);
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      padding: 24px;
-    }}
-    .lightbox-modal.open {{
-      display: flex;
-    }}
-    .lightbox-img {{
-      max-width: 92vw;
-      max-height: 85vh;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
-    }}
-    .lightbox-caption {{
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      margin-top: 12px;
-    }}
-    .lightbox-close {{
-      position: absolute;
-      top: 20px;
-      right: 28px;
-      font-size: 32px;
-      color: #fff;
-      cursor: pointer;
-      user-select: none;
-    }}
   </style>
 </head>
 <body>
@@ -667,14 +556,7 @@ def generate_e2e_html_report(
     </div>
 
     {video_section_html}
-    {screenshot_section_html}
     {errors_section_html}
-  </div>
-
-  <div id="lightbox" class="lightbox-modal" onclick="closeLightbox()">
-    <span class="lightbox-close">&times;</span>
-    <img id="lightbox-img" class="lightbox-img" src="" alt="Zoom" onclick="event.stopPropagation()" />
-    <div id="lightbox-caption" class="lightbox-caption"></div>
   </div>
 
   <script>
@@ -692,23 +574,6 @@ def generate_e2e_html_report(
         if (video) video.play().catch(function() {{}});
       }}
     }}
-
-    function openLightbox(src, caption) {{
-      const modal = document.getElementById("lightbox");
-      const img = document.getElementById("lightbox-img");
-      const cap = document.getElementById("lightbox-caption");
-      img.src = src;
-      cap.textContent = caption;
-      modal.classList.add("open");
-    }}
-
-    function closeLightbox() {{
-      document.getElementById("lightbox").classList.remove("open");
-    }}
-
-    document.addEventListener("keydown", function(e) {{
-      if (e.key === "Escape") closeLightbox();
-    }});
 
     const track = document.querySelector(".levels-grid");
     if (track) {{

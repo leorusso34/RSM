@@ -32,6 +32,7 @@ from tests.e2e.test_level4_advanced import run_level4_advanced_checks
 from tests.e2e.test_level5_bulk import run_level5_bulk_checks
 from tests.e2e.test_level6_undo_partial_sale import run_level6_undo_partial_sale_checks
 from tests.e2e.test_level7_packlink_shipping import run_level7_packlink_shipping_checks
+from tests.e2e.test_level8_17track import run_level8_17track_checks
 
 
 def extract_error_info(exc: Exception) -> tuple[str, str | None, int | None]:
@@ -61,8 +62,8 @@ def main() -> int:
         "--level",
         "-l",
         type=int,
-        choices=[1, 2, 3, 4, 5, 6, 7],
-        help="Esegue esclusivamente il livello indicato (1: Smoke, 2: CRUD, 3: Ciclo Vendita, 4: Avanzato, 5: Vendita Multipla, 6: Undo Vendita Parziale, 7: Spedizioni Packlink)",
+        choices=[1, 2, 3, 4, 5, 6, 7, 8],
+        help="Esegue esclusivamente il livello indicato (1: Smoke, 2: CRUD, 3: Ciclo Vendita, 4: Avanzato, 5: Vendita Multipla, 6: Undo Vendita Parziale, 7: Spedizioni Packlink, 8: Tracking 17TRACK)",
     )
     parser.add_argument(
         "--output",
@@ -468,6 +469,60 @@ def main() -> int:
                     )
                 )
 
+            # ==================================================================
+            # LIVELLO 8: 17TRACK & SPEDIZIONI NEL SIDE-DRAWER
+            # ==================================================================
+            if (args.level is None or args.level == 8) and not has_failed:
+                print("▶ [8/8] Esecuzione Livello 8: Integrazione 17TRACK nel Side-Drawer...")
+                start_t = time.time()
+                mgr8 = E2EContextManager(playwright, "level8_17track")
+                try:
+                    with mgr8 as (page, console_errors):
+                        chk8 = run_level8_17track_checks(page, console_errors)
+
+                    elapsed = time.time() - start_t
+                    res8 = LevelResult(
+                        level_id=8,
+                        name="Tracking 17TRACK & Side-Drawer Spedizioni",
+                        status="PASSED",
+                        duration=elapsed,
+                        video_path=mgr8.final_video_path or VIDEOS_DIR / "level8_17track.webm",
+                        details=chk8["details"],
+                    )
+                    results.append(res8)
+                    print(
+                        f"   ✅ LIVELLO 8 SUPERATO in {elapsed:.2f}s (riconoscimento BRT, 8 tappe, refresh, modifica ed eliminazione validati)\n"
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    elapsed = time.time() - start_t
+                    err_msg, f_path, line_no = extract_error_info(exc)
+                    res8 = LevelResult(
+                        level_id=8,
+                        name="Tracking 17TRACK & Side-Drawer Spedizioni",
+                        status="FAILED",
+                        duration=elapsed,
+                        error_message=err_msg,
+                        file_path=f_path,
+                        line_number=line_no,
+                        video_path=mgr8.final_video_path or VIDEOS_DIR / "level8_17track.webm",
+                        details=["Fallimento durante l'apertura drawer, tracking 17TRACK o gestione tappe nel Livello 8."],
+                    )
+                    results.append(res8)
+                    has_failed = True
+                    print(f"   ❌ LIVELLO 8 FALLITO in {elapsed:.2f}s:")
+                    print(f"      {err_msg}\n")
+            elif args.level is None and has_failed:
+                results.append(
+                    LevelResult(
+                        level_id=8,
+                        name="Tracking 17TRACK & Side-Drawer Spedizioni",
+                        status="SKIPPED",
+                        details=[
+                            "Livello saltato automaticamente a causa del fallimento di un livello precedente (Fail-Fast)."
+                        ],
+                    )
+                )
+
     finally:
         print("[2/3] Chiusura sicura del server Sandbox e distruzione del database effimero...")
         server.stop()
@@ -481,7 +536,7 @@ def main() -> int:
         if not has_failed:
             print("🏆 [ESITO FINALE: SUCCESSO 100%]")
             print(f"📄 Report HTML Standalone pronto sul Desktop: {report_path}")
-            print("   👉 Doppio click sul file per aprire la dashboard, riprodurre i video e vedere gli screenshot.")
+            print("   👉 Doppio click sul file per aprire la dashboard e riprodurre i video di collaudo.")
         else:
             print("⚠️  [ESITO FINALE: REGISTRATI ERRORI]")
             print(f"📄 Report HTML diagnostico generato sul Desktop: {report_path}")
