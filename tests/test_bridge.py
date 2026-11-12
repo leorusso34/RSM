@@ -953,3 +953,105 @@ def test_bridge_packlink_endpoints(tmp_path, monkeypatch):
         server.shutdown()
         server.server_close()
 
+
+def test_bridge_tracking_endpoints(tmp_path, monkeypatch):
+    """Verifica gli endpoint bridge dedicati a 17TRACK (/api/tracking, /api/products/<id>/tracking)."""
+    test_db = tmp_path / "test_bridge_tracking.db"
+    db = InventoryDatabase(test_db)
+
+    # Crea un prodotto venduto
+    prod_id = db.save(
+        {
+            "name": "Jordan 4 Retro Military Black",
+            "purchased_price": Decimal("210.00"),
+            "status": "Venduto",
+            "sold_price": Decimal("320.00"),
+            "fees": Decimal("25.00"),
+        }
+    )
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        mock_tracking_data = {
+            "success": True,
+            "tracking_number": "179090188502104",
+            "carrier": "brt",
+            "carrier_name": "BRT Bartolini",
+            "status": "Delivered",
+            "status_label": "Consegnato",
+            "events_count": 2,
+            "events": [
+                {
+                    "time_iso": "2026-11-03T15:27:00+01:00",
+                    "formatted_date": "03/11/2026 15:27",
+                    "description": "DELIVERED",
+                    "location": "LUCCA (090)",
+                }
+            ],
+        }
+
+        # 1. POST /api/products/<id>/tracking con mock di fetch_tracking_info
+        with patch("src.services.bridge_server.fetch_tracking_info", return_value=mock_tracking_data):
+            req_post = request.Request(
+                f"http://127.0.0.1:{port}/api/products/{prod_id}/tracking",
+                data=json.dumps({"tracking_number": "179090188502104", "carrier": "brt"}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(req_post) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                assert data["success"] is True
+                assert data["tracking_number"] == "179090188502104"
+                assert data["carrier"] == "brt"
+                assert data["data"]["status"] == "Delivered"
+
+        # 2. GET /api/products/<id>/tracking da cache
+        req_get = request.Request(f"http://127.0.0.1:{port}/api/products/{prod_id}/tracking")
+        with request.urlopen(req_get) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["has_tracking"] is True
+            assert data["cached"] is True
+            assert data["tracking_number"] == "179090188502104"
+            assert data["data"]["status"] == "Delivered"
+
+        # 3. GET /api/products include i campi di tracking
+        req_list = request.Request(f"http://127.0.0.1:{port}/api/products")
+        with request.urlopen(req_list) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            item = next(p for p in data["data"] if p["id"] == prod_id)
+            assert item["tracking_number"] == "179090188502104"
+            assert item["carrier"] == "brt"
+            assert "Delivered" in item["tracking_cache"]
+
+        # 4. DELETE /api/products/<id>/tracking
+        req_del = request.Request(
+            f"http://127.0.0.1:{port}/api/products/{prod_id}/tracking",
+            method="DELETE",
+        )
+        with request.urlopen(req_del) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+
+        # Verifica che il tracking sia stato azzerato
+        req_get_empty = request.Request(f"http://127.0.0.1:{port}/api/products/{prod_id}/tracking")
+        with request.urlopen(req_get_empty) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert data["success"] is True
+            assert data["has_tracking"] is False
+    finally:
+        server.shutdown()
+        server.server_close()
+

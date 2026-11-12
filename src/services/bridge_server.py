@@ -34,6 +34,7 @@ from src.config import (
     STATUS_STOCK,
 )
 from src.database import InventoryDatabase
+from src.tracking import fetch_tracking_info
 from src.utils import money_to_cents
 
 PORT = 28472
@@ -340,6 +341,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                         "createdAt": p.get("created_at") or "",
                         "notes": p.get("notes") or "",
                         "bundle_id": p.get("bundle_id") or "",
+                        "tracking_number": p.get("tracking_number") or "",
+                        "carrier": p.get("carrier") or "",
+                        "tracking_cache": p.get("tracking_cache") or "",
                     }
                 )
             self._send_json({"success": True, "count": len(formatted), "data": formatted})
@@ -406,6 +410,84 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self._send_json({"success": True, "data": product})
             else:
                 self._send_error("Prodotto non trovato", status=HTTPStatus.NOT_FOUND)
+            return
+
+        # Tracking 17TRACK di uno specifico prodotto /api/products/<id>/tracking
+        match_prod_tracking = re.match(r"^/api/products/(\d+)/tracking$", path)
+        if match_prod_tracking:
+            prod_id = int(match_prod_tracking.group(1))
+            product = self.db.get(prod_id)
+            if not product:
+                self._send_error(f"Prodotto #{prod_id} non trovato.", status=HTTPStatus.NOT_FOUND)
+                return
+
+            query_params = parse_qs(parsed_url.query)
+            force_refresh = query_params.get("refresh", ["0"])[0].lower() in ("1", "true")
+            tracking_num = str(product.get("tracking_number") or "").strip()
+            carrier = str(product.get("carrier") or "").strip()
+            cache_raw = str(product.get("tracking_cache") or "").strip()
+
+            if not tracking_num:
+                self._send_json(
+                    {
+                        "success": True,
+                        "has_tracking": False,
+                        "tracking_number": "",
+                        "carrier": "",
+                        "data": None,
+                    }
+                )
+                return
+
+            if cache_raw and not force_refresh:
+                try:
+                    cached_data = json.loads(cache_raw)
+                    self._send_json(
+                        {
+                            "success": True,
+                            "has_tracking": True,
+                            "cached": True,
+                            "tracking_number": tracking_num,
+                            "carrier": carrier,
+                            "data": cached_data,
+                        }
+                    )
+                    return
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    pass
+
+            info = fetch_tracking_info(tracking_num, carrier)
+            resolved_carrier = info.get("carrier") if info.get("success") else carrier
+            if info.get("success"):
+                self.db.update_product_tracking(
+                    prod_id,
+                    tracking_num,
+                    resolved_carrier,
+                    json.dumps(info, ensure_ascii=False),
+                )
+
+            self._send_json(
+                {
+                    "success": True,
+                    "has_tracking": True,
+                    "cached": False,
+                    "tracking_number": tracking_num,
+                    "carrier": resolved_carrier,
+                    "data": info,
+                }
+            )
+            return
+
+        # Query diretta generica di tracking /api/tracking?number=...&carrier=...
+        if path == "/api/tracking":
+            query_params = parse_qs(parsed_url.query)
+            num = query_params.get("number", [""])[0].strip()
+            carrier = query_params.get("carrier", [""])[0].strip()
+            if not num:
+                self._send_error("Parametro 'number' mancante o vuoto.")
+                return
+            res = fetch_tracking_info(num, carrier)
+            self._send_json(res)
             return
 
         # Impostazioni applicazione
@@ -767,6 +849,37 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     self._send_error(res.get("error", "Errore sconosciuto durante la creazione della bozza Packlink."))
             except Exception as e:  # noqa: BLE001
                 self._send_error(f"Errore creazione bozza Packlink: {e}")
+            return
+
+        # Salvataggio/Aggiornamento tracking prodotto con 17TRACK /api/products/<id>/tracking
+        match_prod_tracking = re.match(r"^/api/products/(\d+)/tracking$", path)
+        if match_prod_tracking:
+            prod_id = int(match_prod_tracking.group(1))
+            product = self.db.get(prod_id)
+            if not product:
+                self._send_error(f"Prodotto #{prod_id} non trovato.", status=HTTPStatus.NOT_FOUND)
+                return
+
+            tracking_num = str(body.get("tracking_number", "")).strip()
+            carrier = str(body.get("carrier", "")).strip()
+            if not tracking_num:
+                self._send_error("Il codice di tracciamento non può essere vuoto.")
+                return
+
+            info = fetch_tracking_info(tracking_num, carrier)
+            resolved_carrier = info.get("carrier") if info.get("success") else carrier
+            cache_str = json.dumps(info, ensure_ascii=False) if info.get("success") else ""
+
+            self.db.update_product_tracking(prod_id, tracking_num, resolved_carrier, cache_str)
+            self._send_json(
+                {
+                    "success": True,
+                    "message": "Tracciamento salvato ed aggiornato con successo!",
+                    "tracking_number": tracking_num,
+                    "carrier": resolved_carrier,
+                    "data": info,
+                }
+            )
             return
 
         if path == "/api/products":
@@ -1297,6 +1410,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 "sold_date": body.get("date", existing.get("sold_date", "")),
                 "bundle_id": body.get("bundle_id", existing.get("bundle_id", "")),
                 "is_completed": is_completed,
+                "tracking_number": body.get("tracking_number", existing.get("tracking_number", "")),
+                "carrier": body.get("carrier", existing.get("carrier", "")),
+                "tracking_cache": body.get("tracking_cache", existing.get("tracking_cache", "")),
             }
 
             try:
@@ -1313,6 +1429,17 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
     # --------------------------------------------------------------------------
     def do_DELETE(self) -> None:
         path = urlparse(self.path).path
+        match_prod_tracking = re.match(r"^/api/products/(\d+)/tracking$", path)
+        if match_prod_tracking:
+            prod_id = int(match_prod_tracking.group(1))
+            product = self.db.get(prod_id)
+            if not product:
+                self._send_error(f"Prodotto #{prod_id} non trovato.", status=HTTPStatus.NOT_FOUND)
+                return
+            self.db.update_product_tracking(prod_id, "", "", "")
+            self._send_json({"success": True, "message": "Tracciamento rimosso con successo."})
+            return
+
         match_id = re.match(r"^/api/products/(\d+)$", path)
         if match_id:
             prod_id = int(match_id.group(1))

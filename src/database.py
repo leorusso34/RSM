@@ -57,6 +57,9 @@ class InventoryDatabase:
                 notes TEXT NOT NULL DEFAULT '',
                 bundle_id TEXT NOT NULL DEFAULT '',
                 is_completed INTEGER NOT NULL DEFAULT 0,
+                tracking_number TEXT NOT NULL DEFAULT '',
+                carrier TEXT NOT NULL DEFAULT '',
+                tracking_cache TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -77,6 +80,15 @@ class InventoryDatabase:
 
         if existing_columns and "is_completed" not in existing_columns:
             cursor.execute("ALTER TABLE products ADD COLUMN is_completed INTEGER NOT NULL DEFAULT 0")
+
+        if existing_columns and "tracking_number" not in existing_columns:
+            cursor.execute("ALTER TABLE products ADD COLUMN tracking_number TEXT NOT NULL DEFAULT ''")
+
+        if existing_columns and "carrier" not in existing_columns:
+            cursor.execute("ALTER TABLE products ADD COLUMN carrier TEXT NOT NULL DEFAULT ''")
+
+        if existing_columns and "tracking_cache" not in existing_columns:
+            cursor.execute("ALTER TABLE products ADD COLUMN tracking_cache TEXT NOT NULL DEFAULT ''")
 
         # Fix constraint if older version of STATUS_PREORDER is in schema
         if existing_columns:
@@ -276,6 +288,9 @@ class InventoryDatabase:
         """Salva (inserisce o aggiorna) un prodotto nel database."""
         bundle_id = str(data.get("bundle_id", "") or "")
         is_completed = int(data.get("is_completed", 0) or 0)
+        tracking_number = str(data.get("tracking_number", "") or "")
+        carrier = str(data.get("carrier", "") or "")
+        tracking_cache = str(data.get("tracking_cache", "") or "")
         fields = (
             "name",
             "size",
@@ -292,6 +307,9 @@ class InventoryDatabase:
             "notes",
             "bundle_id",
             "is_completed",
+            "tracking_number",
+            "carrier",
+            "tracking_cache",
         )
         status = data.get("status", STATUS_STOCK)
         if status not in {STATUS_STOCK, STATUS_PREORDER, STATUS_SOLD}:
@@ -316,6 +334,9 @@ class InventoryDatabase:
             data.get("notes", ""),
             bundle_id,
             is_completed,
+            tracking_number,
+            carrier,
+            tracking_cache,
         )
 
         with self.connection:
@@ -333,6 +354,24 @@ class InventoryDatabase:
                 values + (product_id,),
             )
             return product_id
+
+    def update_product_tracking(
+        self,
+        product_id: int,
+        tracking_number: str,
+        carrier: str = "",
+        tracking_cache: str = "",
+    ) -> None:
+        """Aggiorna il codice di tracciamento, il corriere e la cache di tracking di un prodotto."""
+        with self.connection:
+            self.connection.execute(
+                """
+                UPDATE products
+                SET tracking_number = ?, carrier = ?, tracking_cache = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (str(tracking_number or "").strip(), str(carrier or "").strip(), str(tracking_cache or ""), product_id),
+            )
 
     def _read_config_json(self) -> dict[str, str]:
         """Legge il file config.json esterno se presente."""

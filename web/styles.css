@@ -2137,6 +2137,200 @@ textarea:-webkit-autofill {
   flex-shrink: 0;
 }
 
+/* ==========================================================================
+   INTEGRAZIONE 17TRACK - SIDE DRAWER SPEDIZIONI
+   ========================================================================== */
+.drawer-tracking-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.drawer-tracking-badge.delivered {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+.drawer-tracking-badge.intransit {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+.drawer-tracking-badge.alert {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+.drawer-tracking-badge.pending {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.35);
+}
+
+.tracking-card-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px;
+}
+
+.tracking-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tracking-card-carrier {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tracking-code-pill {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  padding: 2px 7px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.tracking-code-pill:hover {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+.tracking-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.tracking-icon-btn:hover {
+  background: var(--bg-card-hover);
+  color: #fff;
+}
+
+.tracking-timeline-list {
+  position: relative;
+  border-left: 2px solid rgba(99, 102, 241, 0.35);
+  margin-left: 6px;
+  padding-left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tracking-timeline-node {
+  position: relative;
+}
+
+.tracking-timeline-dot {
+  position: absolute;
+  left: -19px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748b;
+  box-shadow: 0 0 0 3px var(--bg-card);
+}
+.tracking-timeline-node.latest .tracking-timeline-dot {
+  background: #10b981;
+  width: 9px;
+  height: 9px;
+  left: -19.5px;
+}
+.tracking-timeline-node.transit .tracking-timeline-dot {
+  background: #3b82f6;
+}
+
+.tracking-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.tracking-node-status {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.tracking-node-date {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.tracking-node-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.tracking-expand-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 11px;
+  color: #818cf8;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+.tracking-expand-btn:hover {
+  background: var(--bg-card-hover);
+  color: #a5b4fc;
+  border-color: #4f46e5;
+}
+
+.tracking-empty-box {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-md, 8px);
+  padding: 14px 12px;
+  text-align: center;
+}
+
+@keyframes spinTracking {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.tracking-icon-btn.spin-anim svg {
+  animation: spinTracking 0.8s linear infinite;
+}
+
 /* Stili Gestione Luoghi & Marketplace Dinamici (Punto 7) */
 .btn-input-action {
   background: transparent;

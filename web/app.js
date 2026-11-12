@@ -1946,52 +1946,8 @@ function openDrawer(id) {
   if (badgeEl) badgeEl.className = `status-badge ${statusClass}`;
   if (textEl) textEl.textContent = statusLabel;
 
-  // Timeline Eventi
-  const timelineEl = document.getElementById("drawerTimeline");
-  if (timelineEl) {
-    let timelineHtml = `
-      <div class="drawer-timeline-step completed">
-        <div class="drawer-timeline-title">Acquisto Confermato</div>
-        <div class="drawer-timeline-date">${item.date || "Ricevuto"} • Store: ${item.purchasedPlace || "Ufficiale"}</div>
-      </div>
-    `;
-
-    if (item.status === "stock" || item.status === "active-sale" || item.status === "completed") {
-      timelineHtml += `
-        <div class="drawer-timeline-step completed">
-          <div class="drawer-timeline-title">Arrivato in Magazzino</div>
-          <div class="drawer-timeline-date">Controllo integrità e taglia completato</div>
-        </div>
-      `;
-    }
-
-    if (item.status === "active-sale" || item.status === "completed") {
-      timelineHtml += `
-        <div class="drawer-timeline-step completed">
-          <div class="drawer-timeline-title">Vendita Attiva</div>
-          <div class="drawer-timeline-date">Piattaforma: ${item.sellingPlace || "Marketplace"}</div>
-        </div>
-      `;
-    }
-
-    if (item.status === "completed") {
-      timelineHtml += `
-        <div class="drawer-timeline-step completed">
-          <div class="drawer-timeline-title">Vendita Conclusa & Accreditata</div>
-          <div class="drawer-timeline-date">Utile netto incassato: ${netProfit >= 0 ? `€ ${netProfit.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `-€ ${Math.abs(netProfit).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</div>
-        </div>
-      `;
-    } else if (item.status === "preorder") {
-      timelineHtml += `
-        <div class="drawer-timeline-step">
-          <div class="drawer-timeline-title">In Transito verso Magazzino</div>
-          <div class="drawer-timeline-date">In attesa di consegna corriere</div>
-        </div>
-      `;
-    }
-
-    timelineEl.innerHTML = timelineHtml;
-  }
+  // Render Sezione Spedizione & Tracking 17TRACK (o Cronologia Prodotto)
+  renderDrawerTrackingOrTimeline(item);
 
   // Pulsanti del Footer Drawer
   const ebayBtn = document.getElementById("drawerEbayBtn");
@@ -2040,6 +1996,401 @@ function closeDrawer() {
   if (backdrop) backdrop.classList.remove("open");
   if (drawer) drawer.classList.remove("open");
   currentDrawerItem = null;
+}
+
+// ==========================================================================
+// CONTROLLER 17TRACK - SIDE DRAWER SPEDIZIONI & TRACKING (Opzione A)
+// ==========================================================================
+let drawerTrackingIsExpanded = false;
+
+function renderDrawerTrackingOrTimeline(item, isEditing = false) {
+  const timelineEl = document.getElementById("drawerTimeline");
+  const sectionTitleEl = document.getElementById("drawerTrackingSectionTitle");
+  const statusBadgeEl = document.getElementById("drawerTrackingStatusBadge");
+  if (!timelineEl) return;
+
+  const isSoldOrTracked = item.status === "completed" || item.status === "active-sale" || Boolean(item.tracking_number);
+
+  if (!isSoldOrTracked && !isEditing) {
+    if (sectionTitleEl) sectionTitleEl.textContent = "Cronologia Prodotto";
+    if (statusBadgeEl) statusBadgeEl.style.display = "none";
+
+    let timelineHtml = `
+      <div class="drawer-timeline-step completed">
+        <div class="drawer-timeline-title">Acquisto Confermato</div>
+        <div class="drawer-timeline-date">${item.date || "Ricevuto"} • Store: ${escapeHtml(item.purchasedPlace || "Ufficiale")}</div>
+      </div>
+    `;
+    if (item.status === "stock") {
+      timelineHtml += `
+        <div class="drawer-timeline-step completed">
+          <div class="drawer-timeline-title">Arrivato in Magazzino</div>
+          <div class="drawer-timeline-date">Controllo integrità e taglia completato</div>
+        </div>
+      `;
+    } else if (item.status === "preorder") {
+      timelineHtml += `
+        <div class="drawer-timeline-step">
+          <div class="drawer-timeline-title">In Transito verso Magazzino</div>
+          <div class="drawer-timeline-date">In attesa di consegna corriere</div>
+        </div>
+      `;
+    }
+
+    timelineHtml += `
+      <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+        <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="renderDrawerTrackingOrTimeline(currentDrawerItem, true)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon></svg>
+          <span>Aggiungi Tracciamento 17TRACK</span>
+        </button>
+      </div>
+    `;
+
+    timelineEl.className = "drawer-timeline";
+    timelineEl.innerHTML = timelineHtml;
+    return;
+  }
+
+  // Prodotti venduti o con tracciamento attivo
+  timelineEl.className = "";
+  if (sectionTitleEl) sectionTitleEl.textContent = "Spedizione & Tracking (17TRACK)";
+
+  const hasTracking = Boolean(item.tracking_number && item.tracking_number.trim());
+
+  // STATO 1: Inserimento codice o modalità modifica
+  if (!hasTracking || isEditing) {
+    if (statusBadgeEl) statusBadgeEl.style.display = "none";
+
+    const currentNum = escapeHtml(item.tracking_number || "");
+    const currentCarrier = (item.carrier || "").toLowerCase();
+
+    timelineEl.innerHTML = `
+      <div class="tracking-empty-box">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-card-hover); color: #818cf8; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="3" width="15" height="13"></rect>
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+          </svg>
+        </div>
+        <div style="font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 2px;">
+          ${hasTracking ? "Modifica Codice di Spedizione" : "Nessun tracciamento associato"}
+        </div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
+          Inserisci la lettera di vettura per monitorare le tappe del corriere in tempo reale con 17TRACK.
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 8px; margin-bottom: 10px; text-align: left;">
+          <div>
+            <label style="display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px;">Codice Spedizione *</label>
+            <input type="text" id="drawerTrackingInput" value="${currentNum}" placeholder="es. 179090188502104" style="width: 100%; font-family: monospace; font-size: 11.5px; padding: 6px 8px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; outline: none;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px;">Corriere</label>
+            <select id="drawerCarrierSelect" style="width: 100%; font-size: 11.5px; padding: 6px 4px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; outline: none;">
+              <option value="" ${!currentCarrier ? "selected" : ""}>Auto (17TRACK)</option>
+              <option value="brt" ${currentCarrier === "brt" ? "selected" : ""}>BRT Bartolini</option>
+              <option value="poste" ${currentCarrier === "poste" ? "selected" : ""}>Poste / SDA</option>
+              <option value="gls" ${currentCarrier === "gls" ? "selected" : ""}>GLS Italy</option>
+              <option value="inpost" ${currentCarrier === "inpost" ? "selected" : ""}>InPost</option>
+              <option value="ups" ${currentCarrier === "ups" ? "selected" : ""}>UPS</option>
+              <option value="dhl" ${currentCarrier === "dhl" ? "selected" : ""}>DHL</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 6px;">
+          ${hasTracking ? `<button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; padding: 6px;" onclick="renderDrawerTrackingOrTimeline(currentDrawerItem, false)">Annulla</button>` : ""}
+          <button type="button" id="btnSaveDrawerTracking" class="btn btn-primary" style="flex: 2; font-size: 11px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="saveDrawerTracking(${item.id})">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <span>Salva e Monitora</span>
+          </button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // STATO 2: Tracciamento attivo
+  let trackingData = null;
+  if (item.tracking_cache) {
+    try {
+      trackingData = typeof item.tracking_cache === "string" ? JSON.parse(item.tracking_cache) : item.tracking_cache;
+    } catch (e) {
+      trackingData = null;
+    }
+  }
+
+  renderTrackingCardContent(item, trackingData, false);
+
+  if (!trackingData) {
+    fetchProductTrackingSilent(item.id);
+  }
+}
+
+function renderTrackingCardContent(item, data, isRefreshing = false) {
+  const timelineEl = document.getElementById("drawerTimeline");
+  const statusBadgeEl = document.getElementById("drawerTrackingStatusBadge");
+  if (!timelineEl) return;
+
+  const rawStatus = (data && data.status) ? data.status : "In Lavorazione";
+  const statusLabel = (data && data.status_label) ? data.status_label : rawStatus;
+  const carrierName = (data && data.carrier_name) ? data.carrier_name : (item.carrier ? item.carrier.toUpperCase() : "Corriere");
+  const trackingNum = item.tracking_number || "";
+
+  // Badge colorato in alto
+  if (statusBadgeEl) {
+    statusBadgeEl.style.display = "inline-flex";
+    let badgeClass = "pending";
+    if (rawStatus === "Delivered") badgeClass = "delivered";
+    else if (["InTransit", "PickedUp", "OutForDelivery", "ForDelivery"].includes(rawStatus)) badgeClass = "intransit";
+    else if (["Alert", "Expired", "Undelivered"].includes(rawStatus)) badgeClass = "alert";
+
+    statusBadgeEl.className = `drawer-tracking-badge ${badgeClass}`;
+    statusBadgeEl.innerHTML = `<span style="width: 5px; height: 5px; border-radius: 50%; background: currentColor;"></span> ${escapeHtml(statusLabel)}`;
+  }
+
+  const events = (data && Array.isArray(data.events)) ? data.events : [];
+  const eventsCount = events.length;
+  drawerTrackingIsExpanded = false;
+
+  let timelineNodesHtml = "";
+
+  if (eventsCount === 0) {
+    timelineNodesHtml = `
+      <div style="padding: 12px 0; text-align: center; color: var(--text-dim); font-size: 11px;">
+        ${data ? "Spedizione registrata su 17TRACK. In attesa del primo aggiornamento dal corriere." : "Connessione a 17TRACK in corso..."}
+      </div>
+    `;
+  } else {
+    const visibleLimit = Math.min(3, eventsCount);
+    const visibleEvents = events.slice(0, visibleLimit);
+    const hiddenEvents = events.slice(visibleLimit);
+
+    timelineNodesHtml = `
+      <div class="tracking-timeline-list">
+        ${visibleEvents.map((ev, idx) => {
+          const isLatest = idx === 0;
+          const nodeClass = isLatest ? "latest" : (rawStatus !== "Delivered" && idx === 1 ? "transit" : "");
+          return `
+            <div class="tracking-timeline-node ${nodeClass}">
+              <span class="tracking-timeline-dot"></span>
+              <div class="tracking-node-header">
+                <span class="tracking-node-status">${escapeHtml(ev.description || "Evento")}</span>
+                <span class="tracking-node-date">${escapeHtml(ev.formatted_date || ev.time_iso || "")}</span>
+              </div>
+              ${ev.location ? `<div class="tracking-node-desc">${escapeHtml(ev.location)}</div>` : ""}
+            </div>
+          `;
+        }).join("")}
+
+        ${hiddenEvents.length > 0 ? `
+          <div id="drawerTrackingHiddenEvents" style="display: none; flex-direction: column; gap: 14px; padding-top: 4px; border-top: 1px dashed var(--border-color);">
+            ${hiddenEvents.map((ev) => `
+              <div class="tracking-timeline-node">
+                <span class="tracking-timeline-dot"></span>
+                <div class="tracking-node-header">
+                  <span class="tracking-node-status" style="color: var(--text-muted); font-weight: 500;">${escapeHtml(ev.description || "Tappa")}</span>
+                  <span class="tracking-node-date">${escapeHtml(ev.formatted_date || ev.time_iso || "")}</span>
+                </div>
+                ${ev.location ? `<div class="tracking-node-desc" style="color: var(--text-dim);">${escapeHtml(ev.location)}</div>` : ""}
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
+      </div>
+    `;
+
+    if (hiddenEvents.length > 0) {
+      timelineNodesHtml += `
+        <button id="drawerTrackingToggleBtn" class="tracking-expand-btn" onclick="toggleDrawerTrackingHistory(${hiddenEvents.length})">
+          <span id="drawerTrackingToggleText">Espandi cronologia completa (altre ${hiddenEvents.length} tappe)</span>
+          <svg id="drawerTrackingToggleIcon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.2s ease;">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+      `;
+    }
+  }
+
+  timelineEl.innerHTML = `
+    <div class="tracking-card-container">
+      <div class="tracking-card-header">
+        <div class="tracking-card-carrier">
+          <span>${escapeHtml(carrierName)}</span>
+          <span class="tracking-code-pill" onclick="copyTrackingCode('${escapeHtml(trackingNum)}')" title="Clicca per copiare il codice">
+            <span>${escapeHtml(trackingNum)}</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+            </svg>
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <button type="button" class="tracking-icon-btn ${isRefreshing ? 'spin-anim' : ''}" onclick="refreshDrawerTracking(${item.id})" title="Aggiorna tracking da 17TRACK">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+              <path d="M16 21h5v-5"></path>
+            </svg>
+          </button>
+          <button type="button" class="tracking-icon-btn" onclick="renderDrawerTrackingOrTimeline(currentDrawerItem, true)" title="Modifica codice / corriere">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+            </svg>
+          </button>
+          <button type="button" class="tracking-icon-btn" onclick="deleteDrawerTracking(${item.id})" title="Rimuovi tracciamento" style="color: #f87171;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18"></path>
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      ${timelineNodesHtml}
+    </div>
+  `;
+}
+
+function toggleDrawerTrackingHistory(remainingCount) {
+  const hiddenEl = document.getElementById("drawerTrackingHiddenEvents");
+  const textEl = document.getElementById("drawerTrackingToggleText");
+  const iconEl = document.getElementById("drawerTrackingToggleIcon");
+  if (!hiddenEl) return;
+
+  drawerTrackingIsExpanded = !drawerTrackingIsExpanded;
+  if (drawerTrackingIsExpanded) {
+    hiddenEl.style.display = "flex";
+    if (textEl) textEl.textContent = "Comprimi cronologia (mostra solo ultime)";
+    if (iconEl) iconEl.style.transform = "rotate(180deg)";
+  } else {
+    hiddenEl.style.display = "none";
+    if (textEl) textEl.textContent = `Espandi cronologia completa (altre ${remainingCount} tappe)`;
+    if (iconEl) iconEl.style.transform = "rotate(0deg)";
+  }
+}
+
+function copyTrackingCode(code) {
+  if (!code) return;
+  navigator.clipboard.writeText(code).then(() => {
+    showToast(`Codice copiato: ${code}`);
+  }).catch(() => {
+    showToast(`Codice: ${code}`);
+  });
+}
+
+async function saveDrawerTracking(productId) {
+  const inputEl = document.getElementById("drawerTrackingInput");
+  const carrierEl = document.getElementById("drawerCarrierSelect");
+  const btn = document.getElementById("btnSaveDrawerTracking");
+  const code = (inputEl ? inputEl.value : "").trim();
+  const carrier = carrierEl ? carrierEl.value.trim() : "";
+
+  if (!code) {
+    showToast("Inserisci un codice di spedizione valido.");
+    if (inputEl) inputEl.focus();
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spinTracking 0.6s linear infinite;"></span> Ricerca 17TRACK...`;
+  }
+
+  try {
+    const res = await callApi(`/products/${productId}/tracking`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tracking_number: code, carrier: carrier }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || "Impossibile salvare il tracciamento.");
+    }
+
+    const item = inventoryData.find((i) => i.id === productId);
+    if (item) {
+      item.tracking_number = json.tracking_number || code;
+      item.carrier = json.carrier || carrier;
+      item.tracking_cache = json.data || null;
+      currentDrawerItem = item;
+      renderDrawerTrackingOrTimeline(item, false);
+    }
+    showToast("Tracciamento salvato ed aggiornato con successo!");
+  } catch (err) {
+    showToast(`Errore: ${err.message}`);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Salva e Monitora";
+    }
+  }
+}
+
+async function refreshDrawerTracking(productId) {
+  const item = inventoryData.find((i) => i.id === productId);
+  if (!item || !item.tracking_number) return;
+
+  const currentCache = item.tracking_cache ? (typeof item.tracking_cache === "string" ? JSON.parse(item.tracking_cache) : item.tracking_cache) : null;
+  renderTrackingCardContent(item, currentCache, true);
+
+  try {
+    const res = await callApi(`/products/${productId}/tracking?refresh=1`);
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || "Errore aggiornamento tracking");
+    }
+    item.tracking_number = json.tracking_number || item.tracking_number;
+    item.carrier = json.carrier || item.carrier;
+    item.tracking_cache = json.data;
+    currentDrawerItem = item;
+    renderTrackingCardContent(item, json.data, false);
+    showToast("Stato spedizione aggiornato!");
+  } catch (err) {
+    showToast(`Aggiornamento non riuscito: ${err.message}`);
+    renderTrackingCardContent(item, currentCache, false);
+  }
+}
+
+async function deleteDrawerTracking(productId) {
+  if (!confirm("Sei sicuro di voler rimuovere il tracciamento da questo prodotto?")) return;
+  try {
+    const res = await callApi(`/products/${productId}/tracking`, { method: "DELETE" });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || "Errore rimozione");
+
+    const item = inventoryData.find((i) => i.id === productId);
+    if (item) {
+      item.tracking_number = "";
+      item.carrier = "";
+      item.tracking_cache = null;
+      currentDrawerItem = item;
+      renderDrawerTrackingOrTimeline(item, false);
+    }
+    showToast("Tracciamento rimosso con successo.");
+  } catch (err) {
+    showToast(`Errore: ${err.message}`);
+  }
+}
+
+async function fetchProductTrackingSilent(productId) {
+  try {
+    const res = await callApi(`/products/${productId}/tracking?refresh=0`);
+    const json = await res.json();
+    if (res.ok && json.success && json.data) {
+      const item = inventoryData.find((i) => i.id === productId);
+      if (item && currentDrawerItem && currentDrawerItem.id === productId) {
+        item.tracking_cache = json.data;
+        item.carrier = json.carrier || item.carrier;
+        renderTrackingCardContent(item, json.data, false);
+      }
+    }
+  } catch (e) {
+    // Silenzioso
+  }
 }
 
 function updateModalProfitPreview() {

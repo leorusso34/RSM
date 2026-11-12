@@ -25,5 +25,8 @@ class ProductRecord(TypedDict, total=False):
     notes: str
     bundle_id: str
     is_completed: int
+    tracking_number: str
+    carrier: str
+    tracking_cache: str
     created_at: str
     updated_at: str
