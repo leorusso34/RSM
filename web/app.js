@@ -4259,7 +4259,7 @@ async function saveEmailPreorders() {
 // ==========================================================================
 // AUTO-UPDATER & VERIFICA AGGIORNAMENTI (PUNTO 8)
 // ==========================================================================
-let currentAppVersion = "1.6.3";
+let currentAppVersion = "1.6.4";
 let pendingUpdateInfo = null;
 let updatePollingTimer = null;
 let isApplyingUpdate = false;
@@ -4681,10 +4681,6 @@ async function checkPacklinkStatus() {
     const res = await callApi("/packlink/status");
     const json = await res.json();
     isPacklinkConfigured = Boolean(json.configured);
-    const navBadge = document.getElementById("packlink-nav-badge");
-    if (navBadge) {
-      navBadge.style.display = isPacklinkConfigured ? "inline-block" : "none";
-    }
     const keyInput = document.getElementById("pk-api-key-input");
     if (keyInput && json.api_key) {
       keyInput.value = json.api_key;
