@@ -5675,8 +5675,14 @@ function initTitlebarDrag() {
   const titlebar = document.getElementById("customTitlebar");
   if (!titlebar) return;
   titlebar.addEventListener("mousedown", (e) => {
-    // Non avviare il trascinamento se il click avviene sui pulsanti finestra
-    if (e.target.closest(".window-ctrl-btn")) return;
+    // Non avviare il trascinamento se il click avviene sui controlli finestra o sulle notifiche
+    if (
+      e.target.closest(
+        ".window-ctrl-btn, .titlebar-controls, #titlebarNotifWrap, #titlebarNotifBtn, #notifPopover, button"
+      )
+    ) {
+      return;
+    }
     if (e.buttons === 1) {
       if (e.detail === 2) {
         toggleMaximizeWindow();

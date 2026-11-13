@@ -153,6 +153,7 @@ body {
   display: flex;
   align-items: center;
   height: 100%;
+  -webkit-app-region: no-drag;
 }
 
 .window-ctrl-btn {
@@ -200,6 +201,7 @@ body {
   margin-right: 6px;
   padding-right: 8px;
   border-right: 1px solid var(--border-color);
+  -webkit-app-region: no-drag;
 }
 
 .titlebar-notif-btn {
@@ -215,6 +217,7 @@ body {
   gap: 5px;
   cursor: pointer;
   outline: none;
+  -webkit-app-region: no-drag;
   transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
@@ -264,6 +267,7 @@ body {
   z-index: 3000;
   overflow: hidden;
   display: none;
+  -webkit-app-region: no-drag;
   animation: notifPopIn 0.14s ease-out;
 }
 

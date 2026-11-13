@@ -11,15 +11,15 @@
   <!-- ====================================================================
        BARRA SUPERIORE FRAMELESS (CUSTOM WINDOW TITLEBAR)
        ==================================================================== -->
-  <header class="custom-titlebar" id="customTitlebar" data-tauri-drag-region>
+  <header class="custom-titlebar" id="customTitlebar">
     <div class="titlebar-left" data-tauri-drag-region ondblclick="toggleMaximizeWindow()">
       <img src="app_icon.png" alt="RSM" class="titlebar-icon" />
       <span class="titlebar-title">RSM</span>
     </div>
     <div class="titlebar-drag-region" data-tauri-drag-region ondblclick="toggleMaximizeWindow()"></div>
-    <div class="titlebar-controls">
+    <div class="titlebar-controls" onmousedown="event.stopPropagation()">
       <!-- Casella Notifiche Consegne (Opzione C) -->
-      <div class="titlebar-notif-wrap" id="titlebarNotifWrap">
+      <div class="titlebar-notif-wrap" id="titlebarNotifWrap" onmousedown="event.stopPropagation()">
         <button type="button" class="titlebar-notif-btn" id="titlebarNotifBtn" title="Notifiche Consegne" onclick="toggleNotificationsPopover(event)" aria-label="Notifiche Consegne">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
