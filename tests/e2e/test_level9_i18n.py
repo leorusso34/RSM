@@ -112,6 +112,12 @@ def run_level9_i18n_checks(page: Page, console_errors: list[str]) -> dict[str, A
         "('New Product', 'Invested Capital', .lang-btn[data-lang='en'].active, localStorage='en')"
     )
 
+    # Verifica notifica toast in basso a destra in inglese al cambio sezione sidebar
+    toast_locator = page.locator("#toastNotification")
+    page.locator('.nav-item[data-section="magazzino"]').click()
+    expect(toast_locator).to_have_text("View: Stock", timeout=5000)
+    details.append("Scenario B3 superato: toast navigazione localizzato in inglese ('View: Stock')")
+
     # =========================================================================
     # SCENARIO C: Persistenza della lingua attraverso il ricaricamento (Reload)
     # =========================================================================

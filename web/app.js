@@ -211,22 +211,22 @@ async function retryBridgeConnection() {
   const btn = document.getElementById("btn-retry-bridge");
   const label = document.getElementById("btn-retry-bridge-label");
   if (btn) btn.disabled = true;
-  if (label) label.textContent = "Connessione in corso...";
+  if (label) label.textContent = t("bridgeOffline.connecting");
 
   try {
     const ok = await loadProductsFromBackend(4, 400);
     if (ok) {
       closeBridgeOfflineModal();
       pingBridgeLatency();
-      showToast("Connessione al motore locale stabilita con successo!");
+      showToast(t("toasts.bridgeConnected"));
     } else {
-      showToast("Il motore locale non risponde ancora. Controlla data/bridge.log.");
+      showToast(t("toasts.bridgeNoResponse"));
     }
   } catch (err) {
-    showToast(`Errore: ${err.message}`);
+    showToast(t("toasts.genericError", { error: err.message }));
   } finally {
     if (btn) btn.disabled = false;
-    if (label) label.textContent = "Riprova Connessione";
+    if (label) label.textContent = t("bridgeOffline.retryConnection");
   }
 }
 
@@ -263,7 +263,7 @@ function pushUndo(action) {
 
 async function performUndo() {
   if (undoStack.length === 0) {
-    showToast("Nessuna azione da annullare.");
+    showToast(t("toasts.noActionToUndo"));
     return;
   }
   const action = undoStack.pop();
@@ -285,9 +285,9 @@ async function performUndo() {
       const json = await res.json();
       if (json.success) {
         await loadProductsFromBackend();
-        showToast(`Annullato: ${action.desc}`);
+        showToast(t("toasts.actionUndone", { desc: action.desc }));
       } else {
-        showToast(`Errore durante l'annullamento: ${json.error}`);
+        showToast(t("toasts.undoError", { error: json.error }));
       }
     } else if (action.type === "delete_ids" && action.ids && action.ids.length > 0) {
       const res = await callApi("/products/bulk-delete", {
@@ -298,13 +298,13 @@ async function performUndo() {
       const json = await res.json();
       if (json.success) {
         await loadProductsFromBackend();
-        showToast(`Annullato: ${action.desc}`);
+        showToast(t("toasts.actionUndone", { desc: action.desc }));
       } else {
-        showToast(`Errore durante l'annullamento: ${json.error}`);
+        showToast(t("toasts.undoError", { error: json.error }));
       }
     }
   } catch (err) {
-    showToast(`Errore durante l'annullamento: ${err.message}`);
+    showToast(t("toasts.undoError", { error: err.message }));
   }
 }
 
@@ -774,14 +774,14 @@ function toggleStockHealthDetails() {
     chevron.style.transform = isStockHealthExpanded ? "rotate(180deg)" : "rotate(0deg)";
   }
   if (label) {
-    label.textContent = isStockHealthExpanded ? "Chiudi" : "Dettagli";
+    label.textContent = isStockHealthExpanded ? t("common.close") : t("stockHealth.details");
   }
 }
 
 function filterByAgingBracket(bracket) {
   if (filterAgingBracket === bracket) {
     filterAgingBracket = null;
-    showToast("Filtro giacenza rimosso");
+    showToast(t("toasts.agingFilterRemoved"));
   } else {
     filterAgingBracket = bracket;
     filterDeadStockOnly = false;
@@ -797,8 +797,12 @@ function filterByAgingBracket(bracket) {
         i.classList.toggle("active", i.getAttribute("data-section") === "magazzino");
       });
     }
-    const label = bracket === "normal" ? "regolari (<60gg)" : bracket === "warning" ? "in attenzione (60-90gg)" : "dead stock (>90gg)";
-    showToast(`Filtro giacenza attivo: mostrati prodotti ${label}`);
+    const label = bracket === "normal"
+      ? t("toasts.agingLabelNormal")
+      : bracket === "warning"
+        ? t("toasts.agingLabelWarning")
+        : t("toasts.agingLabelCritical");
+    showToast(t("toasts.agingFilterActive", { label }));
   }
 
   // Aggiorna evidenziazione blocchi
@@ -2375,7 +2379,7 @@ function copyTrackingCode(code) {
   navigator.clipboard.writeText(code).then(() => {
     showToast(t("toasts.codeCopied", { code }));
   }).catch(() => {
-    showToast(`Codice: ${code}`);
+    showToast(t("toasts.codeCopied", { code }));
   });
 }
 
@@ -2401,14 +2405,14 @@ async function saveDrawerTracking(productId) {
   const carrier = carrierEl ? carrierEl.value.trim() : "";
 
   if (!code) {
-    showToast("Inserisci un codice di spedizione valido.");
+    showToast(t("toasts.validTrackingCodeRequired"));
     if (inputEl) inputEl.focus();
     return;
   }
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spinTracking 0.6s linear infinite;"></span> Ricerca 17TRACK...`;
+    btn.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spinTracking 0.6s linear infinite;"></span> ${t("tracking.connecting")}`;
   }
 
   try {
@@ -2419,7 +2423,7 @@ async function saveDrawerTracking(productId) {
     });
     const json = await res.json();
     if (!res.ok || !json.success) {
-      throw new Error(json.error || "Impossibile salvare il tracciamento.");
+      throw new Error(json.error || t("toasts.operationFailed"));
     }
 
     const item = inventoryData.find((i) => i.id === productId);
@@ -2431,12 +2435,12 @@ async function saveDrawerTracking(productId) {
       renderDrawerTrackingOrTimeline(item, false);
     }
     loadNotificationsFromBackend();
-    showToast("Tracciamento salvato ed aggiornato con successo!");
+    showToast(t("toasts.trackingSaved"));
   } catch (err) {
-    showToast(`Errore: ${err.message}`);
+    showToast(t("toasts.genericError", { error: err.message }));
     if (btn) {
       btn.disabled = false;
-      btn.textContent = "Salva e Monitora";
+      btn.textContent = t("tracking.saveAndMonitor");
     }
   }
 }
@@ -2452,7 +2456,7 @@ async function refreshDrawerTracking(productId) {
     const res = await callApi(`/products/${productId}/tracking?refresh=1`);
     const json = await res.json();
     if (!res.ok || !json.success) {
-      throw new Error(json.error || "Errore aggiornamento tracking");
+      throw new Error(json.error || t("toasts.operationFailed"));
     }
     item.tracking_number = json.tracking_number || item.tracking_number;
     item.carrier = json.carrier || item.carrier;
@@ -2462,9 +2466,9 @@ async function refreshDrawerTracking(productId) {
       renderTrackingCardContent(item, json.data, false);
     }
     loadNotificationsFromBackend();
-    showToast("Stato spedizione aggiornato!");
+    showToast(t("toasts.trackingUpdated"));
   } catch (err) {
-    showToast(`Aggiornamento non riuscito: ${err.message}`);
+    showToast(t("toasts.trackingUpdateFailed", { error: err.message }));
     if (!document.getElementById("drawerTrackingInput")) {
       renderTrackingCardContent(item, currentCache, false);
     }
@@ -2489,7 +2493,7 @@ async function deleteDrawerTracking(productId) {
     loadNotificationsFromBackend();
     showToast(t("toasts.trackingRemoved"));
   } catch (err) {
-    showToast(`Errore: ${err.message}`);
+    showToast(t("toasts.genericError", { error: err.message }));
   }
 }
 
@@ -2769,7 +2773,7 @@ async function handleSaveProduct(e) {
   const notes = ((isLocked && existingItem.notes !== undefined) ? existingItem.notes : rawNotes).trim();
 
   if (!name) {
-    showToast("Inserisci un nome per il prodotto!");
+    showToast(t("toasts.productNameRequired"));
     return;
   }
 
@@ -2810,25 +2814,25 @@ async function handleSaveProduct(e) {
       if (isEdit && prevSnapshot) {
         pushUndo({
           type: "restore_records",
-          desc: `Modifica "${prevSnapshot.name}"`,
+          desc: t("undo.editProduct", { name: prevSnapshot.name }),
           records: [prevSnapshot],
         });
       } else if (!isEdit && result.id) {
         pushUndo({
           type: "delete_ids",
-          desc: `Creazione "${payload.name}"`,
+          desc: t("undo.createProduct", { name: payload.name }),
           ids: [result.id],
         });
       }
       closeModal();
       currentEditingId = null;
       await loadProductsFromBackend();
-      showToast(isEdit ? `"${name}" aggiornato nel database!` : `"${name}" salvato nel database!`);
+      showToast(isEdit ? t("toasts.productUpdated", { name }) : t("toasts.productSaved", { name }));
     } else {
-      showToast(`Errore: ${result.error || "Salvataggio non riuscito"}`);
+      showToast(t("toasts.genericError", { error: result.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -2844,17 +2848,17 @@ async function deleteProduct(id) {
       if (result.success) {
         pushUndo({
           type: "restore_records",
-          desc: `Eliminazione "${snapshot.name}"`,
+          desc: t("undo.deleteProduct", { name: snapshot.name }),
           records: [snapshot],
         });
         closeDrawer();
         await loadProductsFromBackend();
-        showToast(`"${item.name}" rimosso dal database.`);
+        showToast(t("toasts.productRemoved", { name: item.name }));
       } else {
-        showToast(`Errore eliminazione: ${result.error}`);
+        showToast(t("toasts.genericError", { error: result.error || t("toasts.operationFailed") }));
       }
     } catch (err) {
-      showToast(`Errore di rete: ${err.message}`);
+      showToast(t("toasts.networkError", { error: err.message }));
     }
   }
 }
@@ -2863,7 +2867,7 @@ function editProduct(id) {
   const item = inventoryData.find((i) => i.id === id);
   if (!item) return;
   if (item.status === "completed") {
-    showToast("Le vendite completate non possono essere modificate.");
+    showToast(t("toasts.completedSalesLocked"));
     return;
   }
   closeDrawer();
@@ -2911,7 +2915,7 @@ async function openEbayPriceLookup(productName, size = "") {
 
   const effectiveSize = (size || "").trim();
   const subtitle = (effectiveSize && effectiveSize.toUpperCase() !== "UNI")
-    ? `${productName}  ·  taglia ${effectiveSize}`
+    ? `${productName}  ·  ${t("ebay.sizePrefix")} ${effectiveSize}`
     : productName;
 
   const subEl = document.getElementById("ebay-subtitle");
@@ -2939,14 +2943,14 @@ async function openEbayPriceLookup(productName, size = "") {
       if (minEl) minEl.textContent = `€ ${min.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       if (avgEl) avgEl.textContent = `€ ${avg.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       if (maxEl) maxEl.textContent = `€ ${max.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      if (countEl) countEl.textContent = `Analizzate ${count} inserzioni controllate su eBay.it`;
+      if (countEl) countEl.textContent = t("ebay.analyzedCount", { count });
     } else {
-      showToast(`eBay: ${json.error || "Nessun risultato trovato"}`);
+      showToast(`eBay: ${json.error || t("ebay.noResults")}`);
       closeModal();
     }
   } catch (err) {
     if (loadingEl) loadingEl.style.display = "none";
-    showToast(`Errore ricerca eBay: ${err.message}`);
+    showToast(t("toasts.genericError", { error: err.message }));
     closeModal();
   }
 }
@@ -2963,7 +2967,7 @@ async function openEbayInBrowser() {
       })
     });
   } catch (err) {
-    showToast(`Errore apertura browser: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -3172,18 +3176,18 @@ async function deleteBundle(bundleId) {
     if (json.success) {
       pushUndo({
         type: "restore_records",
-        desc: `Eliminazione vendita multipla (${snapshots.length} prodotti)`,
+        desc: t("undo.deleteBundle", { count: snapshots.length }),
         records: snapshots,
       });
       ids.forEach((id) => selectedProductIds.delete(id));
       updateSelectionBadge();
       await loadProductsFromBackend();
-      showToast(`Vendita multipla eliminata con successo (${items.length} prodotti).`);
+      showToast(t("toasts.bundleDeleted", { count: items.length }));
     } else {
-      showToast(`Errore eliminazione bundle: ${json.error}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -3197,7 +3201,9 @@ function showContextMenu(x, y) {
 
   const header = document.getElementById("ctxMenuHeader");
   if (header) {
-    header.textContent = `${count} Prodott${count === 1 ? "o Selezionato" : "i Selezionati"}`;
+    header.textContent = count === 1
+      ? t("contextMenu.selectedSingle", { count })
+      : t("contextMenu.selectedMultiple", { count });
   }
 
   const selectedRecords = inventoryData.filter((i) => selectedProductIds.has(i.id));
@@ -3283,18 +3289,18 @@ async function ctxActionDuplicate() {
     if (json.success && json.ids) {
       pushUndo({
         type: "delete_ids",
-        desc: `Duplicazione di ${json.ids.length} prodotti`,
+        desc: t("undo.duplicateProducts", { count: json.ids.length }),
         ids: json.ids,
       });
       selectedProductIds.clear();
       updateSelectionBadge();
       await loadProductsFromBackend();
-      showToast(`Duplicati ${ids.length} prodotti con successo!`);
+      showToast(t("toasts.productsDuplicated", { count: ids.length }));
     } else {
-      showToast(`Errore duplicazione: ${json.error}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -3337,7 +3343,7 @@ async function ctxActionComplete() {
     if (json.success) {
       pushUndo({
         type: "restore_records",
-        desc: `Completamento vendite (${snapshots.length} prodotti)`,
+        desc: t("undo.completeSales", { count: snapshots.length }),
         records: snapshots,
       });
       selectedProductIds.clear();
@@ -3349,10 +3355,10 @@ async function ctxActionComplete() {
       await loadProductsFromBackend();
       showToast(t("toasts.salesCompleted", { count: ids.length }));
     } else {
-      showToast(`Errore completamento: ${json.error}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -3429,7 +3435,7 @@ async function ctxActionDelete() {
     if (json.success) {
       pushUndo({
         type: "restore_records",
-        desc: `Eliminazione (${snapshots.length} prodotti)`,
+        desc: t("undo.deleteMultiple", { count: snapshots.length }),
         records: snapshots,
       });
       selectedProductIds.clear();
@@ -3437,10 +3443,10 @@ async function ctxActionDelete() {
       await loadProductsFromBackend();
       showToast(t("toasts.productsDeleted", { count: json.deleted_count }));
     } else {
-      showToast(`Errore eliminazione: ${json.error}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -3585,7 +3591,7 @@ async function handleBulkSaleSubmit(e) {
 
       pushUndo({
         type: "restore_records",
-        desc: `Messa in vendita (${snapshots.length} prodotti)`,
+        desc: t("undo.putOnSale", { count: snapshots.length }),
         records: snapshots,
         created_ids: createdIds,
       });
@@ -3604,10 +3610,10 @@ async function handleBulkSaleSubmit(e) {
           : t("toasts.productPutOnSaleMultiple", { count: ids.length })
       );
     } else {
-      showToast(`Errore vendita: ${json.error}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -3745,7 +3751,7 @@ async function handleConfirmStockSubmit(e) {
 
       pushUndo({
         type: "restore_records",
-        desc: `Spostamento in Magazzino (${snapshots.length} prodotti)`,
+        desc: t("undo.moveToStock", { count: snapshots.length }),
         records: snapshots,
         created_ids: createdIds,
       });
@@ -3767,10 +3773,10 @@ async function handleConfirmStockSubmit(e) {
               : t("toasts.productMovedStockMultiple", { count: ids.length }))
       );
     } else {
-      showToast(`Errore spostamento: ${json.error}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -3851,7 +3857,7 @@ function setupFloatingPillAutocomplete(inputId, dropdownId, getItemsFn, typeBadg
     activeIndex = -1;
 
     if (filtered.length === 0) {
-      dropdown.innerHTML = `<div class="autocomplete-empty">Nessun suggerimento corrispondente</div>`;
+      dropdown.innerHTML = `<div class="autocomplete-empty">${escapeHtml(t("managePlaces.noSuggestions"))}</div>`;
       dropdown.classList.add("open");
       return;
     }
@@ -4015,22 +4021,26 @@ function renderManagePlacesModal() {
   const purchasedCount = document.getElementById("purchased-places-count");
 
   if (sellingCount) {
-    sellingCount.textContent = `${availableSellingPlaces.length} canal${availableSellingPlaces.length === 1 ? "e" : "i"}`;
+    sellingCount.textContent = availableSellingPlaces.length === 1
+      ? t("managePlaces.channelsCountSingle", { count: availableSellingPlaces.length })
+      : t("managePlaces.channelsCountPlural", { count: availableSellingPlaces.length });
   }
   if (purchasedCount) {
-    purchasedCount.textContent = `${availablePurchasedPlaces.length} luog${availablePurchasedPlaces.length === 1 ? "o" : "hi"}`;
+    purchasedCount.textContent = availablePurchasedPlaces.length === 1
+      ? t("managePlaces.placesCountSingle", { count: availablePurchasedPlaces.length })
+      : t("managePlaces.placesCountPlural", { count: availablePurchasedPlaces.length });
   }
 
   if (sellingContainer) {
     if (availableSellingPlaces.length === 0) {
-      sellingContainer.innerHTML = '<span style="font-size:11px; color:var(--text-dim); padding:6px;">Nessun canale di vendita configurato.</span>';
+      sellingContainer.innerHTML = `<span style="font-size:11px; color:var(--text-dim); padding:6px;">${escapeHtml(t("managePlaces.noSellingChannels"))}</span>`;
     } else {
       sellingContainer.innerHTML = availableSellingPlaces
         .map((place) => {
           const safePlace = escapeHtml(place);
           return `<div class="place-chip">
             <span>${safePlace}</span>
-            <button type="button" class="place-chip-del" title="Elimina canale" data-place="${safePlace}">
+            <button type="button" class="place-chip-del" title="${escapeHtml(t("managePlaces.deleteChannelTooltip"))}" data-place="${safePlace}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>`;
@@ -4048,7 +4058,7 @@ function renderManagePlacesModal() {
 
   if (purchasedContainer) {
     if (availablePurchasedPlaces.length === 0) {
-      purchasedContainer.innerHTML = '<span style="font-size:11px; color:var(--text-dim); padding:6px;">Nessun luogo di acquisto registrato.</span>';
+      purchasedContainer.innerHTML = `<span style="font-size:11px; color:var(--text-dim); padding:6px;">${escapeHtml(t("managePlaces.noPurchasePlaces"))}</span>`;
     } else {
       purchasedContainer.innerHTML = availablePurchasedPlaces
         .map((place) => {
@@ -4084,10 +4094,10 @@ async function submitAddCustomPlace() {
       showToast(t("toasts.channelAdded", { name }));
       await loadPlacesFromBackend();
     } else {
-      showToast(`Errore: ${json.error || "Operazione non riuscita"}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -4105,10 +4115,10 @@ async function deleteCustomPlace(name) {
       showToast(t("toasts.channelRemoved", { name }));
       await loadPlacesFromBackend();
     } else {
-      showToast(`Errore: ${json.error || "Operazione non riuscita"}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -4264,9 +4274,9 @@ async function handleAIAnalyze() {
     btnAnalyze.disabled = false;
 
     if (!res.ok || !json.success) {
-      const errMsg = json.error || `Errore server (${res.status})`;
+      const errMsg = json.error || `HTTP ${res.status}`;
       statusEl.textContent = `⚠️ ${errMsg}`;
-      showToast(`Errore AI: ${errMsg}`);
+      showToast(t("toasts.genericError", { error: errMsg }));
       return;
     }
 
@@ -4297,8 +4307,8 @@ async function handleAIAnalyze() {
     document.getElementById("btn-ai-save-all").style.display = "inline-flex";
   } catch (err) {
     btnAnalyze.disabled = false;
-    statusEl.textContent = "Errore durante l'analisi AI.";
-    showToast(`Errore AI: ${err.message}`);
+    statusEl.textContent = t("toasts.operationFailed");
+    showToast(t("toasts.genericError", { error: err.message }));
   }
 }
 
@@ -4327,10 +4337,10 @@ async function handleAISaveAll() {
       closeModal();
       await loadProductsFromBackend();
     } else {
-      showToast(`Errore salvataggio: ${json.error || "Operazione non riuscita"}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore: ${err.message}`);
+    showToast(t("toasts.genericError", { error: err.message }));
   } finally {
     btnSave.disabled = false;
   }
@@ -4395,7 +4405,7 @@ async function saveEmailCredentials() {
   const hasSaved = pwdInput && pwdInput.dataset.hasSaved === "true";
 
   if (!email || (!pwd && !hasSaved)) {
-    showToast("Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri.");
+    showToast(t("toasts.emailRequiredFields"));
     return;
   }
 
@@ -4420,10 +4430,10 @@ async function saveEmailCredentials() {
         }
       }
     } else {
-      showToast(`Errore salvataggio: ${json.error}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore: ${err.message}`);
+    showToast(t("toasts.genericError", { error: err.message }));
   }
 }
 
@@ -4435,11 +4445,11 @@ async function testEmailConnection() {
   const statusEl = document.getElementById("email-scan-status");
 
   if (!email || (!pwd && !hasSaved)) {
-    showToast("Compila prima Email e Password per le App.");
+    showToast(t("toasts.emailFillFirst"));
     return;
   }
 
-  statusEl.textContent = "Verifica connessione a Gmail in corso...";
+  statusEl.textContent = t("email.testingConnection");
   try {
     const payload = { email_sync_address: email };
     if (pwd) {
@@ -4452,15 +4462,15 @@ async function testEmailConnection() {
     });
     const json = await res.json();
     if (json.success) {
-      statusEl.textContent = "Connessione a Gmail stabilita con successo!";
+      statusEl.textContent = t("email.connectionEstablished");
       showToast(t("toasts.gmailConnected"));
     } else {
-      statusEl.textContent = "Errore di connessione a Gmail.";
-      showToast(`Connessione fallita: ${json.error || json.message}`);
+      statusEl.textContent = t("email.connectionError");
+      showToast(t("toasts.genericError", { error: json.error || json.message || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    statusEl.textContent = "Errore durante il test di connessione.";
-    showToast(`Errore: ${err.message}`);
+    statusEl.textContent = t("email.connectionError");
+    showToast(t("toasts.genericError", { error: err.message }));
   }
 }
 
@@ -4476,12 +4486,12 @@ async function startEmailScan() {
   const btnSave = document.getElementById("btn-save-email-preorders");
 
   if (!email || (!pwd && !hasSaved)) {
-    showToast("Inserisci Email e Password per le App prima di avviare la scansione.");
+    showToast(t("toasts.emailFillBeforeScan"));
     return;
   }
 
   btnScan.disabled = true;
-  statusEl.textContent = "Connessione a Gmail e ricerca nuove email non lette...";
+  statusEl.textContent = t("email.scanningUnread");
 
   try {
     const payload = { email_sync_address: email };
@@ -4497,8 +4507,8 @@ async function startEmailScan() {
     btnScan.disabled = false;
 
     if (!res.ok || !json.success) {
-      statusEl.textContent = "Errore durante la scansione.";
-      showToast(`Scansione fallita: ${json.error || "Impossibile leggere la casella Gmail."}`);
+      statusEl.textContent = t("email.scanError");
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
       return;
     }
 
@@ -4506,15 +4516,15 @@ async function startEmailScan() {
     const scannedCount = json.emails_scanned || 0;
 
     if (emailScannedItems.length === 0) {
-      statusEl.textContent = `Scansione completata: ${scannedCount} email analizzate, nessun prodotto nuovo rilevato.`;
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-dim); padding:20px;">Nessuna nuova email d'ordine rilevata nella casella INBOX.</td></tr>`;
-      countInfo.textContent = "Nessun prodotto da importare.";
+      statusEl.textContent = t("email.scanEmptyResult", { scanned: scannedCount });
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-dim); padding:20px;">${escapeHtml(t("email.inboxEmptyRow"))}</td></tr>`;
+      countInfo.textContent = t("email.nothingToImport");
       btnSave.style.display = "none";
       return;
     }
 
-    statusEl.textContent = `Scansione completata: ${emailScannedItems.length} prodotti trovati in ${scannedCount} email.`;
-    countInfo.textContent = `${emailScannedItems.length} prodotti pronti per l'importazione nei Pre-ordini.`;
+    statusEl.textContent = t("email.scanFoundResult", { found: emailScannedItems.length, scanned: scannedCount });
+    countInfo.textContent = t("email.readyForPreorders", { count: emailScannedItems.length });
     btnSave.style.display = "inline-flex";
 
     tbody.innerHTML = "";
@@ -4532,8 +4542,8 @@ async function startEmailScan() {
     });
   } catch (err) {
     btnScan.disabled = false;
-    statusEl.textContent = "Errore durante la scansione.";
-    showToast(`Errore: ${err.message}`);
+    statusEl.textContent = t("email.scanError");
+    showToast(t("toasts.genericError", { error: err.message }));
   }
 }
 
@@ -4556,10 +4566,10 @@ async function saveEmailPreorders() {
       closeModal();
       await loadProductsFromBackend();
     } else {
-      showToast(`Errore salvataggio: ${json.error}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore: ${err.message}`);
+    showToast(t("toasts.genericError", { error: err.message }));
   } finally {
     btnSave.disabled = false;
   }
@@ -4605,11 +4615,11 @@ async function checkForUpdates(isUserInitiated = false) {
         }
       }
     } else if (isUserInitiated) {
-      showToast(`Errore verifica: ${json.error || "Impossibile verificare"}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
     if (isUserInitiated) {
-      showToast(`Errore verifica aggiornamenti: ${err.message}`);
+      showToast(t("toasts.genericError", { error: err.message }));
     }
   }
 }
@@ -4783,7 +4793,7 @@ function handleExcelFileSelected(event) {
 
   const hintModal = document.getElementById("excelHintModal");
   if (hintModal) {
-    document.getElementById("excel-hint-filename").textContent = `File selezionato: ${file.name}`;
+    document.getElementById("excel-hint-filename").textContent = t("excel.selectedFile", { name: file.name });
     document.getElementById("excel-hint-text").value = "";
     document.getElementById("excel-parse-status").textContent = "";
     const btnNoHint = document.getElementById("btn-excel-no-hint");
@@ -4804,7 +4814,7 @@ async function executeExcelAnalysis(useHint) {
 
   if (btnNoHint) btnNoHint.disabled = true;
   if (btnWithHint) btnWithHint.disabled = true;
-  if (statusEl) statusEl.textContent = "Lettura del foglio di calcolo e analisi AI con Gemini in corso...";
+  if (statusEl) statusEl.textContent = t("excel.readingAndAnalyzing");
 
   try {
     const reader = new FileReader();
@@ -4830,8 +4840,8 @@ async function executeExcelAnalysis(useHint) {
     const json = await res.json();
 
     if (!json.success || !json.products || json.products.length === 0) {
-      const errMsg = json.error || "Nessun prodotto valido rilevato nel file.";
-      if (statusEl) statusEl.textContent = `Errore: ${errMsg}`;
+      const errMsg = json.error || t("toasts.aiNoValidProducts");
+      if (statusEl) statusEl.textContent = t("toasts.genericError", { error: errMsg });
       showToast(`Excel: ${errMsg}`);
       if (btnNoHint) btnNoHint.disabled = false;
       if (btnWithHint) btnWithHint.disabled = false;
@@ -4842,8 +4852,8 @@ async function executeExcelAnalysis(useHint) {
     closeModal();
     openExcelPreviewModal();
   } catch (err) {
-    if (statusEl) statusEl.textContent = `Errore: ${err.message}`;
-    showToast(`Errore analisi Excel: ${err.message}`);
+    if (statusEl) statusEl.textContent = t("toasts.genericError", { error: err.message });
+    showToast(t("toasts.genericError", { error: err.message }));
     if (btnNoHint) btnNoHint.disabled = false;
     if (btnWithHint) btnWithHint.disabled = false;
   }
@@ -4857,12 +4867,12 @@ function openExcelPreviewModal() {
   const count = excelExtractedProducts.length;
   const subtitleEl = document.getElementById("excel-preview-subtitle");
   if (subtitleEl) {
-    subtitleEl.textContent = `L'AI ha analizzato il file e trovato ${count} prodott${count === 1 ? 'o' : 'i'} pronti per l'importazione. Controlla l'anteprima e conferma.`;
+    subtitleEl.textContent = t("excel.previewFoundSubtitle", { count });
   }
 
   const summaryCountEl = document.getElementById("excel-summary-count");
   if (summaryCountEl) {
-    summaryCountEl.textContent = `${count} prodott${count === 1 ? 'o' : 'i'} pronti per l'importazione.`;
+    summaryCountEl.textContent = t("excel.summaryReadyCount", { count });
   }
 
   const tbody = document.getElementById("excel-preview-tbody");
@@ -4923,10 +4933,10 @@ async function saveExcelExtractedProducts() {
       pendingExcelFile = null;
       await loadProductsFromBackend();
     } else {
-      showToast(`Errore salvataggio: ${json.error || "Operazione non riuscita"}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   } finally {
     if (btnSave) btnSave.disabled = false;
   }
@@ -5024,7 +5034,7 @@ async function openPacklinkModal() {
   if (!status.configured) {
     if (banner) banner.style.display = "block";
     if (badge) {
-      badge.textContent = "Chiave Assente";
+      badge.textContent = t("packlink.keyMissing");
       badge.style.color = "#f59e0b";
       badge.style.background = "rgba(245, 158, 11, 0.15)";
       badge.style.borderColor = "rgba(245, 158, 11, 0.3)";
@@ -5032,13 +5042,13 @@ async function openPacklinkModal() {
   } else {
     if (banner) banner.style.display = "none";
     if (badge) {
-      badge.textContent = `PRO Attivo (${status.masked_key || "v1"})`;
+      badge.textContent = t("packlink.proActive", { key: status.masked_key || "v1" });
       badge.style.color = "#818cf8";
       badge.style.background = "rgba(99, 102, 241, 0.15)";
       badge.style.borderColor = "rgba(99, 102, 241, 0.3)";
     }
     if (bannerText) {
-      bannerText.textContent = `Chiave API configurata: ${status.masked_key}`;
+      bannerText.textContent = t("packlink.keyConfigured", { key: status.masked_key });
     }
   }
 
@@ -5079,7 +5089,7 @@ async function savePacklinkApiKey() {
   if (!input) return;
   const key = input.value.trim();
   if (!key) {
-    showToast("Inserisci una chiave API valida generata su Packlink PRO.");
+    showToast(t("toasts.packlinkInvalidKey"));
     return;
   }
 
@@ -5099,16 +5109,16 @@ async function savePacklinkApiKey() {
       await checkPacklinkStatus();
       const badge = document.getElementById("packlink-api-badge");
       if (badge) {
-        badge.textContent = "PRO Attivo (v1)";
+        badge.textContent = t("packlink.proActive", { key: "v1" });
         badge.style.color = "#818cf8";
         badge.style.background = "rgba(99, 102, 241, 0.15)";
         badge.style.borderColor = "rgba(99, 102, 241, 0.3)";
       }
     } else {
-      showToast(`Errore salvataggio: ${json.error || "Operazione non riuscita"}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
     }
   } catch (err) {
-    showToast(`Errore di rete: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   }
 }
 
@@ -5127,7 +5137,7 @@ function setPacklinkPreset(type) {
     if (lengthInput) lengthInput.value = "34";
     if (widthInput) widthInput.value = "23";
     if (heightInput) heightInput.value = "13";
-    if (contentInput) contentInput.value = "Scarpe / Sneakers";
+    if (contentInput) contentInput.value = t("packlink.defaultShoesContent");
   } else if (type === "envelope") {
     const btn = document.getElementById("btnPresetEnvelope");
     if (btn) btn.classList.add("active");
@@ -5135,7 +5145,7 @@ function setPacklinkPreset(type) {
     if (lengthInput) lengthInput.value = "25";
     if (widthInput) widthInput.value = "20";
     if (heightInput) heightInput.value = "5";
-    if (contentInput) contentInput.value = "Abbigliamento";
+    if (contentInput) contentInput.value = t("packlink.defaultClothingContent");
   } else if (type === "custom") {
     const btn = document.getElementById("btnPresetCustom");
     if (btn) btn.classList.add("active");
@@ -5155,7 +5165,7 @@ async function handlePacklinkAiExtract() {
   if (!pasteEl) return;
   const rawText = pasteEl.value.trim();
   if (!rawText) {
-    showToast("Incolla prima il messaggio dell'acquirente nella casella!");
+    showToast(t("toasts.packlinkPasteFirst"));
     pasteEl.focus();
     return;
   }
@@ -5168,11 +5178,11 @@ async function handlePacklinkAiExtract() {
         <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
         <path d="M12 2a10 10 0 0 1 10 10"/>
       </svg>
-      <span>Invio a Gemini in corso...</span>
+      <span>${t("packlink.sendingToGemini")}</span>
     `;
   }
   if (hint) {
-    hint.textContent = "Analisi e normalizzazione recapiti con Google Gemini in corso...";
+    hint.textContent = t("packlink.analyzingAddresses");
     hint.style.color = "#818cf8";
   }
 
@@ -5206,20 +5216,20 @@ async function handlePacklinkAiExtract() {
 
       showToast(t("toasts.packlinkAddressExtracted"));
       if (hint) {
-        hint.textContent = "Dati estratti e verificati con successo. Controlla e conferma.";
+        hint.textContent = t("packlink.addressesVerified");
         hint.style.color = "#818cf8";
       }
     } else {
-      showToast(`Analisi fallita: ${json.error || "Riprova o inserisci manualmente"}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
       if (hint) {
-        hint.textContent = "Non è stato possibile estrarre i dati. Compila i campi manualmente.";
+        hint.textContent = t("packlink.extractFailedHint");
         hint.style.color = "#f59e0b";
       }
     }
   } catch (err) {
-    showToast(`Errore di rete durante l'analisi AI: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
     if (hint) {
-      hint.textContent = "Errore di connessione. Inserisci i campi manualmente.";
+      hint.textContent = t("packlink.connectionErrorHint");
       hint.style.color = "#ef4444";
     }
   } finally {
@@ -5262,7 +5272,7 @@ async function handlePacklinkSubmit(e) {
   const submitBtn = document.getElementById("btnPacklinkSubmit");
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.textContent = "Creazione bozza in corso...";
+    submitBtn.textContent = t("packlink.creatingDraft");
   }
 
   const payload = {
@@ -5302,13 +5312,13 @@ async function handlePacklinkSubmit(e) {
         }, 600);
       }
     } else {
-      showToast(`Errore Packlink PRO: ${json.error || "Impossibile creare la bozza"}`);
+      showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
       if (json.error && (json.error.includes("Chiave") || json.error.includes("401"))) {
         togglePacklinkConfigBanner();
       }
     }
   } catch (err) {
-    showToast(`Errore di connessione: ${err.message}`);
+    showToast(t("toasts.networkError", { error: err.message }));
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -5494,7 +5504,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       renderTable();
-      showToast(`Visualizzazione: ${item.querySelector("span").textContent}`);
+      showToast(t("toasts.viewSwitched", { name: item.querySelector("span").textContent }));
     });
   });
 
@@ -5646,7 +5656,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderTable();
       const pillActive = document.querySelector(".table-tab-pill.active");
       if (pillActive) {
-        showToast(`Tabella: ${pillActive.textContent.trim()}`);
+        showToast(t("toasts.tableSwitched", { name: pillActive.textContent.trim() }));
       }
       return;
     }
@@ -5680,16 +5690,16 @@ document.addEventListener("DOMContentLoaded", () => {
           if (json.success && json.ids) {
             pushUndo({
               type: "delete_ids",
-              desc: `Incollati ${json.ids.length} prodotti`,
+              desc: t("undo.pasteProducts", { count: json.ids.length }),
               ids: json.ids,
             });
             await loadProductsFromBackend();
             showToast(t("toasts.pastedFromClipboard", { count: json.ids.length }));
           } else {
-            showToast(`Errore durante l'incolla: ${json.error || "Operazione non riuscita"}`);
+            showToast(t("toasts.genericError", { error: json.error || t("toasts.operationFailed") }));
           }
         } catch (err) {
-          showToast(`Errore di rete: ${err.message}`);
+          showToast(t("toasts.networkError", { error: err.message }));
         }
         return;
       }

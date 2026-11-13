@@ -216,7 +216,10 @@ window.RSM_I18N = {
       minimum: "MINIMO",
       average: "MEDIO",
       maximum: "MASSIMO",
-      viewOnEbay: "Vedi su eBay"
+      viewOnEbay: "Vedi su eBay",
+      sizePrefix: "taglia",
+      analyzedCount: "Analizzate {count} inserzioni controllate su eBay.it",
+      noResults: "Nessun risultato trovato"
     },
     ai: {
       quickEntry: "Inserimento Rapido con AI",
@@ -262,7 +265,17 @@ window.RSM_I18N = {
       colOrderDate: "DATA ORDINE",
       emptyList: "Nessun prodotto in attesa di importazione. Avvia una scansione per trovare ordini recenti.",
       syncCountEmpty: "Nessun prodotto in attesa di importazione.",
-      saveAllPreorders: "Salva Tutti nei Pre-ordini"
+      saveAllPreorders: "Salva Tutti nei Pre-ordini",
+      testingConnection: "Verifica connessione a Gmail in corso...",
+      connectionEstablished: "Connessione a Gmail stabilita con successo!",
+      connectionError: "Errore di connessione a Gmail.",
+      scanningUnread: "Connessione a Gmail e ricerca nuove email non lette...",
+      scanError: "Errore durante la scansione.",
+      scanEmptyResult: "Scansione completata: {scanned} email analizzate, nessun prodotto nuovo rilevato.",
+      inboxEmptyRow: "Nessuna nuova email d'ordine rilevata nella casella INBOX.",
+      nothingToImport: "Nessun prodotto da importare.",
+      scanFoundResult: "Scansione completata: {found} prodotti trovati in {scanned} email.",
+      readyForPreorders: "{count} prodotti pronti per l'importazione nei Pre-ordini."
     },
     excel: {
       hintTitle: "Suggerimento per l'AI (opzionale)",
@@ -279,7 +292,11 @@ window.RSM_I18N = {
       colBuyPlace: "L. ACQUISTO",
       colSellPlace: "L. VENDITA",
       colStatus: "STATO",
-      confirmAndSave: "Conferma e Salva"
+      confirmAndSave: "Conferma e Salva",
+      selectedFile: "File selezionato: {name}",
+      readingAndAnalyzing: "Lettura del foglio di calcolo e analisi AI con Gemini in corso...",
+      previewFoundSubtitle: "L'AI ha analizzato il file e trovato {count} prodotti pronti per l'importazione. Controlla l'anteprima e conferma.",
+      summaryReadyCount: "{count} prodotti pronti per l'importazione."
     },
     drawer: {
       metricBuy: "Acquisto",
@@ -312,7 +329,9 @@ window.RSM_I18N = {
       completeSale: "Completa Vendita",
       searchEbay: "Cerca su eBay",
       ebayPrices: "Stima Prezzi eBay",
-      delete: "Elimina"
+      delete: "Elimina",
+      selectedSingle: "{count} Prodotto Selezionato",
+      selectedMultiple: "{count} Prodotti Selezionati"
     },
     bulkSale: {
       title: "Metti in Vendita",
@@ -355,7 +374,15 @@ window.RSM_I18N = {
       addNewLabel: "AGGIUNGI NUOVO CANALE DI VENDITA",
       inputPlaceholder: "es. Vestiaire Collective, Subito...",
       salesChannelsTitle: "Canali di Vendita & Marketplace",
-      purchasePlacesTitle: "Luoghi di Acquisto Registrati"
+      purchasePlacesTitle: "Luoghi di Acquisto Registrati",
+      noSuggestions: "Nessun suggerimento corrispondente",
+      channelsCountSingle: "{count} canale",
+      channelsCountPlural: "{count} canali",
+      placesCountSingle: "{count} luogo",
+      placesCountPlural: "{count} luoghi",
+      noSellingChannels: "Nessun canale di vendita configurato.",
+      noPurchasePlaces: "Nessun luogo di acquisto registrato.",
+      deleteChannelTooltip: "Elimina canale"
     },
     packlink: {
       modalTitle: "Nuova Spedizione Packlink PRO",
@@ -391,7 +418,18 @@ window.RSM_I18N = {
       draftTariffsHint: "Genera la bozza con calcolo automatico tariffe corrieri.",
       footerHint: "Genera bozza su Packlink PRO per pagamento ed etichetta",
       apiKeyBtn: "Chiave API",
-      createDraft: "Crea Bozza Packlink"
+      createDraft: "Crea Bozza Packlink",
+      keyMissing: "Chiave Assente",
+      proActive: "PRO Attivo ({key})",
+      keyConfigured: "Chiave API configurata: {key}",
+      sendingToGemini: "Invio a Gemini in corso...",
+      analyzingAddresses: "Analisi e normalizzazione recapiti con Google Gemini in corso...",
+      addressesVerified: "Dati estratti e verificati con successo. Controlla e conferma.",
+      extractFailedHint: "Non è stato possibile estrarre i dati. Compila i campi manualmente.",
+      connectionErrorHint: "Errore di connessione. Inserisci i campi manualmente.",
+      creatingDraft: "Creazione bozza in corso...",
+      defaultShoesContent: "Scarpe / Sneakers",
+      defaultClothingContent: "Abbigliamento"
     },
     update: {
       modalTitle: "Nuova Versione Disponibile",
@@ -407,7 +445,8 @@ window.RSM_I18N = {
       description: "L'applicazione non riesce a comunicare con il backend locale. I dati rimangono comunque salvi sul tuo disco in SQLite.",
       possibleCauses: "Possibili cause: permessi di esecuzione, librerie mancanti o antivirus che ha bloccato il processo bridge.exe.",
       continueAnyway: "Continua Comunque",
-      retryConnection: "Riprova Connessione"
+      retryConnection: "Riprova Connessione",
+      connecting: "Connessione in corso..."
     },
     dialogs: {
       confirmDeleteProduct: "Confermi l'eliminazione di \"{name}\" dal database SQLite?",
@@ -508,7 +547,33 @@ window.RSM_I18N = {
       selectionModeEnabled: "Modalità Selezione: Attivata",
       selectionModeDisabled: "Modalità Selezione: Disattivata",
       copiedToClipboard: "Copiati {count} prodotti negli appunti.",
-      pastedFromClipboard: "Incollati {count} prodotti con successo."
+      pastedFromClipboard: "Incollati {count} prodotti con successo.",
+      viewSwitched: "Visualizzazione: {name}",
+      tableSwitched: "Tabella: {name}",
+      agingFilterActive: "Filtro giacenza attivo: mostrati prodotti {label}",
+      agingLabelNormal: "regolari (<60gg)",
+      agingLabelWarning: "in attenzione (60-90gg)",
+      agingLabelCritical: "dead stock (>90gg)",
+      networkError: "Errore di rete: {error}",
+      genericError: "Errore: {error}",
+      operationFailed: "Operazione non riuscita",
+      emailRequiredFields: "Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri.",
+      emailFillFirst: "Compila prima Email e Password per le App.",
+      emailFillBeforeScan: "Inserisci Email e Password per le App prima di avviare la scansione.",
+      packlinkInvalidKey: "Inserisci una chiave API valida generata su Packlink PRO.",
+      packlinkPasteFirst: "Incolla prima il messaggio dell'acquirente nella casella!"
+    },
+    undo: {
+      editProduct: "Modifica \"{name}\"",
+      createProduct: "Creazione \"{name}\"",
+      deleteProduct: "Eliminazione \"{name}\"",
+      deleteBundle: "Eliminazione vendita multipla ({count} prodotti)",
+      duplicateProducts: "Duplicazione di {count} prodotti",
+      completeSales: "Completamento vendite ({count} prodotti)",
+      deleteMultiple: "Eliminazione ({count} prodotti)",
+      putOnSale: "Messa in vendita ({count} prodotti)",
+      moveToStock: "Spostamento in Magazzino ({count} prodotti)",
+      pasteProducts: "Incollati {count} prodotti"
     }
   },
   en: {
@@ -718,7 +783,10 @@ window.RSM_I18N = {
       minimum: "MINIMUM",
       average: "AVERAGE",
       maximum: "MAXIMUM",
-      viewOnEbay: "View on eBay"
+      viewOnEbay: "View on eBay",
+      sizePrefix: "size",
+      analyzedCount: "Analyzed {count} verified listings on eBay",
+      noResults: "No results found"
     },
     ai: {
       quickEntry: "Quick Entry with AI",
@@ -764,7 +832,17 @@ window.RSM_I18N = {
       colOrderDate: "ORDER DATE",
       emptyList: "No products waiting to import. Start a scan to find recent orders.",
       syncCountEmpty: "No products waiting to import.",
-      saveAllPreorders: "Save All to Pre-orders"
+      saveAllPreorders: "Save All to Pre-orders",
+      testingConnection: "Testing Gmail connection...",
+      connectionEstablished: "Gmail connection established successfully!",
+      connectionError: "Gmail connection error.",
+      scanningUnread: "Connecting to Gmail and searching for unread emails...",
+      scanError: "Error during scan.",
+      scanEmptyResult: "Scan complete: {scanned} emails analyzed, no new products detected.",
+      inboxEmptyRow: "No new order emails detected in INBOX.",
+      nothingToImport: "No products to import.",
+      scanFoundResult: "Scan complete: {found} products found in {scanned} emails.",
+      readyForPreorders: "{count} products ready for import into Pre-orders."
     },
     excel: {
       hintTitle: "AI Hint (Optional)",
@@ -781,7 +859,11 @@ window.RSM_I18N = {
       colBuyPlace: "BUY PLACE",
       colSellPlace: "SELL PLACE",
       colStatus: "STATUS",
-      confirmAndSave: "Confirm and Save"
+      confirmAndSave: "Confirm and Save",
+      selectedFile: "Selected file: {name}",
+      readingAndAnalyzing: "Reading spreadsheet and analyzing with Gemini AI...",
+      previewFoundSubtitle: "AI analyzed the file and found {count} products ready for import. Check the preview and confirm.",
+      summaryReadyCount: "{count} products ready for import."
     },
     drawer: {
       metricBuy: "Purchase",
@@ -814,7 +896,9 @@ window.RSM_I18N = {
       completeSale: "Complete Sale",
       searchEbay: "Search on eBay",
       ebayPrices: "Estimate eBay Prices",
-      delete: "Delete"
+      delete: "Delete",
+      selectedSingle: "{count} Product Selected",
+      selectedMultiple: "{count} Products Selected"
     },
     bulkSale: {
       title: "Put on Sale",
@@ -857,7 +941,15 @@ window.RSM_I18N = {
       addNewLabel: "ADD NEW SALES CHANNEL",
       inputPlaceholder: "e.g. Vestiaire Collective, Subito...",
       salesChannelsTitle: "Sales Channels & Marketplaces",
-      purchasePlacesTitle: "Registered Purchase Places"
+      purchasePlacesTitle: "Registered Purchase Places",
+      noSuggestions: "No matching suggestions",
+      channelsCountSingle: "{count} channel",
+      channelsCountPlural: "{count} channels",
+      placesCountSingle: "{count} place",
+      placesCountPlural: "{count} places",
+      noSellingChannels: "No sales channels configured.",
+      noPurchasePlaces: "No purchase places recorded.",
+      deleteChannelTooltip: "Delete channel"
     },
     packlink: {
       modalTitle: "New Packlink PRO Shipment",
@@ -893,7 +985,18 @@ window.RSM_I18N = {
       draftTariffsHint: "Generate draft with automatic carrier rate calculation.",
       footerHint: "Generate draft on Packlink PRO for payment and shipping label",
       apiKeyBtn: "API Key",
-      createDraft: "Create Packlink Draft"
+      createDraft: "Create Packlink Draft",
+      keyMissing: "Key Missing",
+      proActive: "PRO Active ({key})",
+      keyConfigured: "API Key configured: {key}",
+      sendingToGemini: "Sending to Gemini...",
+      analyzingAddresses: "Analyzing and normalizing addresses with Google Gemini...",
+      addressesVerified: "Data extracted and verified successfully. Check and confirm.",
+      extractFailedHint: "Could not extract data. Please fill in the fields manually.",
+      connectionErrorHint: "Connection error. Please fill in the fields manually.",
+      creatingDraft: "Creating draft...",
+      defaultShoesContent: "Shoes / Sneakers",
+      defaultClothingContent: "Clothing"
     },
     update: {
       modalTitle: "New Version Available",
@@ -909,7 +1012,8 @@ window.RSM_I18N = {
       description: "The application cannot communicate with the local backend. Your data remains safe on disk in SQLite.",
       possibleCauses: "Possible causes: execution permissions, missing libraries, or antivirus blocking bridge.exe.",
       continueAnyway: "Continue Anyway",
-      retryConnection: "Retry Connection"
+      retryConnection: "Retry Connection",
+      connecting: "Connecting..."
     },
     dialogs: {
       confirmDeleteProduct: "Confirm deletion of \"{name}\" from the SQLite database?",
@@ -1010,7 +1114,33 @@ window.RSM_I18N = {
       selectionModeEnabled: "Selection Mode: Enabled",
       selectionModeDisabled: "Selection Mode: Disabled",
       copiedToClipboard: "Copied {count} products to clipboard.",
-      pastedFromClipboard: "Pasted {count} products successfully."
+      pastedFromClipboard: "Pasted {count} products successfully.",
+      viewSwitched: "View: {name}",
+      tableSwitched: "Table: {name}",
+      agingFilterActive: "Aging filter active: showing {label} products",
+      agingLabelNormal: "regular (<60d)",
+      agingLabelWarning: "warning (60-90d)",
+      agingLabelCritical: "dead stock (>90d)",
+      networkError: "Network error: {error}",
+      genericError: "Error: {error}",
+      operationFailed: "Operation failed",
+      emailRequiredFields: "Please enter your Gmail address and 16-character App Password.",
+      emailFillFirst: "Please fill in Email and App Password first.",
+      emailFillBeforeScan: "Please enter Email and App Password before starting the scan.",
+      packlinkInvalidKey: "Please enter a valid API key generated on Packlink PRO.",
+      packlinkPasteFirst: "Please paste the buyer's message in the box first!"
+    },
+    undo: {
+      editProduct: "Edit \"{name}\"",
+      createProduct: "Create \"{name}\"",
+      deleteProduct: "Delete \"{name}\"",
+      deleteBundle: "Delete multi sale ({count} products)",
+      duplicateProducts: "Duplicate {count} products",
+      completeSales: "Complete sales ({count} products)",
+      deleteMultiple: "Delete ({count} products)",
+      putOnSale: "Put on sale ({count} products)",
+      moveToStock: "Move to Stock ({count} products)",
+      pasteProducts: "Paste {count} products"
     }
   }
 };
