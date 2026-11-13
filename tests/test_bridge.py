@@ -1170,6 +1170,76 @@ def test_bridge_notifications_endpoints(tmp_path):
         with request.urlopen(f"http://127.0.0.1:{port}/api/notifications") as resp:
             notif_res = json.loads(resp.read().decode("utf-8"))
             assert notif_res["data"] == []
+
+        # 5. Auto-rimozione notifica quando una vendita passa a Completata (bulk-status & PUT)
+        prod_id_3 = db.save(
+            {
+                "name": "Asics Gel-Kayano 14",
+                "size": "43",
+                "purchased_price": Decimal("130.00"),
+                "status": "Venduto",
+                "sold_price": Decimal("195.00"),
+                "fees": Decimal("10.00"),
+            }
+        )
+        prod_id_4 = db.save(
+            {
+                "name": "New Balance 1906R",
+                "size": "42",
+                "purchased_price": Decimal("120.00"),
+                "status": "Venduto",
+                "sold_price": Decimal("175.00"),
+                "fees": Decimal("10.00"),
+            }
+        )
+        mock_delivered_3 = {**mock_delivered_1, "tracking_number": "GLS777888999"}
+        mock_delivered_4 = {**mock_delivered_2, "tracking_number": "UPS000111222"}
+        with patch("src.services.bridge_server.fetch_tracking_info", side_effect=[mock_delivered_3, mock_delivered_4]):
+            for pid, num, car in [
+                (prod_id_3, "GLS777888999", "gls"),
+                (prod_id_4, "UPS000111222", "ups"),
+            ]:
+                req = request.Request(
+                    f"http://127.0.0.1:{port}/api/products/{pid}/tracking",
+                    data=json.dumps({"tracking_number": num, "carrier": car}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with request.urlopen(req) as resp:
+                    assert json.loads(resp.read().decode("utf-8"))["success"] is True
+
+        with request.urlopen(f"http://127.0.0.1:{port}/api/notifications") as resp:
+            notif_res = json.loads(resp.read().decode("utf-8"))
+            assert len(notif_res["data"]) == 2
+
+        # Completa prod_id_3 tramite bulk-status
+        req_bulk = request.Request(
+            f"http://127.0.0.1:{port}/api/products/bulk-status",
+            data=json.dumps({"ids": [prod_id_3], "status": "completed"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req_bulk) as resp:
+            assert json.loads(resp.read().decode("utf-8"))["success"] is True
+
+        with request.urlopen(f"http://127.0.0.1:{port}/api/notifications") as resp:
+            notif_res = json.loads(resp.read().decode("utf-8"))
+            assert len(notif_res["data"]) == 1
+            assert notif_res["data"][0]["product_id"] == prod_id_4
+
+        # Completa prod_id_4 tramite PUT /api/products/<id>
+        req_put = request.Request(
+            f"http://127.0.0.1:{port}/api/products/{prod_id_4}",
+            data=json.dumps({"name": "New Balance 1906R", "status": "completed"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with request.urlopen(req_put) as resp:
+            assert json.loads(resp.read().decode("utf-8"))["success"] is True
+
+        with request.urlopen(f"http://127.0.0.1:{port}/api/notifications") as resp:
+            notif_res = json.loads(resp.read().decode("utf-8"))
+            assert notif_res["data"] == []
     finally:
         server.shutdown()
         server.server_close()

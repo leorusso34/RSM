@@ -1081,6 +1081,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                             f"UPDATE products SET is_completed = 1, updated_at = CURRENT_TIMESTAMP WHERE id IN ({placeholders})",
                             ids,
                         )
+                    self.db.dismiss_notifications_for_products(ids)
                     self._send_json({"success": True, "updated_count": len(ids)})
                     return
 

@@ -1,7 +1,7 @@
-"""Livello 8: Integrazione 17TRACK nel Side-Drawer dei Prodotti Venduti.
+"""Livello 8: Integrazione 17TRACK nel Side-Drawer e Casella Notifiche Consegne.
 
 Verifiche E2E:
-1. Creazione e selezione di un prodotto venduto (stato completed).
+1. Creazione e selezione di un prodotto in vendita attiva (stato active-sale).
 2. Apertura del side-drawer (#sideDrawer) e verifica presenza della sezione 'Spedizione & Tracking (17TRACK)'.
 3. Verifica dello stato iniziale: form compatto con input codice (#drawerTrackingInput) e dropdown corriere (#drawerCarrierSelect).
 4. Test Inserimento Senza Corriere (Auto 17TRACK):
@@ -23,17 +23,17 @@ Verifiche E2E:
    - Verifica ricomparsa del form con codice precompilato.
    - Forzatura esplicita del corriere 'BRT Bartolini' ('brt').
    - Salvataggio e verifica card aggiornata con corriere BRT.
-7. Test Eliminazione Tracking:
-   - Click sul pulsante 'Rimuovi' (icona cestino) con conferma dialog.
-   - Verifica rimozione del tracking e ripristino del form iniziale vuoto.
-8. Test Casella Notifiche Consegne (Titlebar):
+7. Test Casella Notifiche Consegne (Titlebar):
    - Verifica che al passaggio in 'Consegnato' compaia il badge '1' su #titlebarNotifBtn (.has-unread).
-   - Apertura della tendina #notifPopover al click su #titlebarNotifBtn.
-   - Verifica notifica prodotto 'Jordan 4 Retro Military Black (42.5)' con messaggio 'Il pacco risulta Consegnato'.
-   - Rimozione singola tramite pulsante '×' (.notif-dismiss-btn), verifica stato vuoto e azzeramento badge.
-   - Chiusura tendina notifiche.
-9. Audit console JavaScript (0 errori).
-10. Registrazione video completa level8_17track.webm.
+   - Apertura della tendina #notifPopover al click su #titlebarNotifBtn e verifica avviso prodotto.
+8. Test Rimozione Automatica Notifica al Completamento Vendita:
+   - Passaggio del prodotto da 'Vendita Attiva' a 'Vendita Completata' tramite modal di modifica.
+   - Verifica che il badge #titlebarNotifBadge sparisca automaticamente e la tendina mostri 'Nessuna notifica presente'.
+9. Test Eliminazione Tracking:
+   - Apertura prodotto in 'Vendite Completate', click su 'Rimuovi' (icona cestino) con conferma dialog.
+   - Verifica rimozione del tracking e ripristino del form iniziale vuoto.
+10. Audit console JavaScript (0 errori).
+11. Registrazione video completa level8_17track.webm.
 """
 
 import json
@@ -50,14 +50,15 @@ def run_level8_17track_checks(page: Page, console_errors: list[str]) -> dict[str
     """Esegue tutte le asserzioni e i controlli del Livello 8 (17TRACK nel Side-Drawer)."""
     details = []
 
-    # 1. Creazione di un prodotto venduto sandbox via API per il test
+    # 1. Creazione di un prodotto in Vendita Attiva sandbox via API per il test
     prod_payload = {
         "name": "Jordan 4 Retro Military Black",
         "size": "42.5",
         "quantity": 1,
         "purchasedPrice": 210.0,
         "purchasedPlace": "SNKRS",
-        "status": "completed",
+        "sellingPlace": "Vinted",
+        "status": "active-sale",
         "soldPrice": 340.0,
         "fees": 25.0,
         "date": "2026-11-03",
@@ -72,21 +73,21 @@ def run_level8_17track_checks(page: Page, console_errors: list[str]) -> dict[str
     with urllib.request.urlopen(req) as resp:
         created = json.loads(resp.read().decode("utf-8"))
         prod_id = created.get("id")
-    assert prod_id is not None, "Creazione prodotto venduto fallita"
-    details.append(f"Prodotto venduto creato con successo (ID #{prod_id})")
+    assert prod_id is not None, "Creazione prodotto in vendita attiva fallita"
+    details.append(f"Prodotto in vendita attiva creato con successo (ID #{prod_id})")
 
-    # 2. Caricamento interfaccia e switch alla tab Storico Vendite (dove risiedono i prodotti completati)
+    # 2. Caricamento interfaccia e switch alla tab Vendite Attive
     page.goto(SANDBOX_BASE_URL, wait_until="networkidle")
     page.wait_for_selector(".table-card", timeout=5000)
     page.wait_for_timeout(400)
 
-    # Naviga alla sezione Storico Vendite
-    page.click("li.nav-item[data-section='storico']")
+    # Seleziona la tab Vendite Attive
+    page.click("button.table-tab-pill[data-filter='active-sale']")
     page.wait_for_selector("#inventory-table-body tr", timeout=5000)
     page.wait_for_timeout(300)
 
     # Click sulla riga del prodotto per aprire il side-drawer
-    product_row = page.locator("tr:has-text('Jordan 4 Retro Military Black')")
+    product_row = page.locator("#inventory-table-body tr:has-text('Jordan 4 Retro Military Black')")
     expect(product_row).to_be_visible(timeout=5000)
     product_row.click()
 
@@ -204,26 +205,12 @@ def run_level8_17track_checks(page: Page, console_errors: list[str]) -> dict[str
     expect(carrier_label).to_contain_text("BRT Bartolini")
     details.append("Modifica tracking con selezione esplicita corriere BRT completata con successo")
 
-    # 9. Test Eliminazione Tracking (il dialog di conferma è gestito automaticamente da E2EContextManager)
-    delete_tracking_btn = page.locator('.tracking-icon-btn[title*="Rimuovi"]')
-    expect(delete_tracking_btn).to_be_visible()
-    with page.expect_response(lambda r: "/tracking" in r.url and r.request.method == "DELETE", timeout=10000):
-        delete_tracking_btn.click()
-    page.wait_for_selector("#drawerTrackingInput", timeout=5000)
-
-    # Verifica ripristino form vuoto iniziale
-    empty_tracking_input = page.locator("#drawerTrackingInput")
-    expect(empty_tracking_input).to_be_visible()
-    expect(empty_tracking_input).to_have_value("")
-    expect(status_badge).to_be_hidden()
-    details.append("Eliminazione tracking verificata: rimosso dal database e ripristinato form iniziale")
-
     # Chiusura side-drawer (ESC rapido)
     page.keyboard.press("Escape")
     page.wait_for_selector("#sideDrawer.open", state="detached", timeout=3000)
     details.append("Side-drawer richiuso correttamente")
 
-    # 10. Test Casella Notifiche Consegne nella Titlebar
+    # 9. Test Casella Notifiche Consegne nella Titlebar (notifica ancora attiva prima del completamento)
     expect(notif_badge).to_be_visible(timeout=5000)
     expect(notif_badge).to_have_text("1")
 
@@ -239,25 +226,60 @@ def run_level8_17track_checks(page: Page, console_errors: list[str]) -> dict[str
     expect(notif_item).to_contain_text("Il pacco risulta Consegnato")
     details.append("Tendina notifiche aperta con avviso consegna per 'Jordan 4 Retro Military Black (42.5)'")
 
-    # Rimozione singola tramite pulsante '×'
-    dismiss_btn = notif_item.locator(".notif-dismiss-btn")
-    expect(dismiss_btn).to_be_visible()
-    dismiss_btn.click()
-
-    expect(page.locator("#notifPopoverList .notif-empty-state")).to_be_visible(timeout=3000)
-    expect(page.locator("#notifPopoverList .notif-empty-state")).to_contain_text("Nessuna notifica presente")
-    expect(notif_badge).to_be_hidden()
-    expect(notif_btn).not_to_have_class(re.compile(r"\bhas-unread\b"))
-    expect(page.locator("#notifClearAllBtn")).to_be_disabled()
-    details.append("Rimozione notifica tramite '×' verificata: stato vuoto e badge azzerato")
-
-    # Chiusura tendina notifiche ricliccando sulla campanella
+    # Richiude la tendina SENZA rimuovere manualmente la notifica
     notif_btn.click()
     expect(notif_popover).not_to_have_class(re.compile(r"\bopen\b"), timeout=3000)
-    expect(notif_popover).to_be_hidden()
-    details.append("Tendina notifiche richiusa correttamente")
 
-    # 11. Audit console JavaScript
+    # 10. Passaggio della vendita a 'Vendita Completata' -> Rimozione Automatica Notifica
+    active_row = page.locator("#inventory-table-body tr:has-text('Jordan 4 Retro Military Black')")
+    expect(active_row).to_be_visible(timeout=5000)
+    active_row.locator('button[title="Modifica Prodotto"]').click()
+    page.wait_for_selector("#productModal.open", timeout=5000)
+    page.select_option("#prod-status", "completed")
+    with page.expect_response(
+        lambda r: f"/api/products/{prod_id}" in r.url and r.request.method == "PUT",
+        timeout=10000,
+    ):
+        page.click("#productForm button.btn-primary")
+    page.wait_for_selector("#productModal", state="hidden", timeout=5000)
+
+    # Verifica scomparsa automatica del badge e svuotamento tendina notifiche
+    expect(notif_badge).to_be_hidden(timeout=5000)
+    expect(notif_btn).not_to_have_class(re.compile(r"\bhas-unread\b"), timeout=5000)
+    notif_btn.click()
+    expect(notif_popover).to_have_class(re.compile(r"\bopen\b"), timeout=3000)
+    expect(page.locator("#notifPopoverList .notif-empty-state")).to_be_visible(timeout=3000)
+    expect(page.locator("#notifPopoverList .notif-empty-state")).to_contain_text("Nessuna notifica presente")
+    expect(page.locator("#notifClearAllBtn")).to_be_disabled()
+    details.append("Completamento vendita verificato: notifica di consegna rimossa automaticamente")
+
+    # Chiusura tendina notifiche
+    notif_btn.click()
+    expect(notif_popover).not_to_have_class(re.compile(r"\bopen\b"), timeout=3000)
+
+    # 11. Verifica in Vendite Completate ed Eliminazione Tracking dal Side-Drawer
+    page.click("button.table-tab-pill[data-filter='completed']")
+    completed_row = page.locator("#inventory-table-body tr:has-text('Jordan 4 Retro Military Black')")
+    expect(completed_row).to_be_visible(timeout=5000)
+    completed_row.click()
+    expect(drawer).to_have_class(re.compile(r"\bopen\b"), timeout=5000)
+
+    delete_tracking_btn = page.locator('.tracking-icon-btn[title*="Rimuovi"]')
+    expect(delete_tracking_btn).to_be_visible(timeout=5000)
+    with page.expect_response(lambda r: "/tracking" in r.url and r.request.method == "DELETE", timeout=10000):
+        delete_tracking_btn.click()
+    page.wait_for_selector("#drawerTrackingInput", timeout=5000)
+
+    empty_tracking_input = page.locator("#drawerTrackingInput")
+    expect(empty_tracking_input).to_be_visible()
+    expect(empty_tracking_input).to_have_value("")
+    expect(status_badge).to_be_hidden()
+    details.append("Eliminazione tracking verificata anche in Vendite Completate: ripristinato form iniziale")
+
+    page.keyboard.press("Escape")
+    page.wait_for_selector("#sideDrawer.open", state="detached", timeout=3000)
+
+    # 12. Audit console JavaScript
     assert len(console_errors) == 0, f"Rilevati errori console durante il test 17TRACK: {console_errors}"
     details.append("Audit console superato: 0 errori JavaScript rilevati")
 

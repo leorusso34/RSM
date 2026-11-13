@@ -374,7 +374,9 @@ class InventoryDatabase:
                 )
                 saved_id = product_id
 
-        if tracking_number and tracking_cache:
+        if is_completed == 1:
+            self.dismiss_notifications_for_products([saved_id])
+        elif tracking_number and tracking_cache:
             self._maybe_create_delivery_notification(saved_id, tracking_number, carrier, tracking_cache)
         return saved_id
 
@@ -428,10 +430,13 @@ class InventoryDatabase:
             return
 
         prod_row = self.connection.execute(
-            "SELECT name, size FROM products WHERE id = ?",
+            "SELECT name, size, is_completed FROM products WHERE id = ?",
             (product_id,),
         ).fetchone()
         if not prod_row:
+            return
+        if int(prod_row["is_completed"] or 0) == 1:
+            self.dismiss_notifications_for_products([product_id])
             return
 
         product_name = str(prod_row["name"] or "").strip()
@@ -468,12 +473,21 @@ class InventoryDatabase:
             )
 
     def sync_delivery_notifications(self) -> None:
-        """Allinea le notifiche di consegna dai prodotti con tracking 17TRACK già salvato in cache."""
+        """Allinea le notifiche di consegna dai prodotti attivi con tracking 17TRACK già salvato in cache."""
+        with self.connection:
+            self.connection.execute(
+                """
+                UPDATE notifications
+                SET is_dismissed = 1
+                WHERE is_dismissed = 0
+                  AND product_id IN (SELECT id FROM products WHERE is_completed = 1)
+                """
+            )
         rows = self.connection.execute(
             """
             SELECT id, tracking_number, carrier, tracking_cache
             FROM products
-            WHERE tracking_number != '' AND tracking_cache != ''
+            WHERE tracking_number != '' AND tracking_cache != '' AND is_completed = 0
             """
         ).fetchall()
         for row in rows:
@@ -482,6 +496,17 @@ class InventoryDatabase:
                 str(row["tracking_number"] or ""),
                 str(row["carrier"] or ""),
                 str(row["tracking_cache"] or ""),
+            )
+
+    def dismiss_notifications_for_products(self, product_ids: list[int]) -> None:
+        """Contrassegna come rimosse tutte le notifiche attive associate ai prodotti indicati."""
+        if not product_ids:
+            return
+        placeholders = ", ".join("?" for _ in product_ids)
+        with self.connection:
+            self.connection.execute(
+                f"UPDATE notifications SET is_dismissed = 1 WHERE product_id IN ({placeholders}) AND is_dismissed = 0",
+                tuple(product_ids),
             )
 
     def list_notifications(self) -> list[dict[str, Any]]:
