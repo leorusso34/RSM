@@ -26,8 +26,14 @@ Verifiche E2E:
 7. Test Eliminazione Tracking:
    - Click sul pulsante 'Rimuovi' (icona cestino) con conferma dialog.
    - Verifica rimozione del tracking e ripristino del form iniziale vuoto.
-8. Audit console JavaScript (0 errori).
-9. Registrazione video completa level8_17track.webm.
+8. Test Casella Notifiche Consegne (Titlebar):
+   - Verifica che al passaggio in 'Consegnato' compaia il badge '1' su #titlebarNotifBtn (.has-unread).
+   - Apertura della tendina #notifPopover al click su #titlebarNotifBtn.
+   - Verifica notifica prodotto 'Jordan 4 Retro Military Black (42.5)' con messaggio 'Il pacco risulta Consegnato'.
+   - Rimozione singola tramite pulsante '×' (.notif-dismiss-btn), verifica stato vuoto e azzeramento badge.
+   - Chiusura tendina notifiche.
+9. Audit console JavaScript (0 errori).
+10. Registrazione video completa level8_17track.webm.
 """
 
 import json
@@ -131,6 +137,14 @@ def run_level8_17track_checks(page: Page, console_errors: list[str]) -> dict[str
     code_pill = page.locator(".tracking-code-pill")
     expect(code_pill).to_contain_text(tracking_code)
 
+    # Verifica comparsa immediata del badge notifica in alto a destra (a tendina ancora chiusa)
+    notif_btn = page.locator("#titlebarNotifBtn")
+    notif_badge = page.locator("#titlebarNotifBadge")
+    expect(notif_badge).to_be_visible(timeout=5000)
+    expect(notif_badge).to_have_text("1", timeout=5000)
+    expect(notif_btn).to_have_class(re.compile(r"\bhas-unread\b"))
+    details.append("Badge notifica '1' visibile subito sulla campanella in titlebar (.has-unread)")
+
     # 6. Verifica delle tappe ed espansione tendina (8 tappe totali)
     # Prime 3 tappe visibili
     visible_nodes = page.locator(".tracking-timeline-list > .tracking-timeline-node")
@@ -209,7 +223,41 @@ def run_level8_17track_checks(page: Page, console_errors: list[str]) -> dict[str
     page.wait_for_selector("#sideDrawer.open", state="detached", timeout=3000)
     details.append("Side-drawer richiuso correttamente")
 
-    # 10. Audit console JavaScript
+    # 10. Test Casella Notifiche Consegne nella Titlebar
+    expect(notif_badge).to_be_visible(timeout=5000)
+    expect(notif_badge).to_have_text("1")
+
+    notif_popover = page.locator("#notifPopover")
+    notif_btn.click()
+    expect(notif_popover).to_have_class(re.compile(r"\bopen\b"), timeout=3000)
+    expect(notif_popover).to_be_visible()
+    expect(page.locator("#notifPopoverCount")).to_have_text("1")
+
+    notif_item = page.locator("#notifPopoverList .notif-item").first
+    expect(notif_item).to_be_visible(timeout=3000)
+    expect(notif_item).to_contain_text("Jordan 4 Retro Military Black (42.5)")
+    expect(notif_item).to_contain_text("Il pacco risulta Consegnato")
+    details.append("Tendina notifiche aperta con avviso consegna per 'Jordan 4 Retro Military Black (42.5)'")
+
+    # Rimozione singola tramite pulsante '×'
+    dismiss_btn = notif_item.locator(".notif-dismiss-btn")
+    expect(dismiss_btn).to_be_visible()
+    dismiss_btn.click()
+
+    expect(page.locator("#notifPopoverList .notif-empty-state")).to_be_visible(timeout=3000)
+    expect(page.locator("#notifPopoverList .notif-empty-state")).to_contain_text("Nessuna notifica presente")
+    expect(notif_badge).to_be_hidden()
+    expect(notif_btn).not_to_have_class(re.compile(r"\bhas-unread\b"))
+    expect(page.locator("#notifClearAllBtn")).to_be_disabled()
+    details.append("Rimozione notifica tramite '×' verificata: stato vuoto e badge azzerato")
+
+    # Chiusura tendina notifiche ricliccando sulla campanella
+    notif_btn.click()
+    expect(notif_popover).not_to_have_class(re.compile(r"\bopen\b"), timeout=3000)
+    expect(notif_popover).to_be_hidden()
+    details.append("Tendina notifiche richiusa correttamente")
+
+    # 11. Audit console JavaScript
     assert len(console_errors) == 0, f"Rilevati errori console durante il test 17TRACK: {console_errors}"
     details.append("Audit console superato: 0 errori JavaScript rilevati")
 
