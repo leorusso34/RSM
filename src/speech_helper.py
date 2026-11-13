@@ -142,7 +142,7 @@ class SpeechTranscriber:
                 import scipy.io.wavfile as wav_io
                 import sounddevice as sd
                 import speech_recognition as sr
-            except ImportError as e:
+            except (ImportError, OSError) as e:
                 self._is_recording = False
                 on_error(tr_msg(normalized_lang, f"Dipendenza mancante: {e}", f"Missing dependency: {e}"))
                 return

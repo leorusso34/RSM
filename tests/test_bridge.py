@@ -1,5 +1,8 @@
 import json
+import sys
 import threading
+import types
+from contextlib import contextmanager
 from decimal import Decimal
 from http.server import ThreadingHTTPServer
 from unittest.mock import MagicMock, patch
@@ -1564,32 +1567,47 @@ def test_gemini_transcription_empty_and_malformed_payload_resilience():
         assert res == "Scarpa Nike Air", f"Atteso 'Scarpa Nike Air', ottenuto {res!r}"
 
 
+@contextmanager
+def _mock_sounddevice(transcriber):
+    """Inietta temporaneamente un modulo sounddevice simulato senza dipendere da libportaudio nei runner headless."""
+    import numpy as np
+
+    def fake_stream(*args, **kwargs):
+        cb = kwargs.get("callback")
+        mock = MagicMock()
+
+        def _enter():
+            if cb:
+                fake_audio = np.zeros((1600, 1), dtype=np.int16)
+                fake_audio[100:200] = 1000
+                cb(fake_audio, 1600, None, 0)
+            transcriber._stop_event.set()
+            return mock
+
+        mock.__enter__.side_effect = _enter
+        mock.__exit__.return_value = None
+        return mock
+
+    fake_sd = types.ModuleType("sounddevice")
+    fake_sd.InputStream = MagicMock(side_effect=fake_stream)
+
+    sentinel = object()
+    prev = sys.modules.get("sounddevice", sentinel)
+    sys.modules["sounddevice"] = fake_sd
+    try:
+        yield fake_sd
+    finally:
+        if prev is sentinel:
+            sys.modules.pop("sounddevice", None)
+        else:
+            sys.modules["sounddevice"] = prev
+
+
 def test_speech_transcriber_fallback_preservation_on_gemini_none():
     """Verifica che il fallback a Google Speech Recognition venga preservato ed eseguito quando Gemini restituisce None."""
-    import numpy as np
-    import sounddevice as sd
     import speech_recognition as sr
 
     from src.speech_helper import SpeechTranscriber
-
-    def _create_mock_stream(transcriber):
-        def fake_stream(*args, **kwargs):
-            cb = kwargs.get("callback")
-            mock = MagicMock()
-
-            def _enter():
-                if cb:
-                    fake_audio = np.zeros((1600, 1), dtype=np.int16)
-                    fake_audio[100:200] = 1000
-                    cb(fake_audio, 1600, None, 0)
-                transcriber._stop_event.set()
-                return mock
-
-            mock.__enter__.side_effect = _enter
-            mock.__exit__.return_value = None
-            return mock
-
-        return fake_stream
 
     # Sub-caso 1: Gemini restituisce None -> il fallback a Google Speech Recognition viene eseguito
     transcriber = SpeechTranscriber()
@@ -1597,7 +1615,7 @@ def test_speech_transcriber_fallback_preservation_on_gemini_none():
     errors = []
 
     with (
-        patch.object(sd, "InputStream", side_effect=_create_mock_stream(transcriber)),
+        _mock_sounddevice(transcriber),
         patch.object(sr, "Recognizer") as mock_sr,
         patch.object(sr, "AudioData"),
         patch("src.speech_helper._transcribe_with_gemini", return_value=None) as mock_gemini,
@@ -1627,7 +1645,7 @@ def test_speech_transcriber_fallback_preservation_on_gemini_none():
     errors2 = []
 
     with (
-        patch.object(sd, "InputStream", side_effect=_create_mock_stream(transcriber2)),
+        _mock_sounddevice(transcriber2),
         patch.object(sr, "Recognizer") as mock_sr2,
         patch.object(sr, "AudioData"),
         patch("src.speech_helper._transcribe_with_gemini", return_value="scarpa gemini diretta") as mock_gemini2,
@@ -1653,30 +1671,9 @@ def test_speech_transcriber_fallback_preservation_on_gemini_none():
 
 def test_speech_transcriber_empty_parts_regression_end_to_end():
     """Test di regressione end-to-end: un payload Gemini con parts: [] non deve bloccare il fallback Google."""
-    import numpy as np
-    import sounddevice as sd
     import speech_recognition as sr
 
     from src.speech_helper import SpeechTranscriber
-
-    def _create_mock_stream(transcriber):
-        def fake_stream(*args, **kwargs):
-            cb = kwargs.get("callback")
-            mock = MagicMock()
-
-            def _enter():
-                if cb:
-                    fake_audio = np.zeros((1600, 1), dtype=np.int16)
-                    fake_audio[100:200] = 1000
-                    cb(fake_audio, 1600, None, 0)
-                transcriber._stop_event.set()
-                return mock
-
-            mock.__enter__.side_effect = _enter
-            mock.__exit__.return_value = None
-            return mock
-
-        return fake_stream
 
     transcriber = SpeechTranscriber()
     results = []
@@ -1692,7 +1689,7 @@ def test_speech_transcriber_empty_parts_regression_end_to_end():
     mock_conn.getresponse.return_value = mock_resp
 
     with (
-        patch.object(sd, "InputStream", side_effect=_create_mock_stream(transcriber)),
+        _mock_sounddevice(transcriber),
         patch.object(sr, "Recognizer") as mock_sr,
         patch.object(sr, "AudioData"),
         patch("http.client.HTTPSConnection", return_value=mock_conn),
