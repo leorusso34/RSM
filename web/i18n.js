@@ -244,7 +244,8 @@ window.RSM_I18N = {
       listeningPrompt: "In ascolto, puoi parlare. Clicca di nuovo sul microfono per elaborare.",
       toastEnterText: "Scrivi o detta i prodotti prima di analizzare.",
       analyzingText: "Analisi del testo con Gemini in corso...",
-      noValidProducts: "Nessun prodotto valido rilevato dall'AI."
+      noValidProducts: "Nessun prodotto valido rilevato dall'AI.",
+      micStartFailed: "Impossibile attivare il microfono"
     },
     email: {
       syncOrders: "Sincronizzazione Ordini via Email",
@@ -437,7 +438,12 @@ window.RSM_I18N = {
       dataSafetyGuarantee: "I tuoi dati locali (database SQLite e configurazioni) sono protetti e non verranno sovrascritti.",
       downloadInProgress: "Download dell'aggiornamento in corso...",
       later: "Più Tardi",
-      updateNow: "Aggiorna Ora"
+      updateNow: "Aggiorna Ora",
+      noChangelog: "Nessuna nota di rilascio specificata.",
+      applyingRestart: "Estrazione completata! Applicazione aggiornamento e riavvio di RSM in corso...",
+      restarting: "Riavvio di RSM in corso...",
+      downloadStartFailed: "Impossibile avviare il download",
+      newVersionFallback: "Nuova"
     },
     bridgeOffline: {
       modalTitle: "Motore Locale non Raggiungibile",
@@ -487,7 +493,8 @@ window.RSM_I18N = {
       refreshTooltip: "Aggiorna tracking da 17TRACK",
       editTooltip: "Modifica codice / corriere",
       removeTooltip: "Rimuovi tracciamento",
-      confirmRemove: "Sei sicuro di voler rimuovere il tracciamento da questo prodotto?"
+      confirmRemove: "Sei sicuro di voler rimuovere il tracciamento da questo prodotto?",
+      removeError: "Errore rimozione"
     },
     notifications: {
       emptyState: "Nessuna notifica presente",
@@ -811,7 +818,8 @@ window.RSM_I18N = {
       listeningPrompt: "Listening, you can speak. Click the microphone again to process.",
       toastEnterText: "Type or dictate products before analyzing.",
       analyzingText: "Analyzing text with Gemini...",
-      noValidProducts: "No valid products detected by AI."
+      noValidProducts: "No valid products detected by AI.",
+      micStartFailed: "Unable to start microphone"
     },
     email: {
       syncOrders: "Email Order Synchronization",
@@ -1004,7 +1012,12 @@ window.RSM_I18N = {
       dataSafetyGuarantee: "Your local data (SQLite database and configurations) is safe and will not be overwritten.",
       downloadInProgress: "Downloading update...",
       later: "Later",
-      updateNow: "Update Now"
+      updateNow: "Update Now",
+      noChangelog: "No release notes specified.",
+      applyingRestart: "Extraction complete! Applying update and restarting RSM...",
+      restarting: "Restarting RSM...",
+      downloadStartFailed: "Unable to start download",
+      newVersionFallback: "New"
     },
     bridgeOffline: {
       modalTitle: "Local Engine Unreachable",
@@ -1054,7 +1067,8 @@ window.RSM_I18N = {
       refreshTooltip: "Refresh tracking from 17TRACK",
       editTooltip: "Edit code / carrier",
       removeTooltip: "Remove tracking",
-      confirmRemove: "Are you sure you want to remove tracking from this product?"
+      confirmRemove: "Are you sure you want to remove tracking from this product?",
+      removeError: "Removal error"
     },
     notifications: {
       emptyState: "No notifications",
@@ -1330,11 +1344,166 @@ function setAppLanguage(lang) {
   }
 }
 
+// Tabelle di normalizzazione per messaggi/errori provenienti dal backend Python
+const BACKEND_MSG_EXACT_EN = {
+  "Inserisci sia l'indirizzo email che la password per le app.": "Please enter both your email address and app password.",
+  "Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri.": "Please enter your Gmail address and 16-character App Password.",
+  "Configura prima l'indirizzo Gmail e la Password per le App.": "Please configure your Gmail address and App Password first.",
+  "Configura prima l'indirizzo Gmail e l'App Password nelle impostazioni.": "Please configure your Gmail address and App Password in settings first.",
+  "Connessione a Gmail stabilita con successo!": "Gmail connection established successfully!",
+  "Impossibile accedere alla cartella INBOX.": "Unable to access the INBOX folder.",
+  "Credenziali non valide: assicurati di usare la Password per le App a 16 caratteri creata su Google.": "Invalid credentials: make sure you are using the 16-character Google App Password.",
+  "WORKER_URL non è configurato.": "WORKER_URL is not configured.",
+  "Prompt richiesto per l'analisi AI.": "Prompt required for AI analysis.",
+  "Nessuna registrazione attiva.": "No active recording.",
+  "Tempo di elaborazione trascrizione scaduto.": "Transcription processing timed out.",
+  "Nessun audio registrato.": "No audio recorded.",
+  "Connessione internet non disponibile per il riconoscimento vocale. Puoi scrivere direttamente nel testo.": "Internet connection unavailable for speech recognition. You can type directly in the text box.",
+  "Nessun parlato chiaro rilevato. Riprova parlando più vicino al microfono.": "No clear speech detected. Try speaking closer to the microphone.",
+  "Dispositivo microfono non rilevato o non accessibile.": "Microphone device not found or inaccessible.",
+  "Nessun contenuto file ricevuto.": "No file content received.",
+  "Il file selezionato non contiene dati leggibili.": "The selected file contains no readable data.",
+  "Nessun prodotto da salvare.": "No products to save.",
+  "Parametro 'name' richiesto.": "Parameter 'name' is required.",
+  "Errore sconosciuto": "Unknown error",
+  "Testo recapiti richiesto per l'analisi.": "Recipient address text is required for analysis.",
+  "Testo indirizzo vuoto.": "Empty address text.",
+  "Chiave API Packlink PRO non configurata. Inseriscila per procedere.": "Packlink PRO API Key not configured. Enter it to continue.",
+  "Chiave API di Packlink PRO mancante. Configurala in 'Spedizioni Packlink' o nel file config.json.": "Missing Packlink PRO API key. Configure it in 'Packlink Shipping' or in config.json.",
+  "Chiave API di Packlink PRO non valida o non autorizzata. Verifica la chiave generata su Packlink PRO.": "Invalid or unauthorized Packlink PRO API key. Please verify the key generated on Packlink PRO.",
+  "Il nome del destinatario è obbligatorio.": "Recipient name is required.",
+  "L'indirizzo di destinazione (via e civico) è obbligatorio.": "Destination street address is required.",
+  "Il CAP del destinatario è obbligatorio.": "Recipient postal code is required.",
+  "La città del destinatario è obbligatoria.": "Recipient city is required.",
+  "Il numero di telefono del destinatario è obbligatorio per il corriere.": "Recipient phone number is required for the carrier.",
+  "Errore sconosciuto durante la creazione della bozza Packlink.": "Unknown error while creating Packlink draft.",
+  "Codice di tracciamento vuoto o non valido.": "Empty or invalid tracking number.",
+  "Il codice di tracciamento non può essere vuoto.": "Tracking number cannot be empty.",
+  "Parametro 'number' mancante o vuoto.": "Missing or empty 'number' parameter.",
+  "La risposta del servizio di tracking non è in formato JSON valido.": "Tracking service response is not valid JSON.",
+  "Spedizione non riconosciuta o codice non valido.": "Shipment not recognized or invalid tracking code.",
+  "Nessuna informazione di tracciamento disponibile per questo codice.": "No tracking information available for this code.",
+  "Superato il limite massimo di redirect HTTP": "Maximum HTTP redirect limit exceeded",
+  "Download dell'aggiornamento in corso...": "Downloading update...",
+  "Estrazione file in corso...": "Extracting files...",
+  "Avvio aggiornamento in background...": "Starting update in background...",
+  "Avvio download dell'aggiornamento...": "Starting update download...",
+  "Aggiornamento già in corso": "Update already in progress",
+  "URL di download non fornito o non valido.": "Download URL missing or invalid.",
+  "Il nome del prodotto è obbligatorio.": "Product name is required.",
+  "Il nome del prodotto non può essere vuoto.": "Product name cannot be empty.",
+  "Le vendite completate non possono essere modificate.": "Completed sales cannot be modified.",
+  "Nessun ID prodotto fornito.": "No product ID provided.",
+  "Stato target non valido.": "Invalid target status.",
+  "Il nome del luogo non può essere vuoto.": "Place name cannot be empty.",
+  "Prodotto non trovato": "Product not found",
+  "Operazione non riuscita": "Operation failed",
+  "Tempo scaduto: il server proxy AI ha impiegato più di 3 minuti. Riprova.": "Timeout: the AI proxy server took more than 3 minutes. Please retry."
+};
+
+const BACKEND_MSG_PREFIX_EN = [
+  ["Errore autenticazione IMAP: ", "IMAP authentication error: "],
+  ["Errore di connessione: ", "Connection error: "],
+  ["Errore connessione: ", "Connection error: "],
+  ["Sincronizzazione fallita: ", "Sync failed: "],
+  ["Scansione fallita: ", "Scan failed: "],
+  ["Errore Proxy AI Gemini: ", "Gemini AI Proxy error: "],
+  ["Errore di connessione proxy AI: ", "AI proxy connection error: "],
+  ["Errore proxy AI Excel import: ", "AI Excel import proxy error: "],
+  ["Errore analisi AI: ", "AI analysis error: "],
+  ["Errore durante l'analisi del file: ", "File analysis error: "],
+  ["Errore apertura browser eBay: ", "Error opening eBay in browser: "],
+  ["Nessuna inserzione trovata su eBay per: ", "No eBay listings found for: "],
+  ["Nessun prezzo valido trovato per: ", "No valid price found for: "],
+  ["Dipendenza mancante: ", "Missing dependency: "],
+  ["Impossibile completare la trascrizione: ", "Unable to complete transcription: "],
+  ["Errore analisi indirizzo: ", "Address parsing error: "],
+  ["Errore creazione bozza Packlink: ", "Packlink draft creation error: "],
+  ["Errore di connessione verso ", "Connection error to "],
+  ["Errore di connessione di rete con il servizio di tracking: ", "Network connection error with tracking service: "],
+  ["URL del proxy Cloudflare non valido: ", "Invalid Cloudflare proxy URL: "],
+  ["Errore verifica aggiornamenti: ", "Error checking updates: "],
+  ["Errore aggiornamento: ", "Update error: "],
+  ["Download in corso: ", "Downloading: "],
+  ["Errore durante il salvataggio: ", "Save error: "],
+  ["Errore durante l'aggiornamento: ", "Update error: "],
+  ["Errore aggiornamento massivo: ", "Bulk update error: "],
+  ["Errore eliminazione multipla: ", "Bulk deletion error: "],
+  ["Errore duplicazione: ", "Duplication error: "],
+  ["Errore eliminazione: ", "Deletion error: "]
+];
+
+/**
+ * Traduce dinamicamente in inglese i messaggi di errore/stato provenienti dal backend
+ * o dai listener di integrazione quando la lingua attiva è 'en'.
+ */
+function translateBackendMessage(rawMsg) {
+  if (rawMsg === null || rawMsg === undefined) return "";
+  const text = String(rawMsg);
+  if ((window.currentAppLanguage || "it") !== "en") return text;
+
+  const trimmed = text.trim();
+  if (!trimmed) return text;
+
+  // Gestione ricorsiva dei prefissi esterni usati dai toast e modali
+  const wrapperPrefixes = [
+    ["Errore: ", "Error: "],
+    ["Error: ", "Error: "],
+    ["Errore durante l'annullamento: ", "Error during undo: "],
+    ["Error during undo: ", "Error during undo: "],
+    ["Aggiornamento non riuscito: ", "Update failed: "],
+    ["Update failed: ", "Update failed: "],
+    ["eBay: ", "eBay: "],
+    ["Excel: ", "Excel: "]
+  ];
+  for (let i = 0; i < wrapperPrefixes.length; i++) {
+    const [srcPrefix, dstPrefix] = wrapperPrefixes[i];
+    if (trimmed.startsWith(srcPrefix)) {
+      const inner = trimmed.slice(srcPrefix.length);
+      return `${dstPrefix}${translateBackendMessage(inner)}`;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(BACKEND_MSG_EXACT_EN, trimmed)) {
+    return BACKEND_MSG_EXACT_EN[trimmed];
+  }
+
+  for (let i = 0; i < BACKEND_MSG_PREFIX_EN.length; i++) {
+    const [itPrefix, enPrefix] = BACKEND_MSG_PREFIX_EN[i];
+    if (trimmed.startsWith(itPrefix)) {
+      const rest = trimmed.slice(itPrefix.length);
+      return `${enPrefix}${translateBackendMessage(rest)}`;
+    }
+  }
+
+  // Pattern parametrici specifici
+  const proxyAiMatch = trimmed.match(/^Errore Proxy AI \(([^)]+)\):\s*(.*)$/);
+  if (proxyAiMatch) return `AI Proxy error (${proxyAiMatch[1]}): ${proxyAiMatch[2]}`;
+
+  const proxyEbayMatch = trimmed.match(/^Errore Proxy eBay \(([^)]+)\):\s*(.*)$/);
+  if (proxyEbayMatch) return `eBay Proxy error (${proxyEbayMatch[1]}): ${translateBackendMessage(proxyEbayMatch[2])}`;
+
+  const pkErrMatch = trimmed.match(/^Errore Packlink PRO \(([^)]+)\):\s*(.*)$/);
+  if (pkErrMatch) return `Packlink PRO error (${pkErrMatch[1]}): ${pkErrMatch[2]}`;
+
+  const trkHttpMatch = trimmed.match(/^Il server di tracking ha risposto con codice HTTP (\d+):\s*(.*)$/);
+  if (trkHttpMatch) return `Tracking server responded with HTTP code ${trkHttpMatch[1]}: ${trkHttpMatch[2]}`;
+
+  const notFoundMatch = trimmed.match(/^Prodotto #(\d+) non trovato\.?$/);
+  if (notFoundMatch) return `Product #${notFoundMatch[1]} not found.`;
+
+  const notifDeliveredMatch = trimmed.match(/^17TRACK \(([^)]+)\): Il pacco risulta Consegnato$/);
+  if (notifDeliveredMatch) return `17TRACK (${notifDeliveredMatch[1]}): Package is marked as Delivered`;
+
+  return text;
+}
+
 // Inizializzazione delle variabili e funzioni globali
 window.currentAppLanguage = detectInitialLanguage();
 window.t = t;
 window.applyTranslations = applyTranslations;
 window.setAppLanguage = setAppLanguage;
+window.translateBackendMessage = translateBackendMessage;
 
 // Inizializzazione automatica al caricamento del documento
 if (typeof document !== "undefined") {

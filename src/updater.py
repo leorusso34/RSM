@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import APP_VERSION, GITHUB_REPO, PROJECT_DIR, RSM_AUTH_KEY, WORKER_URL
+from .utils import tr_msg
 
 
 def parse_version_tuple(version_str: str) -> tuple[int, int, int]:
@@ -87,7 +88,7 @@ def _fetch_release_info_worker() -> dict[str, Any] | None:
         return None
 
 
-def check_for_updates(current_version: str = APP_VERSION) -> dict[str, Any] | None:
+def check_for_updates(current_version: str = APP_VERSION, lang: str = "it") -> dict[str, Any] | None:
     """
     Controlla se è disponibile un aggiornamento interrogando prima GitHub e poi il Worker di fallback.
     """
@@ -141,7 +142,8 @@ def check_for_updates(current_version: str = APP_VERSION) -> dict[str, Any] | No
     return {
         "version": tag_name,
         "title": data.get("name") or tag_name,
-        "changelog": (data.get("body") or "").strip() or "Nessun dettaglio specificato.",
+        "changelog": (data.get("body") or "").strip()
+        or tr_msg(lang, "Nessun dettaglio specificato.", "No details specified."),
         "download_url": download_url,
         "asset_name": zip_asset.get("name", "RSM-update.zip"),
         "size_bytes": zip_asset.get("size", 0),
@@ -154,6 +156,7 @@ def download_file_with_redirects(
     headers: dict[str, str] | None = None,
     progress_callback: Callable[[float], None] | None = None,
     max_redirects: int = 5,
+    lang: str = "it",
 ) -> None:
     """Scarica il file seguendo i redirect HTTP (GitHub -> AWS S3 / Azure CDN)."""
     current_url = url
@@ -178,7 +181,13 @@ def download_file_with_redirects(
             location = resp.getheader("Location")
             conn.close()
             if not location:
-                raise RuntimeError(f"Redirect HTTP {resp.status} senza Location")
+                raise RuntimeError(
+                    tr_msg(
+                        lang,
+                        f"Redirect HTTP {resp.status} senza Location",
+                        f"HTTP {resp.status} redirect without Location header",
+                    )
+                )
             current_url = location
             if "githubusercontent.com" in location:
                 req_headers.pop("Authorization", None)
@@ -187,7 +196,13 @@ def download_file_with_redirects(
 
         if resp.status != 200:
             conn.close()
-            raise RuntimeError(f"Errore download HTTP {resp.status}: {resp.reason}")
+            raise RuntimeError(
+                tr_msg(
+                    lang,
+                    f"Errore download HTTP {resp.status}: {resp.reason}",
+                    f"HTTP download error {resp.status}: {resp.reason}",
+                )
+            )
 
         total_length = int(resp.getheader("Content-Length", "0"))
         downloaded = 0
@@ -208,13 +223,20 @@ def download_file_with_redirects(
             progress_callback(1.0)
         return
 
-    raise RuntimeError("Superato il limite massimo di redirect HTTP")
+    raise RuntimeError(
+        tr_msg(
+            lang,
+            "Superato il limite massimo di redirect HTTP",
+            "Maximum HTTP redirect limit exceeded",
+        )
+    )
 
 
 def apply_update_and_restart(
     download_url: str,
     progress_callback: Callable[[float], None] | None = None,
     status_callback: Callable[[str], None] | None = None,
+    lang: str = "it",
 ) -> None:
     """Scarica lo zip, estrae i contenuti e lancia lo script di aggiornamento preservando dati e configurazioni."""
     temp_dir = Path(tempfile.mkdtemp(prefix="rsm_update_"))
@@ -222,7 +244,7 @@ def apply_update_and_restart(
 
     try:
         if status_callback:
-            status_callback("Download dell'aggiornamento in corso...")
+            status_callback(tr_msg(lang, "Download dell'aggiornamento in corso...", "Downloading update..."))
 
         headers = {}
         if RSM_AUTH_KEY and "workers.dev" in download_url:
@@ -233,10 +255,11 @@ def apply_update_and_restart(
             zip_dest,
             headers=headers,
             progress_callback=progress_callback,
+            lang=lang,
         )
 
         if status_callback:
-            status_callback("Estrazione file in corso...")
+            status_callback(tr_msg(lang, "Estrazione file in corso...", "Extracting files..."))
 
         extract_dir = temp_dir / "extracted"
         extract_dir.mkdir(exist_ok=True)
@@ -293,7 +316,7 @@ def apply_update_and_restart(
             target_app_dir = (PROJECT_DIR / "dist" / "RSM").resolve()
 
         if status_callback:
-            status_callback("Avvio aggiornamento in background...")
+            status_callback(tr_msg(lang, "Avvio aggiornamento in background...", "Starting update in background..."))
 
         system_temp = Path(tempfile.gettempdir())
         log_path = system_temp / "rsm_update.log"

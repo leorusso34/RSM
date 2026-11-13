@@ -13,6 +13,7 @@ import urllib.parse
 import webbrowser
 
 from .config import RSM_AUTH_KEY, WORKER_URL
+from .utils import tr_msg
 
 # ---------------------------------------------------------------------------
 # Costanti API eBay
@@ -70,6 +71,7 @@ def fetch_market_prices(
     name: str,
     size: str,
     limit: int = 100,
+    lang: str = "it",
 ) -> dict:
     """
     Recupera i prezzi delle inserzioni eBay attive per un prodotto tramite il Cloudflare
@@ -79,6 +81,7 @@ def fetch_market_prices(
         name:  Nome del prodotto.
         size:  Taglia (vuota o "UNI" → non inclusa nella query).
         limit: Numero massimo di risultati da analizzare (default 100).
+        lang:  Lingua dei messaggi di errore ('it' o 'en').
 
     Returns:
         Dizionario con le chiavi:
@@ -93,7 +96,7 @@ def fetch_market_prices(
         ValueError:   se non viene trovata nessuna inserzione valida.
     """
     if not WORKER_URL:
-        raise RuntimeError("WORKER_URL non è configurato.")
+        raise RuntimeError(tr_msg(lang, "WORKER_URL non è configurato.", "WORKER_URL is not configured."))
 
     # Costruzione query (stessa logica dell'URL browser)
     query_parts = [name.strip()]
@@ -122,15 +125,30 @@ def fetch_market_prices(
     try:
         data = json.loads(raw)
     except (json.JSONDecodeError, ValueError):
-        data = {"error": f"Risposta non valida dal server proxy (HTTP {resp.status})"}
+        data = {
+            "error": tr_msg(
+                lang,
+                f"Risposta non valida dal server proxy (HTTP {resp.status})",
+                f"Invalid response from proxy server (HTTP {resp.status})",
+            )
+        }
 
     if resp.status != 200 or "error" in data:
-        error = data.get("error") or data.get("errors", [{}])[0].get("message", "Errore sconosciuto")
-        raise RuntimeError(f"Errore Proxy eBay ({resp.status}): {error}")
+        error = data.get("error") or data.get("errors", [{}])[0].get(
+            "message",
+            tr_msg(lang, "Errore sconosciuto", "Unknown error"),
+        )
+        raise RuntimeError(tr_msg(lang, f"Errore Proxy eBay ({resp.status}): {error}", f"eBay Proxy error ({resp.status}): {error}"))
 
     items = data.get("itemSummaries", [])
     if not items:
-        raise ValueError(f"Nessuna inserzione trovata su eBay per: {query}")
+        raise ValueError(
+            tr_msg(
+                lang,
+                f"Nessuna inserzione trovata su eBay per: {query}",
+                f"No eBay listings found for: {query}",
+            )
+        )
 
     prices = []
     for item in items:
@@ -142,7 +160,13 @@ def fetch_market_prices(
 
     prices = [p for p in prices if p > 0]
     if not prices:
-        raise ValueError(f"Nessun prezzo valido trovato per: {query}")
+        raise ValueError(
+            tr_msg(
+                lang,
+                f"Nessun prezzo valido trovato per: {query}",
+                f"No valid price found for: {query}",
+            )
+        )
 
     return {
         "count": len(prices),

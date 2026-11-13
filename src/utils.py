@@ -11,6 +11,17 @@ from .config import (
 )
 
 
+def normalize_lang(lang: str | None) -> str:
+    """Normalizza un codice lingua in 'en' oppure 'it' (predefinito)."""
+    raw = str(lang or "").strip().lower()
+    return "en" if raw.startswith("en") else "it"
+
+
+def tr_msg(lang: str | None, it_msg: str, en_msg: str) -> str:
+    """Restituisce il messaggio localizzato in base alla lingua richiesta."""
+    return en_msg if normalize_lang(lang) == "en" else it_msg
+
+
 def parse_money(value: Any, allow_empty: bool = False) -> Decimal | None:
     """Converte un importo monetario valido in Decimal con due decimali."""
     if value is None or str(value).strip() == "":

@@ -1815,4 +1815,107 @@ def test_bridge_speech_adversarial_guards(tmp_path):
         server.server_close()
 
 
+def test_bridge_bilingual_integration_errors_en_vs_it(tmp_path):
+    """Verifica che gli endpoint di integrazione (Email Sync, AI, Packlink, eBay, Excel, Tracking) restituiscano errori in inglese con X-App-Lang: en."""
+    test_db = tmp_path / "test_bilingual_errors.db"
+    InventoryDatabase(test_db)
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        # 1. Email Sync: test-email-connection senza credenziali (EN vs default IT)
+        for lang_hdr, expected_sub in [
+            ("en", "Please enter your Gmail address and 16-character App Password."),
+            ("it", "Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri."),
+        ]:
+            req = request.Request(
+                f"http://127.0.0.1:{port}/api/test-email-connection",
+                data=b"{}",
+                headers={"Content-Type": "application/json", "X-App-Lang": lang_hdr},
+                method="POST",
+            )
+            try:
+                request.urlopen(req)
+                raise AssertionError("Atteso HTTP 400 per credenziali mancanti")
+            except HTTPError as err:
+                assert err.code == 400
+                body = json.loads(err.read().decode("utf-8"))
+                assert expected_sub in body["error"]
+
+        # 2. Email Sync: /api/scan-emails e /api/sync-email senza credenziali in inglese
+        for ep, expected_sub in [
+            ("/api/scan-emails", "Please configure your Gmail address and App Password first."),
+            ("/api/sync-email", "Please configure your Gmail address and App Password in settings first."),
+        ]:
+            req = request.Request(
+                f"http://127.0.0.1:{port}{ep}",
+                data=b"{}",
+                headers={"Content-Type": "application/json", "X-App-Lang": "en"},
+                method="POST",
+            )
+            try:
+                request.urlopen(req)
+                raise AssertionError(f"Atteso HTTP 400 su {ep}")
+            except HTTPError as err:
+                assert err.code == 400
+                body = json.loads(err.read().decode("utf-8"))
+                assert expected_sub in body["error"]
+
+        # 3. Email Sync: errore credenziali Gmail reali propagate da test_gmail_connection in inglese
+        import imaplib
+
+        with patch("imaplib.IMAP4_SSL") as mock_imap:
+            mock_mail = MagicMock()
+            mock_mail.login.side_effect = imaplib.IMAP4.error(b"[AUTHENTICATIONFAILED] Invalid credentials (Failure)")
+            mock_imap.return_value = mock_mail
+            req = request.Request(
+                f"http://127.0.0.1:{port}/api/test-email-connection",
+                data=json.dumps({"email_sync_address": "user@gmail.com", "email_sync_app_password": "abcdefghijklmnop"}).encode("utf-8"),
+                headers={"Content-Type": "application/json", "X-App-Lang": "en"},
+                method="POST",
+            )
+            with request.urlopen(req) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                assert data["success"] is False
+                assert "Invalid credentials" in data["message"]
+
+        # 4. Altre integrazioni in inglese: AI, Excel, Packlink, eBay, Tracking, Bulk Status
+        integration_cases = [
+            ("POST", "/api/ai-parse", {}, "Prompt required for AI analysis."),
+            ("POST", "/api/parse-excel", {}, "No file content received."),
+            ("POST", "/api/packlink/create-draft", {}, "Packlink PRO API Key not configured."),
+            ("GET", "/api/ebay-prices", None, "Parameter 'name' is required."),
+            ("GET", "/api/tracking", None, "Missing or empty 'number' parameter."),
+            ("POST", "/api/products/bulk-status", {"ids": []}, "No product ID provided."),
+        ]
+        for method, ep, payload, expected_sub in integration_cases:
+            req = request.Request(
+                f"http://127.0.0.1:{port}{ep}",
+                data=json.dumps(payload).encode("utf-8") if payload is not None else None,
+                headers={"Content-Type": "application/json", "X-App-Lang": "en"},
+                method=method,
+            )
+            try:
+                request.urlopen(req)
+                raise AssertionError(f"Atteso HTTP 400 su {method} {ep}")
+            except HTTPError as err:
+                assert err.code == 400
+                body = json.loads(err.read().decode("utf-8"))
+                assert expected_sub in body["error"]
+
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 

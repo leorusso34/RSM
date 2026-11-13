@@ -8,6 +8,8 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
+from .utils import tr_msg
+
 
 def _normalize_language(language: Any = "it-IT") -> str:
     """Normalizza il codice lingua per la trascrizione ('en*' -> 'en-US', fallback 'it-IT')."""
@@ -142,7 +144,7 @@ class SpeechTranscriber:
                 import speech_recognition as sr
             except ImportError as e:
                 self._is_recording = False
-                on_error(f"Dipendenza mancante: {e}")
+                on_error(tr_msg(normalized_lang, f"Dipendenza mancante: {e}", f"Missing dependency: {e}"))
                 return
 
             frames = []
@@ -161,7 +163,7 @@ class SpeechTranscriber:
                 self._is_recording = False
 
                 if not frames:
-                    on_error("Nessun audio registrato.")
+                    on_error(tr_msg(normalized_lang, "Nessun audio registrato.", "No audio recorded."))
                     return
 
                 audio_data = np.concatenate(frames, axis=0)
@@ -206,14 +208,36 @@ class SpeechTranscriber:
                     or "RequestError" in name
                 ):
                     on_error(
-                        "Connessione internet non disponibile per il riconoscimento vocale. Puoi scrivere direttamente nel testo."
+                        tr_msg(
+                            normalized_lang,
+                            "Connessione internet non disponibile per il riconoscimento vocale. Puoi scrivere direttamente nel testo.",
+                            "Internet connection unavailable for speech recognition. You can type directly in the text box.",
+                        )
                     )
                 elif "UnknownValueError" in name or "Could not understand" in msg:
-                    on_error("Nessun parlato chiaro rilevato. Riprova parlando più vicino al microfono.")
+                    on_error(
+                        tr_msg(
+                            normalized_lang,
+                            "Nessun parlato chiaro rilevato. Riprova parlando più vicino al microfono.",
+                            "No clear speech detected. Try speaking closer to the microphone.",
+                        )
+                    )
                 elif "Invalid" in msg or "device" in msg.lower():
-                    on_error("Dispositivo microfono non rilevato o non accessibile.")
+                    on_error(
+                        tr_msg(
+                            normalized_lang,
+                            "Dispositivo microfono non rilevato o non accessibile.",
+                            "Microphone device not found or inaccessible.",
+                        )
+                    )
                 else:
-                    on_error(f"Impossibile completare la trascrizione: {msg}")
+                    on_error(
+                        tr_msg(
+                            normalized_lang,
+                            f"Impossibile completare la trascrizione: {msg}",
+                            f"Unable to complete transcription: {msg}",
+                        )
+                    )
 
         self._thread = threading.Thread(target=_run, daemon=True)
         self._thread.start()

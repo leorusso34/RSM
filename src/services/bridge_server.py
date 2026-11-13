@@ -35,7 +35,7 @@ from src.config import (
 )
 from src.database import InventoryDatabase
 from src.tracking import fetch_tracking_info
-from src.utils import money_to_cents
+from src.utils import money_to_cents, normalize_lang, tr_msg
 
 PORT = 28472
 HOST = "127.0.0.1"
@@ -65,6 +65,7 @@ def get_thread_db() -> InventoryDatabase:
 # --------------------------------------------------------------------------
 _speech_lock = threading.Lock()
 _active_transcriber: Any = None
+_speech_lang: str = "it-IT"
 _transcription_status = {
     "is_recording": False,
     "is_processing": False,
@@ -75,7 +76,7 @@ _transcription_status = {
 
 def _start_voice_recording(language: str = "it-IT") -> tuple[bool, str]:
     """Avvia la registrazione vocale in background e imposta i callback per la trascrizione."""
-    global _active_transcriber
+    global _active_transcriber, _speech_lang
     with _speech_lock:
         if _active_transcriber and getattr(_active_transcriber, "is_recording", False):
             return True, "already_recording"
@@ -83,6 +84,7 @@ def _start_voice_recording(language: str = "it-IT") -> tuple[bool, str]:
         # Normalizzazione lingua: "en*" -> "en-US", altrimenti fallback deterministico a "it-IT"
         raw_lang = str(language or "").strip().lower()
         normalized_lang = "en-US" if raw_lang.startswith("en") else "it-IT"
+        _speech_lang = normalized_lang
 
         _transcription_status["is_recording"] = True
         _transcription_status["is_processing"] = False
@@ -127,12 +129,13 @@ def _start_voice_recording(language: str = "it-IT") -> tuple[bool, str]:
             return False, str(exc)
 
 
-def _stop_voice_recording() -> tuple[bool, str]:
+def _stop_voice_recording(lang: str | None = None) -> tuple[bool, str]:
+    effective_lang = lang or _speech_lang
     with _speech_lock:
         if not _active_transcriber or not getattr(_active_transcriber, "is_recording", False):
             if _transcription_status["text"]:
                 return True, _transcription_status["text"]
-            return False, "Nessuna registrazione attiva."
+            return False, tr_msg(effective_lang, "Nessuna registrazione attiva.", "No active recording.")
 
         _transcription_status["is_recording"] = False
         _transcription_status["is_processing"] = True
@@ -148,7 +151,11 @@ def _stop_voice_recording() -> tuple[bool, str]:
                     return False, _transcription_status["error"]
         time.sleep(0.1)
 
-    return False, "Tempo di elaborazione trascrizione scaduto."
+    return False, tr_msg(
+        effective_lang,
+        "Tempo di elaborazione trascrizione scaduto.",
+        "Transcription processing timed out.",
+    )
 
 
 # --------------------------------------------------------------------------
@@ -166,33 +173,40 @@ _update_state: dict[str, Any] = {
 }
 
 
-def _run_update_worker(download_url: str) -> None:
+def _run_update_worker(download_url: str, lang: str = "it") -> None:
     try:
 
         def on_progress(fraction: float) -> None:
             with _updater_lock:
                 _update_state["status"] = "downloading"
                 _update_state["progress"] = fraction
-                _update_state["message"] = f"Download in corso: {int(fraction * 100)}%"
+                pct = int(fraction * 100)
+                _update_state["message"] = tr_msg(lang, f"Download in corso: {pct}%", f"Downloading: {pct}%")
 
         def on_status(msg: str) -> None:
             with _updater_lock:
                 _update_state["message"] = msg
-                if "Estrazione" in msg:
+                low = msg.lower()
+                if "estrazione" in low or "extracting" in low:
                     _update_state["status"] = "extracting"
-                elif "Avvio" in msg or "Riavvio" in msg:
+                elif "avvio" in low or "riavvio" in low or "starting" in low or "restarting" in low:
                     _update_state["status"] = "applying"
 
         apply_update_and_restart(
             download_url=download_url,
             progress_callback=on_progress,
             status_callback=on_status,
+            lang=lang,
         )
     except Exception as e:  # noqa: BLE001
         with _updater_lock:
             _update_state["status"] = "error"
             _update_state["error"] = str(e)
-            _update_state["message"] = f"Errore aggiornamento: {e}"
+            _update_state["message"] = tr_msg(
+                lang,
+                f"Errore aggiornamento: {e}",
+                f"Update error: {e}",
+            )
 
 
 class RSMBridgeHandler(BaseHTTPRequestHandler):
@@ -247,6 +261,30 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
     def _send_error(self, message: str, status: int = HTTPStatus.BAD_REQUEST) -> None:
         self._send_json({"success": False, "error": message}, status=status)
+
+    def _get_lang(
+        self,
+        body: dict[str, Any] | None = None,
+        params: dict[str, list[str]] | None = None,
+    ) -> str:
+        """Determina la lingua richiesta dal client ('en' o 'it' predefinito)."""
+        if self.headers:
+            hdr = self.headers.get("X-App-Lang")
+            if hdr and str(hdr).strip():
+                return normalize_lang(hdr)
+        if params:
+            for key in ("lang", "language"):
+                vals = params.get(key)
+                if isinstance(vals, list) and vals and str(vals[0]).strip():
+                    return normalize_lang(vals[0])
+        if isinstance(body, dict):
+            for key in ("lang", "language"):
+                val = body.get(key)
+                if isinstance(val, (list, tuple)) and val:
+                    val = val[0]
+                if val is not None and str(val).strip():
+                    return normalize_lang(str(val))
+        return "it"
 
     def _read_body_json(self) -> dict[str, Any]:
         """Legge ed esegue il parsing difensivo del payload JSON dal body HTTP."""
@@ -399,40 +437,49 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
         # Stima prezzi di mercato eBay
         if path == "/api/ebay-prices":
+            lang = self._get_lang(params=params)
             name_vals = params.get("name")
             name = str(name_vals[0]).strip() if isinstance(name_vals, list) and name_vals else ""
             size_vals = params.get("size")
             size = str(size_vals[0]).strip() if isinstance(size_vals, list) and size_vals else ""
             if not name:
-                self._send_error("Parametro 'name' richiesto.")
+                self._send_error(tr_msg(lang, "Parametro 'name' richiesto.", "Parameter 'name' is required."))
                 return
             try:
                 from src.ebay_api import fetch_market_prices
 
-                ebay_res = fetch_market_prices(name, size)
+                ebay_res = fetch_market_prices(name, size, lang=lang)
                 self._send_json({"success": True, "data": ebay_res})
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"eBay lookup: {e}")
+                self._send_error(tr_msg(lang, f"eBay lookup: {e}", f"eBay lookup: {e}"))
             return
 
         # Dettaglio singolo prodotto /api/products/<id>
         match_id = re.match(r"^/api/products/(\d+)$", path)
         if match_id:
+            lang = self._get_lang(params=params)
             prod_id = int(match_id.group(1))
             product = self.db.get(prod_id)
             if product:
                 self._send_json({"success": True, "data": product})
             else:
-                self._send_error("Prodotto non trovato", status=HTTPStatus.NOT_FOUND)
+                self._send_error(
+                    tr_msg(lang, "Prodotto non trovato", "Product not found"),
+                    status=HTTPStatus.NOT_FOUND,
+                )
             return
 
         # Tracking 17TRACK di uno specifico prodotto /api/products/<id>/tracking
         match_prod_tracking = re.match(r"^/api/products/(\d+)/tracking$", path)
         if match_prod_tracking:
+            lang = self._get_lang(params=params)
             prod_id = int(match_prod_tracking.group(1))
             product = self.db.get(prod_id)
             if not product:
-                self._send_error(f"Prodotto #{prod_id} non trovato.", status=HTTPStatus.NOT_FOUND)
+                self._send_error(
+                    tr_msg(lang, f"Prodotto #{prod_id} non trovato.", f"Product #{prod_id} not found."),
+                    status=HTTPStatus.NOT_FOUND,
+                )
                 return
 
             query_params = parse_qs(parsed_url.query)
@@ -472,7 +519,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 except (json.JSONDecodeError, TypeError, ValueError):
                     pass
 
-            info = fetch_tracking_info(tracking_num, carrier)
+            info = fetch_tracking_info(tracking_num, carrier, lang=lang)
             resolved_carrier = info.get("carrier") if info.get("success") else carrier
             if info.get("success"):
                 self.db.update_product_tracking(
@@ -497,14 +544,21 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         # Query diretta generica di tracking /api/tracking?number=...&carrier=...
         if path == "/api/tracking":
             query_params = parse_qs(parsed_url.query)
+            lang = self._get_lang(params=query_params)
             num_vals = query_params.get("number")
             num = str(num_vals[0]).strip() if isinstance(num_vals, list) and num_vals else ""
             car_vals = query_params.get("carrier")
             carrier = str(car_vals[0]).strip() if isinstance(car_vals, list) and car_vals else ""
             if not num:
-                self._send_error("Parametro 'number' mancante o vuoto.")
+                self._send_error(
+                    tr_msg(
+                        lang,
+                        "Parametro 'number' mancante o vuoto.",
+                        "Missing or empty 'number' parameter.",
+                    )
+                )
                 return
-            res = fetch_tracking_info(num, carrier)
+            res = fetch_tracking_info(num, carrier, lang=lang)
             self._send_json(res)
             return
 
@@ -566,6 +620,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
         # Verifica disponibilità aggiornamenti (Punto 8)
         if path == "/api/updates/check":
+            lang = self._get_lang(params=params)
             try:
                 import importlib
 
@@ -578,7 +633,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     if isinstance(ver_vals, list) and ver_vals
                     else src.config.APP_VERSION
                 )
-                update_info = check_for_updates(current_version=curr_ver)
+                update_info = check_for_updates(current_version=curr_ver, lang=lang)
                 with _updater_lock:
                     _update_state["latest_info"] = update_info
                 self._send_json(
@@ -590,7 +645,13 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     }
                 )
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore verifica aggiornamenti: {e}")
+                self._send_error(
+                    tr_msg(
+                        lang,
+                        f"Errore verifica aggiornamenti: {e}",
+                        f"Error checking updates: {e}",
+                    )
+                )
             return
 
         # Stato avanzamento download/installazione aggiornamento (Punto 8)
@@ -609,7 +670,11 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 )
             return
 
-        self._send_error("Endpoint non trovato", status=HTTPStatus.NOT_FOUND)
+        lang = self._get_lang(params=params)
+        self._send_error(
+            tr_msg(lang, "Endpoint non trovato", "Endpoint not found"),
+            status=HTTPStatus.NOT_FOUND,
+        )
 
     # --------------------------------------------------------------------------
     # GESTIONE METODI POST
@@ -617,11 +682,13 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         parsed_url = urlparse(self.path)
         path = parsed_url.path.rstrip("/") or "/"
+        params = parse_qs(parsed_url.query)
         body = self._read_body_json()
+        lang = self._get_lang(body=body, params=params)
 
         # Avvio registrazione vocale SpeechTranscriber con supporto lingua (IT | EN)
         if path == "/api/speech/start":
-            # Estrazione difensiva lingua da JSON body o query parameters con fallback a "it-IT"
+            # Estrazione difensiva lingua da JSON body o query parameters con fallback a header / "it-IT"
             requested_lang: str | None = None
             if isinstance(body, dict):
                 raw_body_lang = body.get("language") or body.get("lang")
@@ -631,7 +698,6 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     requested_lang = str(raw_body_lang).strip()
 
             if not requested_lang:
-                params = parse_qs(parsed_url.query)
                 for q_key in ("language", "lang"):
                     q_vals = params.get(q_key)
                     if isinstance(q_vals, list) and q_vals:
@@ -640,7 +706,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                             requested_lang = val
                             break
 
-            language = requested_lang or "it-IT"
+            language = requested_lang or ("en-US" if lang == "en" else "it-IT")
             ok, msg = _start_voice_recording(language=language)
             if ok:
                 self._send_json({"success": True, "status": msg})
@@ -650,7 +716,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
         # Arresto registrazione vocale e trascrizione con Gemini
         if path == "/api/speech/stop":
-            ok, result_or_err = _stop_voice_recording()
+            ok, result_or_err = _stop_voice_recording(lang=lang)
             if ok:
                 self._send_json({"success": True, "text": result_or_err})
             else:
@@ -661,15 +727,17 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if path == "/api/ai-parse":
             prompt = body.get("prompt", "").strip()
             if not prompt:
-                self._send_error("Prompt richiesto per l'analisi AI.")
+                self._send_error(
+                    tr_msg(lang, "Prompt richiesto per l'analisi AI.", "Prompt required for AI analysis.")
+                )
                 return
             try:
                 from src.ai_agent import parse_product_with_ai
 
-                parsed = parse_product_with_ai(prompt)
+                parsed = parse_product_with_ai(prompt, lang=lang)
                 self._send_json({"success": True, "data": parsed})
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore analisi AI: {e}")
+                self._send_error(tr_msg(lang, f"Errore analisi AI: {e}", f"AI analysis error: {e}"))
             return
 
         # Sincronizzazione Email Gmail
@@ -677,7 +745,13 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             email_addr = self.db.get_setting("email_sync_address")
             app_pwd = self.db.get_setting("email_sync_app_password")
             if not email_addr or not app_pwd:
-                self._send_error("Configura prima l'indirizzo Gmail e l'App Password nelle impostazioni.")
+                self._send_error(
+                    tr_msg(
+                        lang,
+                        "Configura prima l'indirizzo Gmail e l'App Password nelle impostazioni.",
+                        "Please configure your Gmail address and App Password in settings first.",
+                    )
+                )
                 return
             try:
                 from src.email_sync import (
@@ -690,7 +764,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 imported = []
                 read_uids = []
                 for em in emails:
-                    extracted = parse_order_email_with_gemini(em)
+                    extracted = parse_order_email_with_gemini(em, lang=lang)
                     for prod in extracted:
                         new_id = self.db.save(
                             {
@@ -710,7 +784,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     mark_emails_as_read(email_addr, app_pwd, read_uids)
                 self._send_json({"success": True, "imported_count": len(imported), "products": imported})
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Sincronizzazione fallita: {e}")
+                self._send_error(tr_msg(lang, f"Sincronizzazione fallita: {e}", f"Sync failed: {e}"))
             return
 
         # Test connessione Gmail
@@ -722,15 +796,21 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 .strip()
             )
             if not email_addr or not app_pwd:
-                self._send_error("Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri.")
+                self._send_error(
+                    tr_msg(
+                        lang,
+                        "Inserisci l'indirizzo Gmail e la Password per le App a 16 caratteri.",
+                        "Please enter your Gmail address and 16-character App Password.",
+                    )
+                )
                 return
             try:
                 from src.email_sync import test_gmail_connection
 
-                ok, msg = test_gmail_connection(email_addr, app_pwd)
+                ok, msg = test_gmail_connection(email_addr, app_pwd, lang=lang)
                 self._send_json({"success": ok, "message": msg})
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore connessione: {e}")
+                self._send_error(tr_msg(lang, f"Errore connessione: {e}", f"Connection error: {e}"))
             return
 
         # Apertura ricerca eBay nel browser predefinito
@@ -745,7 +825,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 open_search_in_browser(name, size)
                 self._send_json({"success": True})
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore apertura browser eBay: {e}")
+                self._send_error(
+                    tr_msg(lang, f"Errore apertura browser eBay: {e}", f"Error opening eBay in browser: {e}")
+                )
             return
 
         # Scansione Email Gmail con anteprima
@@ -757,7 +839,13 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 .strip()
             )
             if not email_addr or not app_pwd:
-                self._send_error("Configura prima l'indirizzo Gmail e la Password per le App.")
+                self._send_error(
+                    tr_msg(
+                        lang,
+                        "Configura prima l'indirizzo Gmail e la Password per le App.",
+                        "Please configure your Gmail address and App Password first.",
+                    )
+                )
                 return
             try:
                 from src.email_sync import (
@@ -769,7 +857,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 extracted_items = []
                 for em in emails:
                     try:
-                        parsed = parse_order_email_with_gemini(em)
+                        parsed = parse_order_email_with_gemini(em, lang=lang)
                         for prod in parsed:
                             extracted_items.append(
                                 {
@@ -786,7 +874,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                         print(f"Errore parsing email UID {em.get('uid')}: {err}")
                 self._send_json({"success": True, "emails_scanned": len(emails), "items": extracted_items})
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Scansione fallita: {e}")
+                self._send_error(tr_msg(lang, f"Scansione fallita: {e}", f"Scan failed: {e}"))
             return
 
         # Salvataggio ordini email nei Pre-ordini
@@ -849,29 +937,55 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     self.db.set_setting("email_sync_app_password", pwd_val)
             if "packlink_api_key" in body:
                 self.db.set_setting("packlink_api_key", str(body.get("packlink_api_key") or "").strip())
-            self._send_json({"success": True, "message": "Impostazioni salvate con successo!"})
+            self._send_json(
+                {
+                    "success": True,
+                    "message": tr_msg(
+                        lang,
+                        "Impostazioni salvate con successo!",
+                        "Settings saved successfully!",
+                    ),
+                }
+            )
             return
 
         # Salvataggio rapido chiave API Packlink PRO
         if path == "/api/packlink/config":
             pk_key = str(body.get("api_key", "")).strip()
             self.db.set_setting("packlink_api_key", pk_key)
-            self._send_json({"success": True, "message": "Chiave API Packlink PRO salvata con successo!"})
+            self._send_json(
+                {
+                    "success": True,
+                    "message": tr_msg(
+                        lang,
+                        "Chiave API Packlink PRO salvata con successo!",
+                        "Packlink PRO API Key saved successfully!",
+                    ),
+                }
+            )
             return
 
         # Analisi AI recapiti e dati spedizione per Packlink PRO
         if path == "/api/packlink/parse-address":
             raw_text = str(body.get("text", "")).strip()
             if not raw_text:
-                self._send_error("Testo recapiti richiesto per l'analisi.")
+                self._send_error(
+                    tr_msg(
+                        lang,
+                        "Testo recapiti richiesto per l'analisi.",
+                        "Recipient address text is required for analysis.",
+                    )
+                )
                 return
             try:
                 from src.ai_agent import parse_shipping_address_with_ai
 
-                parsed = parse_shipping_address_with_ai(raw_text)
+                parsed = parse_shipping_address_with_ai(raw_text, lang=lang)
                 self._send_json({"success": True, "data": parsed})
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore analisi indirizzo: {e}")
+                self._send_error(
+                    tr_msg(lang, f"Errore analisi indirizzo: {e}", f"Address parsing error: {e}")
+                )
             return
 
         # Creazione bozza di spedizione su Packlink PRO (POST /v1/drafts)
@@ -882,7 +996,13 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 self.db.set_setting("packlink_api_key", api_key)
 
             if not api_key:
-                self._send_error("Chiave API Packlink PRO non configurata. Inseriscila per procedere.")
+                self._send_error(
+                    tr_msg(
+                        lang,
+                        "Chiave API Packlink PRO non configurata. Inseriscila per procedere.",
+                        "Packlink PRO API Key not configured. Enter it to continue.",
+                    )
+                )
                 return
 
             recipient = body.get("recipient", {})
@@ -899,13 +1019,25 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     package_info=package_info,
                     content=content,
                     sender=sender,
+                    lang=lang,
                 )
                 if res.get("success"):
                     self._send_json(res)
                 else:
-                    self._send_error(res.get("error", "Errore sconosciuto durante la creazione della bozza Packlink."))
+                    self._send_error(
+                        res.get(
+                            "error",
+                            tr_msg(
+                                lang,
+                                "Errore sconosciuto durante la creazione della bozza Packlink.",
+                                "Unknown error while creating Packlink draft.",
+                            ),
+                        )
+                    )
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore creazione bozza Packlink: {e}")
+                self._send_error(
+                    tr_msg(lang, f"Errore creazione bozza Packlink: {e}", f"Packlink draft creation error: {e}")
+                )
             return
 
         # Pulizia completa notifiche consegne /api/notifications/clear
@@ -933,16 +1065,25 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             prod_id = int(match_prod_tracking.group(1))
             product = self.db.get(prod_id)
             if not product:
-                self._send_error(f"Prodotto #{prod_id} non trovato.", status=HTTPStatus.NOT_FOUND)
+                self._send_error(
+                    tr_msg(lang, f"Prodotto #{prod_id} non trovato.", f"Product #{prod_id} not found."),
+                    status=HTTPStatus.NOT_FOUND,
+                )
                 return
 
             tracking_num = str(body.get("tracking_number", "")).strip()
             carrier = str(body.get("carrier", "")).strip()
             if not tracking_num:
-                self._send_error("Il codice di tracciamento non può essere vuoto.")
+                self._send_error(
+                    tr_msg(
+                        lang,
+                        "Il codice di tracciamento non può essere vuoto.",
+                        "Tracking number cannot be empty.",
+                    )
+                )
                 return
 
-            info = fetch_tracking_info(tracking_num, carrier)
+            info = fetch_tracking_info(tracking_num, carrier, lang=lang)
             resolved_carrier = info.get("carrier") if info.get("success") else carrier
             cache_str = json.dumps(info, ensure_ascii=False) if info.get("success") else ""
 
@@ -950,7 +1091,11 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             self._send_json(
                 {
                     "success": True,
-                    "message": "Tracciamento salvato ed aggiornato con successo!",
+                    "message": tr_msg(
+                        lang,
+                        "Tracciamento salvato ed aggiornato con successo!",
+                        "Tracking saved and updated successfully!",
+                    ),
                     "tracking_number": tracking_num,
                     "carrier": resolved_carrier,
                     "data": info,
@@ -961,7 +1106,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if path == "/api/products":
             name = body.get("name", "").strip()
             if not name:
-                self._send_error("Il nome del prodotto è obbligatorio.")
+                self._send_error(
+                    tr_msg(lang, "Il nome del prodotto è obbligatorio.", "Product name is required.")
+                )
                 return
 
             status_input = body.get("status", "stock")
@@ -1001,9 +1148,19 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
             try:
                 new_id = self.db.save(db_payload)
-                self._send_json({"success": True, "id": new_id, "message": "Prodotto salvato con successo!"})
+                self._send_json(
+                    {
+                        "success": True,
+                        "id": new_id,
+                        "message": tr_msg(
+                            lang,
+                            "Prodotto salvato con successo!",
+                            "Product saved successfully!",
+                        ),
+                    }
+                )
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore durante il salvataggio: {e}")
+                self._send_error(tr_msg(lang, f"Errore durante il salvataggio: {e}", f"Save error: {e}"))
             return
 
         # Analisi file Excel / CSV con AI Gemini
@@ -1013,7 +1170,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             user_hint = str(body.get("user_hint", "")).strip()
 
             if not file_b64:
-                self._send_error("Nessun contenuto file ricevuto.")
+                self._send_error(
+                    tr_msg(lang, "Nessun contenuto file ricevuto.", "No file content received.")
+                )
                 return
 
             from src.ai_agent import parse_excel_with_ai
@@ -1029,13 +1188,21 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
                 raw_text = read_spreadsheet_raw(temp_file)
                 if not raw_text.strip():
-                    self._send_error("Il file selezionato non contiene dati leggibili.")
+                    self._send_error(
+                        tr_msg(
+                            lang,
+                            "Il file selezionato non contiene dati leggibili.",
+                            "The selected file contains no readable data.",
+                        )
+                    )
                     return
 
-                products = parse_excel_with_ai(raw_text, user_hint=user_hint)
+                products = parse_excel_with_ai(raw_text, user_hint=user_hint, lang=lang)
                 self._send_json({"success": True, "products": products, "count": len(products)})
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore durante l'analisi del file: {e}")
+                self._send_error(
+                    tr_msg(lang, f"Errore durante l'analisi del file: {e}", f"File analysis error: {e}")
+                )
             finally:
                 if temp_file and os.path.exists(temp_file):
                     try:
@@ -1048,7 +1215,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if path == "/api/save-excel-products":
             products = body.get("products", [])
             if not products:
-                self._send_error("Nessun prodotto da salvare.")
+                self._send_error(tr_msg(lang, "Nessun prodotto da salvare.", "No products to save."))
                 return
 
             saved_count = 0
@@ -1112,12 +1279,12 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             raw_ids = body.get("ids")
             ids = [int(i) for i in raw_ids if str(i).isdigit()] if isinstance(raw_ids, list) else []
             if not ids:
-                self._send_error("Nessun ID prodotto fornito.")
+                self._send_error(tr_msg(lang, "Nessun ID prodotto fornito.", "No product ID provided."))
                 return
 
             target_status = str(body.get("status", "")).strip().lower()
             if target_status not in ("stock", "preorder", "active-sale", "completed"):
-                self._send_error("Stato target non valido.")
+                self._send_error(tr_msg(lang, "Stato target non valido.", "Invalid target status."))
                 return
 
             try:
@@ -1259,7 +1426,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     self._send_json({"success": True, "updated_count": len(ids)})
                     return
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore aggiornamento massivo: {e}")
+                self._send_error(
+                    tr_msg(lang, f"Errore aggiornamento massivo: {e}", f"Bulk update error: {e}")
+                )
                 return
 
         # Operazioni massive: Eliminazione di gruppo
@@ -1267,13 +1436,15 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             raw_ids = body.get("ids")
             ids = [int(i) for i in raw_ids if str(i).isdigit()] if isinstance(raw_ids, list) else []
             if not ids:
-                self._send_error("Nessun ID prodotto fornito.")
+                self._send_error(tr_msg(lang, "Nessun ID prodotto fornito.", "No product ID provided."))
                 return
             try:
                 deleted_count = self.db.delete_many(ids)
                 self._send_json({"success": True, "deleted_count": deleted_count})
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore eliminazione multipla: {e}")
+                self._send_error(
+                    tr_msg(lang, f"Errore eliminazione multipla: {e}", f"Bulk deletion error: {e}")
+                )
             return
 
         # Operazioni massive: Duplicazione prodotti
@@ -1281,7 +1452,7 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             raw_ids = body.get("ids")
             ids = [int(i) for i in raw_ids if str(i).isdigit()] if isinstance(raw_ids, list) else []
             if not ids:
-                self._send_error("Nessun ID prodotto fornito.")
+                self._send_error(tr_msg(lang, "Nessun ID prodotto fornito.", "No product ID provided."))
                 return
             try:
                 duplicated_ids = []
@@ -1290,14 +1461,15 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     if rec:
                         copy_rec = dict(rec)
                         copy_rec.pop("id", None)
-                        copy_rec["name"] = f"{copy_rec.get('name', 'Prodotto')} (Copia)"
+                        copy_suffix = tr_msg(lang, "Copia", "Copy")
+                        copy_rec["name"] = f"{copy_rec.get('name', 'Prodotto')} ({copy_suffix})"
                         copy_rec["bundle_id"] = ""
                         copy_rec["is_completed"] = 0
                         new_id = self.db.save(copy_rec)
                         duplicated_ids.append(new_id)
                 self._send_json({"success": True, "ids": duplicated_ids, "count": len(duplicated_ids)})
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore duplicazione: {e}")
+                self._send_error(tr_msg(lang, f"Errore duplicazione: {e}", f"Duplication error: {e}"))
             return
 
         # Operazioni massive / Undo Stack: Ripristino record
@@ -1355,7 +1527,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if path == "/api/places":
             name = body.get("name", "").strip()
             if not name:
-                self._send_error("Il nome del luogo non può essere vuoto.")
+                self._send_error(
+                    tr_msg(lang, "Il nome del luogo non può essere vuoto.", "Place name cannot be empty.")
+                )
                 return
             self.db.add_custom_place(name)
             purchased, selling = self.db.get_distinct_places()
@@ -1373,7 +1547,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if path == "/api/places/delete":
             name = body.get("name", "").strip()
             if not name:
-                self._send_error("Il nome del luogo non può essere vuoto.")
+                self._send_error(
+                    tr_msg(lang, "Il nome del luogo non può essere vuoto.", "Place name cannot be empty.")
+                )
                 return
             self.db.delete_custom_place(name)
             purchased, selling = self.db.get_distinct_places()
@@ -1391,7 +1567,17 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         if path == "/api/updates/apply":
             with _updater_lock:
                 if _update_state["status"] in ("downloading", "extracting", "applying"):
-                    self._send_json({"success": True, "message": "Aggiornamento già in corso", "already_running": True})
+                    self._send_json(
+                        {
+                            "success": True,
+                            "message": tr_msg(
+                                lang,
+                                "Aggiornamento già in corso",
+                                "Update already in progress",
+                            ),
+                            "already_running": True,
+                        }
+                    )
                     return
 
                 download_url = (body or {}).get("download_url")
@@ -1399,43 +1585,89 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     download_url = _update_state["latest_info"].get("download_url")
 
                 if not download_url:
-                    self._send_error("URL di download non fornito o non valido.")
+                    self._send_error(
+                        tr_msg(
+                            lang,
+                            "URL di download non fornito o non valido.",
+                            "Download URL missing or invalid.",
+                        )
+                    )
                     return
 
                 _update_state["status"] = "downloading"
                 _update_state["progress"] = 0.0
-                _update_state["message"] = "Avvio download dell'aggiornamento..."
+                _update_state["message"] = tr_msg(
+                    lang,
+                    "Avvio download dell'aggiornamento...",
+                    "Starting update download...",
+                )
                 _update_state["error"] = None
 
-                thread = threading.Thread(target=_run_update_worker, args=(download_url,), daemon=True)
+                thread = threading.Thread(
+                    target=_run_update_worker,
+                    args=(download_url,),
+                    kwargs={"lang": lang},
+                    daemon=True,
+                )
                 thread.start()
 
-                self._send_json({"success": True, "message": "Aggiornamento avviato con successo."})
+                self._send_json(
+                    {
+                        "success": True,
+                        "message": tr_msg(
+                            lang,
+                            "Aggiornamento avviato con successo.",
+                            "Update started successfully.",
+                        ),
+                    }
+                )
             return
 
-        self._send_error("Endpoint POST non trovato", status=HTTPStatus.NOT_FOUND)
+        self._send_error(
+            tr_msg(lang, "Endpoint POST non trovato", "POST endpoint not found"),
+            status=HTTPStatus.NOT_FOUND,
+        )
 
     # --------------------------------------------------------------------------
     # GESTIONE METODI PUT (Aggiornamento Prodotto)
     # --------------------------------------------------------------------------
     def do_PUT(self) -> None:
-        path = urlparse(self.path).path
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path
+        params = parse_qs(parsed_url.query)
         match_id = re.match(r"^/api/products/(\d+)$", path)
         if match_id:
+            body = self._read_body_json()
+            lang = self._get_lang(body=body, params=params)
             prod_id = int(match_id.group(1))
             existing = self.db.get(prod_id)
             if not existing:
-                self._send_error(f"Prodotto #{prod_id} non trovato.", status=HTTPStatus.NOT_FOUND)
+                self._send_error(
+                    tr_msg(lang, f"Prodotto #{prod_id} non trovato.", f"Product #{prod_id} not found."),
+                    status=HTTPStatus.NOT_FOUND,
+                )
                 return
 
             if existing.get("is_completed") == 1:
-                self._send_error("Le vendite completate non possono essere modificate.", status=HTTPStatus.FORBIDDEN)
+                self._send_error(
+                    tr_msg(
+                        lang,
+                        "Le vendite completate non possono essere modificate.",
+                        "Completed sales cannot be modified.",
+                    ),
+                    status=HTTPStatus.FORBIDDEN,
+                )
                 return
 
-            body = self._read_body_json()
             name = body.get("name", existing.get("name", "")).strip()
             if not name:
-                self._send_error("Il nome del prodotto non può essere vuoto.")
+                self._send_error(
+                    tr_msg(
+                        lang,
+                        "Il nome del prodotto non può essere vuoto.",
+                        "Product name cannot be empty.",
+                    )
+                )
                 return
 
             status_input = body.get("status", existing.get("status", "stock"))
@@ -1497,18 +1729,37 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
             try:
                 self.db.save(db_payload, product_id=prod_id)
-                self._send_json({"success": True, "id": prod_id, "message": "Prodotto aggiornato con successo!"})
+                self._send_json(
+                    {
+                        "success": True,
+                        "id": prod_id,
+                        "message": tr_msg(
+                            lang,
+                            "Prodotto aggiornato con successo!",
+                            "Product updated successfully!",
+                        ),
+                    }
+                )
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore durante l'aggiornamento: {e}")
+                self._send_error(
+                    tr_msg(lang, f"Errore durante l'aggiornamento: {e}", f"Update error: {e}")
+                )
             return
 
-        self._send_error("Endpoint PUT non trovato", status=HTTPStatus.NOT_FOUND)
+        lang = self._get_lang(params=params)
+        self._send_error(
+            tr_msg(lang, "Endpoint PUT non trovato", "PUT endpoint not found"),
+            status=HTTPStatus.NOT_FOUND,
+        )
 
     # --------------------------------------------------------------------------
     # GESTIONE METODI DELETE
     # --------------------------------------------------------------------------
     def do_DELETE(self) -> None:
-        path = urlparse(self.path).path
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path
+        params = parse_qs(parsed_url.query)
+        lang = self._get_lang(params=params)
         if path == "/api/notifications":
             cleared = self.db.clear_all_notifications()
             self._send_json({"success": True, "cleared_count": cleared})
@@ -1526,10 +1777,22 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             prod_id = int(match_prod_tracking.group(1))
             product = self.db.get(prod_id)
             if not product:
-                self._send_error(f"Prodotto #{prod_id} non trovato.", status=HTTPStatus.NOT_FOUND)
+                self._send_error(
+                    tr_msg(lang, f"Prodotto #{prod_id} non trovato.", f"Product #{prod_id} not found."),
+                    status=HTTPStatus.NOT_FOUND,
+                )
                 return
             self.db.update_product_tracking(prod_id, "", "", "")
-            self._send_json({"success": True, "message": "Tracciamento rimosso con successo."})
+            self._send_json(
+                {
+                    "success": True,
+                    "message": tr_msg(
+                        lang,
+                        "Tracciamento rimosso con successo.",
+                        "Tracking removed successfully.",
+                    ),
+                }
+            )
             return
 
         match_id = re.match(r"^/api/products/(\d+)$", path)
@@ -1537,17 +1800,29 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             prod_id = int(match_id.group(1))
             try:
                 self.db.delete(prod_id)
-                self._send_json({"success": True, "message": f"Prodotto #{prod_id} eliminato con successo."})
+                self._send_json(
+                    {
+                        "success": True,
+                        "message": tr_msg(
+                            lang,
+                            f"Prodotto #{prod_id} eliminato con successo.",
+                            f"Product #{prod_id} deleted successfully.",
+                        ),
+                    }
+                )
             except Exception as e:  # noqa: BLE001
-                self._send_error(f"Errore eliminazione: {e}")
+                self._send_error(tr_msg(lang, f"Errore eliminazione: {e}", f"Deletion error: {e}"))
             return
 
         # Eliminazione Luogo/Marketplace Personalizzato (Punto 7)
         if path == "/api/places":
             body = self._read_body_json()
+            lang = self._get_lang(body=body, params=params)
             name = body.get("name", "").strip()
             if not name:
-                self._send_error("Il nome del luogo non può essere vuoto.")
+                self._send_error(
+                    tr_msg(lang, "Il nome del luogo non può essere vuoto.", "Place name cannot be empty.")
+                )
                 return
             self.db.delete_custom_place(name)
             purchased, selling = self.db.get_distinct_places()
@@ -1561,7 +1836,10 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             )
             return
 
-        self._send_error("Endpoint DELETE non trovato", status=HTTPStatus.NOT_FOUND)
+        self._send_error(
+            tr_msg(lang, "Endpoint DELETE non trovato", "DELETE endpoint not found"),
+            status=HTTPStatus.NOT_FOUND,
+        )
 
     def log_message(self, format: str, *args: Any) -> None:
         """Silenzia i log HTTP standard della console per mantenere zero overhead."""

@@ -12,6 +12,8 @@ import urllib.parse
 from datetime import datetime, timezone
 from typing import Any
 
+from .utils import tr_msg
+
 # Configurazione del Worker Cloudflare di RSM
 WORKER_URL = "https://rsm-proxy.leorusso34-441.workers.dev"
 RSM_AUTH_KEY = "CucGxi.PEhfgR6MFry*s"
@@ -43,6 +45,7 @@ def fetch_tracking_info(
     timeout: int = 15,
     worker_url: str = WORKER_URL,
     auth_key: str = RSM_AUTH_KEY,
+    lang: str = "it",
 ) -> dict[str, Any]:
     """Interroga le API di 17TRACK tramite il Worker Cloudflare di RSM.
 
@@ -52,6 +55,7 @@ def fetch_tracking_info(
         timeout: Timeout in secondi della connessione HTTP (default: 15s).
         worker_url: URL base del Worker Cloudflare proxy (configurabile per i test).
         auth_key: Chiave di autenticazione per l'header X-RSM-Auth.
+        lang: Lingua preferita per i messaggi di stato/errore ('it' o 'en').
 
     Returns:
         Dizionario strutturato con l'esito della chiamata, corriere, stato ed elenco delle tappe.
@@ -60,7 +64,11 @@ def fetch_tracking_info(
     if not clean_number:
         return {
             "success": False,
-            "error": "Codice di tracciamento vuoto o non valido.",
+            "error": tr_msg(
+                lang,
+                "Codice di tracciamento vuoto o non valido.",
+                "Empty or invalid tracking number.",
+            ),
         }
 
     clean_carrier = str(carrier or "").strip().lower()
@@ -70,7 +78,11 @@ def fetch_tracking_info(
     if not host:
         return {
             "success": False,
-            "error": f"URL del proxy Cloudflare non valido: {worker_url}",
+            "error": tr_msg(
+                lang,
+                f"URL del proxy Cloudflare non valido: {worker_url}",
+                f"Invalid Cloudflare proxy URL: {worker_url}",
+            ),
         }
 
     query_params: dict[str, str] = {"number": clean_number}
@@ -100,7 +112,11 @@ def fetch_tracking_info(
     except Exception as err:  # noqa: BLE001
         return {
             "success": False,
-            "error": f"Errore di connessione di rete con il servizio di tracking: {err}",
+            "error": tr_msg(
+                lang,
+                f"Errore di connessione di rete con il servizio di tracking: {err}",
+                f"Network connection error with tracking service: {err}",
+            ),
         }
     finally:
         if conn:
@@ -110,7 +126,11 @@ def fetch_tracking_info(
         return {
             "success": False,
             "status_code": status_code,
-            "error": f"Il server di tracking ha risposto con codice HTTP {status_code}: {raw_body[:200]}",
+            "error": tr_msg(
+                lang,
+                f"Il server di tracking ha risposto con codice HTTP {status_code}: {raw_body[:200]}",
+                f"Tracking server responded with HTTP code {status_code}: {raw_body[:200]}",
+            ),
         }
 
     try:
@@ -118,7 +138,11 @@ def fetch_tracking_info(
     except json.JSONDecodeError:
         return {
             "success": False,
-            "error": "La risposta del servizio di tracking non è in formato JSON valido.",
+            "error": tr_msg(
+                lang,
+                "La risposta del servizio di tracking non è in formato JSON valido.",
+                "Tracking service response is not valid JSON.",
+            ),
             "raw": raw_body[:300],
         }
 
@@ -129,7 +153,11 @@ def fetch_tracking_info(
     if rejected_list and not accepted_list:
         rejected_item = rejected_list[0]
         err_info = rejected_item.get("error", {})
-        err_msg = err_info.get("message") or "Spedizione non riconosciuta o codice non valido."
+        err_msg = err_info.get("message") or tr_msg(
+            lang,
+            "Spedizione non riconosciuta o codice non valido.",
+            "Shipment not recognized or invalid tracking code.",
+        )
         return {
             "success": False,
             "error": err_msg,
@@ -139,7 +167,11 @@ def fetch_tracking_info(
 
     if not accepted_list:
         # Se 17TRACK restituisce un payload generico senza accepted
-        msg = payload.get("message") or "Nessuna informazione di tracciamento disponibile per questo codice."
+        msg = payload.get("message") or tr_msg(
+            lang,
+            "Nessuna informazione di tracciamento disponibile per questo codice.",
+            "No tracking information available for this code.",
+        )
         return {
             "success": False,
             "error": msg,

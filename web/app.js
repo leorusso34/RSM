@@ -17,9 +17,12 @@ let realPlatformProfits = [];
 
 async function callApi(endpoint, options = {}, retries = 2) {
   const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+  const lang = window.currentAppLanguage || "it";
+  const mergedHeaders = { ...(options.headers || {}), "X-App-Lang": lang };
+  const fetchOptions = { ...options, headers: mergedHeaders };
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(url, options);
+      const res = await fetch(url, fetchOptions);
       return res;
     } catch (err) {
       if (attempt < retries) {
@@ -154,8 +157,8 @@ async function loadProductsFromBackend(retries = 6, delay = 500) {
   for (let i = 0; i < retries; i++) {
     try {
       const [resProd, resMetrics] = await Promise.all([
-        fetch(`${API_BASE}/products`),
-        fetch(`${API_BASE}/metrics`).catch(() => null)
+        callApi("/products", {}, 0),
+        callApi("/metrics", {}, 0).catch(() => null)
       ]);
       if (!resProd.ok) throw new Error(`HTTP error ${resProd.status}`);
       const json = await resProd.json();
@@ -2480,7 +2483,7 @@ async function deleteDrawerTracking(productId) {
   try {
     const res = await callApi(`/products/${productId}/tracking`, { method: "DELETE" });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error || "Errore rimozione");
+    if (!res.ok || !json.success) throw new Error(json.error || t("tracking.removeError"));
 
     const item = inventoryData.find((i) => i.id === productId);
     if (item) {
@@ -2574,7 +2577,8 @@ function renderNotificationsUI() {
     .map((n) => {
       const sizeText = n.product_size ? ` (${n.product_size})` : "";
       const titleText = escapeHtml(`${n.product_name || t("table.colProduct")}${sizeText}`);
-      const subText = escapeHtml(n.message || t("notifications.deliveredDefault"));
+      const rawSub = n.message ? (typeof translateBackendMessage === "function" ? translateBackendMessage(n.message) : n.message) : "";
+      const subText = escapeHtml(rawSub || t("notifications.deliveredDefault"));
       const timeText = n.event_time ? `<div class="notif-item-time">${escapeHtml(n.event_time)}</div>` : "";
       return `
         <div class="notif-item" onclick="handleNotificationItemClick(${Number(n.product_id)})">
@@ -2927,8 +2931,8 @@ async function openEbayPriceLookup(productName, size = "") {
   if (resultsEl) resultsEl.style.display = "none";
 
   try {
-    const url = `${API_BASE}/ebay-prices?name=${encodeURIComponent(productName)}&size=${encodeURIComponent(size || "")}`;
-    const res = await fetch(url);
+    const url = `/ebay-prices?name=${encodeURIComponent(productName)}&size=${encodeURIComponent(size || "")}`;
+    const res = await callApi(url, {}, 0);
     const json = await res.json();
     if (loadingEl) loadingEl.style.display = "none";
 
@@ -2958,14 +2962,14 @@ async function openEbayPriceLookup(productName, size = "") {
 async function openEbayInBrowser() {
   if (!currentEbayQuery.name) return;
   try {
-    await fetch(`${API_BASE}/ebay-open-browser`, {
+    await callApi("/ebay-open-browser", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: currentEbayQuery.name,
         size: currentEbayQuery.size
       })
-    });
+    }, 0);
   } catch (err) {
     showToast(t("toasts.networkError", { error: err.message }));
   }
@@ -3788,7 +3792,7 @@ let availablePurchasedPlaces = [];
 
 async function loadPlacesFromBackend() {
   try {
-    const res = await fetch(`${API_BASE}/places`);
+    const res = await callApi("/places", {}, 0);
     if (res.ok) {
       const json = await res.json();
       if (json.success) {
@@ -4171,7 +4175,7 @@ async function toggleVoiceRecording() {
     resetVoiceRecordingState();
     if (statusEl) statusEl.textContent = t("ai.recordingCancelled");
     try {
-      await fetch(`${API_BASE}/speech/stop`, { method: "POST" });
+      await callApi("/speech/stop", { method: "POST" }, 0);
     } catch (_) {}
     return;
   }
@@ -4182,14 +4186,15 @@ async function toggleVoiceRecording() {
     if (statusEl) statusEl.textContent = t("ai.transcribingAudio");
 
     try {
-      const res = await fetch(`${API_BASE}/speech/stop`, { method: "POST" });
+      const res = await callApi("/speech/stop", { method: "POST" }, 0);
       const json = await res.json();
       if (json.success && json.text) {
         if (statusEl) statusEl.textContent = t("ai.transcriptionCompleted");
         const current = promptEl.value.trim();
         promptEl.value = current ? `${current} ${json.text}` : json.text;
       } else {
-        const errMsg = json.error || t("ai.noSpeechDetected");
+        const rawErr = json.error || t("ai.noSpeechDetected");
+        const errMsg = typeof translateBackendMessage === "function" ? translateBackendMessage(rawErr) : rawErr;
         if (statusEl) statusEl.textContent = errMsg;
       }
     } catch (err) {
@@ -4208,18 +4213,19 @@ async function toggleVoiceRecording() {
   // Avviamo già l'acquisizione nel thread Python passando la lingua attiva (it-IT / en-US)
   try {
     const speechLang = window.currentAppLanguage === "en" ? "en-US" : "it-IT";
-    const res = await fetch(`${API_BASE}/speech/start`, {
+    const res = await callApi("/speech/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ language: speechLang }),
-    });
+    }, 0);
     const json = await res.json();
     if (!json.success) {
-      throw new Error(json.error || "Impossibile attivare il microfono");
+      throw new Error(json.error || t("ai.micStartFailed"));
     }
   } catch (err) {
     resetVoiceRecordingState();
-    if (statusEl) statusEl.textContent = t("ai.micError", { error: err.message });
+    const errText = typeof translateBackendMessage === "function" ? translateBackendMessage(err.message) : err.message;
+    if (statusEl) statusEl.textContent = t("ai.micError", { error: errText });
     return;
   }
 
@@ -4265,17 +4271,18 @@ async function handleAIAnalyze() {
   statusEl.textContent = t("ai.analyzingText");
 
   try {
-    const res = await fetch(`${API_BASE}/ai-parse`, {
+    const res = await callApi("/ai-parse", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt })
-    });
+    }, 0);
     const json = await res.json();
     btnAnalyze.disabled = false;
 
     if (!res.ok || !json.success) {
-      const errMsg = json.error || `HTTP ${res.status}`;
-      statusEl.textContent = `⚠️ ${errMsg}`;
+      const rawErr = json.error || `HTTP ${res.status}`;
+      const errMsg = typeof translateBackendMessage === "function" ? translateBackendMessage(rawErr) : rawErr;
+      statusEl.textContent = errMsg;
       showToast(t("toasts.genericError", { error: errMsg }));
       return;
     }
@@ -4318,18 +4325,18 @@ async function handleAISaveAll() {
   btnSave.disabled = true;
 
   try {
-    let res = await fetch(`${API_BASE}/products-batch`, {
+    let res = await callApi("/products-batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ products: aiExtractedProducts })
-    });
+    }, 0);
     // Fallback sicuro se un bridge precedente non ha la route separata
     if (res.status === 404) {
-      res = await fetch(`${API_BASE}/products`, {
+      res = await callApi("/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ products: aiExtractedProducts })
-      });
+      }, 0);
     }
     const json = await res.json();
     if (json.success) {
@@ -4365,7 +4372,7 @@ async function openEmailSyncModal() {
 
   // Carica credenziali correnti dal database
   try {
-    const res = await fetch(`${API_BASE}/settings`);
+    const res = await callApi("/settings", {}, 0);
     if (res.ok) {
       const data = await res.json();
       if (data.email_sync_address) {
@@ -4642,9 +4649,11 @@ function openUpdateModal(updateInfo) {
   const btnCancel = document.getElementById("btn-update-cancel");
   const closeX = document.getElementById("update-close-x");
 
-  if (targetVerEl) targetVerEl.textContent = updateInfo.version || "Nuova";
+  if (targetVerEl) targetVerEl.textContent = updateInfo.version || t("update.newVersionFallback");
   if (currVerEl) currVerEl.textContent = `v${currentAppVersion}`;
-  if (changelogEl) changelogEl.textContent = updateInfo.changelog || "Nessuna nota di rilascio specificata.";
+  const rawChangelog = updateInfo.changelog || "";
+  const localizedChangelog = typeof translateBackendMessage === "function" ? translateBackendMessage(rawChangelog) : rawChangelog;
+  if (changelogEl) changelogEl.textContent = localizedChangelog || t("update.noChangelog");
 
   if (progressWrap) progressWrap.style.display = "none";
   if (progressBar) progressBar.style.width = "0%";
@@ -4701,13 +4710,13 @@ async function startAppUpdate() {
     });
     const json = await res.json();
     if (!json.success) {
-      throw new Error(json.error || "Impossibile avviare il download");
+      throw new Error(json.error || t("update.downloadStartFailed"));
     }
 
     // Polling stato avanzamento
     updatePollingTimer = setInterval(async () => {
       try {
-        const progRes = await fetch(`${API_BASE}/updates/progress`);
+        const progRes = await callApi("/updates/progress", {}, 0);
         if (!progRes.ok) return;
         const progJson = await progRes.json();
         if (progJson.success) {
@@ -4715,12 +4724,14 @@ async function startAppUpdate() {
           if (progressBar) progressBar.style.width = `${Math.min(100, Math.max(0, pct))}%`;
 
           if (progJson.message && statusLabel) {
-            statusLabel.textContent = progJson.message;
+            statusLabel.textContent = typeof translateBackendMessage === "function"
+              ? translateBackendMessage(progJson.message)
+              : progJson.message;
           }
 
           if (progJson.status === "applying") {
             if (statusLabel) {
-              statusLabel.innerHTML = '<span style="color:#10b981; font-weight:700;">Estrazione completata! Applicazione aggiornamento e riavvio di RSM in corso...</span>';
+              statusLabel.innerHTML = `<span style="color:#10b981; font-weight:700;">${escapeHtml(t("update.applyingRestart"))}</span>`;
             }
             if (progressBar) progressBar.style.width = "100%";
             clearInterval(updatePollingTimer);
@@ -4730,7 +4741,9 @@ async function startAppUpdate() {
             updatePollingTimer = null;
             isApplyingUpdate = false;
             if (statusLabel) {
-              statusLabel.innerHTML = `<span style="color:#ef4444;">Errore: ${escapeHtml(progJson.error || "Operazione non riuscita")}</span>`;
+              const rawErr = progJson.error || t("toasts.operationFailed");
+              const locErr = typeof translateBackendMessage === "function" ? translateBackendMessage(rawErr) : rawErr;
+              statusLabel.innerHTML = `<span style="color:#ef4444;">${escapeHtml(t("toasts.genericError", { error: locErr }))}</span>`;
             }
             if (btnCancel) {
               btnCancel.disabled = false;
@@ -4740,7 +4753,7 @@ async function startAppUpdate() {
         }
       } catch (_) {
         if (statusLabel) {
-          statusLabel.innerHTML = '<span style="color:#10b981; font-weight:700;">Riavvio di RSM in corso...</span>';
+          statusLabel.innerHTML = `<span style="color:#10b981; font-weight:700;">${escapeHtml(t("update.restarting"))}</span>`;
         }
         clearInterval(updatePollingTimer);
         updatePollingTimer = null;
@@ -4749,7 +4762,8 @@ async function startAppUpdate() {
   } catch (err) {
     isApplyingUpdate = false;
     if (statusLabel) {
-      statusLabel.innerHTML = `<span style="color:#ef4444;">Errore: ${escapeHtml(err.message)}</span>`;
+      const locErr = typeof translateBackendMessage === "function" ? translateBackendMessage(err.message) : err.message;
+      statusLabel.innerHTML = `<span style="color:#ef4444;">${escapeHtml(t("toasts.genericError", { error: locErr }))}</span>`;
     }
     if (btnCancel) {
       btnCancel.disabled = false;
@@ -4840,7 +4854,8 @@ async function executeExcelAnalysis(useHint) {
     const json = await res.json();
 
     if (!json.success || !json.products || json.products.length === 0) {
-      const errMsg = json.error || t("toasts.aiNoValidProducts");
+      const rawErr = json.error || t("toasts.aiNoValidProducts");
+      const errMsg = typeof translateBackendMessage === "function" ? translateBackendMessage(rawErr) : rawErr;
       if (statusEl) statusEl.textContent = t("toasts.genericError", { error: errMsg });
       showToast(`Excel: ${errMsg}`);
       if (btnNoHint) btnNoHint.disabled = false;
@@ -4942,12 +4957,14 @@ async function saveExcelExtractedProducts() {
   }
 }
 
-// Toast Helper (Zero-Emoji Guaranteed)
+// Toast Helper (Zero-Emoji Guaranteed + Traduzione automatica messaggi backend)
 function showToast(message) {
   const toast = document.getElementById("toastNotification");
   if (!toast) return;
+  const localizedMsg =
+    typeof translateBackendMessage === "function" ? translateBackendMessage(message) : String(message || "");
   // Rimozione totale di emoji grafiche e simboli non testuali per standard aziendale pulito
-  const cleanMessage = String(message || "")
+  const cleanMessage = String(localizedMsg || "")
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}]/gu, "")
     .trim();
   toast.innerHTML = `<span>${cleanMessage}</span>`;
@@ -4966,7 +4983,7 @@ async function pingBridgeLatency() {
   if (!latencyEl) return;
   try {
     const t0 = performance.now();
-    const res = await fetch(`${API_BASE}/version`, { cache: "no-store" });
+    const res = await callApi("/version", { cache: "no-store" }, 0);
     const ms = Math.max(1, Math.round(performance.now() - t0));
     if (res.ok) {
       latencyEl.textContent = `${ms}ms`;

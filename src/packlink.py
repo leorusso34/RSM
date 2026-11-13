@@ -11,6 +11,8 @@ import json
 import re
 from typing import Any
 
+from .utils import tr_msg
+
 PACKLINK_API_HOST = "api.packlink.com"
 PACKLINK_DRAFTS_PATH = "/v1/drafts"
 PACKLINK_DRAFTS_WEB_URL = "https://pro.packlink.it/private/shipments/drafts"
@@ -22,6 +24,7 @@ def create_packlink_draft(
     package_info: dict[str, Any] | None = None,
     content: str = "Abbigliamento / Calzature",
     sender: dict[str, Any] | None = None,
+    lang: str = "it",
 ) -> dict[str, Any]:
     """Crea una nuova bozza di spedizione su Packlink PRO via REST API.
 
@@ -42,7 +45,11 @@ def create_packlink_draft(
     if not clean_key:
         return {
             "success": False,
-            "error": "Chiave API di Packlink PRO mancante. Configurala in 'Spedizioni Packlink' o nel file config.json.",
+            "error": tr_msg(
+                lang,
+                "Chiave API di Packlink PRO mancante. Configurala in 'Spedizioni Packlink' o nel file config.json.",
+                "Missing Packlink PRO API key. Configure it in 'Packlink Shipping' or in config.json.",
+            ),
         }
 
     # Normalizzazione nome e cognome
@@ -63,15 +70,38 @@ def create_packlink_draft(
     email = str(recipient.get("email", "")).strip()
 
     if not full_name:
-        return {"success": False, "error": "Il nome del destinatario è obbligatorio."}
+        return {
+            "success": False,
+            "error": tr_msg(lang, "Il nome del destinatario è obbligatorio.", "Recipient name is required."),
+        }
     if not street1:
-        return {"success": False, "error": "L'indirizzo di destinazione (via e civico) è obbligatorio."}
+        return {
+            "success": False,
+            "error": tr_msg(
+                lang,
+                "L'indirizzo di destinazione (via e civico) è obbligatorio.",
+                "Destination street address is required.",
+            ),
+        }
     if not zip_code:
-        return {"success": False, "error": "Il CAP del destinatario è obbligatorio."}
+        return {
+            "success": False,
+            "error": tr_msg(lang, "Il CAP del destinatario è obbligatorio.", "Recipient postal code is required."),
+        }
     if not city:
-        return {"success": False, "error": "La città del destinatario è obbligatoria."}
+        return {
+            "success": False,
+            "error": tr_msg(lang, "La città del destinatario è obbligatoria.", "Recipient city is required."),
+        }
     if not phone:
-        return {"success": False, "error": "Il numero di telefono del destinatario è obbligatorio per il corriere."}
+        return {
+            "success": False,
+            "error": tr_msg(
+                lang,
+                "Il numero di telefono del destinatario è obbligatorio per il corriere.",
+                "Recipient phone number is required for the carrier.",
+            ),
+        }
 
     # Normalizzazione parametri collo
     pkg = package_info or {}
@@ -158,21 +188,33 @@ def create_packlink_draft(
         if status_code == 401:
             return {
                 "success": False,
-                "error": "Chiave API di Packlink PRO non valida o non autorizzata. Verifica la chiave generata su Packlink PRO.",
+                "error": tr_msg(
+                    lang,
+                    "Chiave API di Packlink PRO non valida o non autorizzata. Verifica la chiave generata su Packlink PRO.",
+                    "Invalid or unauthorized Packlink PRO API key. Please verify the key generated on Packlink PRO.",
+                ),
                 "status_code": 401,
             }
 
         err_detail = resp_json.get("message") or resp_json.get("error") or resp_bytes.decode("utf-8", errors="ignore")
         return {
             "success": False,
-            "error": f"Errore Packlink PRO ({status_code}): {err_detail}",
+            "error": tr_msg(
+                lang,
+                f"Errore Packlink PRO ({status_code}): {err_detail}",
+                f"Packlink PRO error ({status_code}): {err_detail}",
+            ),
             "status_code": status_code,
             "raw_response": resp_json,
         }
     except OSError as e:
         return {
             "success": False,
-            "error": f"Errore di connessione verso {PACKLINK_API_HOST}: {e}",
+            "error": tr_msg(
+                lang,
+                f"Errore di connessione verso {PACKLINK_API_HOST}: {e}",
+                f"Connection error to {PACKLINK_API_HOST}: {e}",
+            ),
         }
     finally:
         conn.close()

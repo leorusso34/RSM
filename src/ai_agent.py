@@ -8,9 +8,10 @@ import urllib.parse
 from typing import Any
 
 from .config import RSM_AUTH_KEY, WORKER_URL
+from .utils import tr_msg
 
 
-def _safe_parse_json_products(raw_content: str) -> list[dict[str, Any]]:
+def _safe_parse_json_products(raw_content: str, lang: str = "it") -> list[dict[str, Any]]:
     """
     Decodifica in modo resiliente il payload JSON dei prodotti restituito dall'AI.
     Se la risposta è stata troncata ai limiti di token, ripara automaticamente
@@ -57,17 +58,23 @@ def _safe_parse_json_products(raw_content: str) -> list[dict[str, Any]]:
     if objects:
         return objects
 
-    raise ValueError(f"Impossibile interpretare la risposta AI come elenco prodotti JSON: {raw_content[:200]}...")
+    raise ValueError(
+        tr_msg(
+            lang,
+            f"Impossibile interpretare la risposta AI come elenco prodotti JSON: {raw_content[:200]}...",
+            f"Unable to parse AI response as JSON product list: {raw_content[:200]}...",
+        )
+    )
 
 
-def parse_product_with_ai(prompt: str) -> list[dict[str, Any]]:
+def parse_product_with_ai(prompt: str, lang: str = "it") -> list[dict[str, Any]]:
     """
     Invia la richiesta testuale al Cloudflare Worker proxy per estrarre i dati
     di UNO O PIÙ prodotti tramite Google Gemini.
     Restituisce una lista di dizionari, uno per prodotto.
     """
     if not WORKER_URL:
-        raise RuntimeError("WORKER_URL non è configurato.")
+        raise RuntimeError(tr_msg(lang, "WORKER_URL non è configurato.", "WORKER_URL is not configured."))
 
     # Schema per un singolo prodotto (riutilizzato dentro l'array)
     product_schema = {
@@ -145,19 +152,37 @@ def parse_product_with_ai(prompt: str) -> list[dict[str, Any]]:
                 result = json.loads(resp_data)
                 if "candidates" in result and len(result["candidates"]) > 0:
                     content = result["candidates"][0]["content"]["parts"][0]["text"]
-                    return _safe_parse_json_products(content)
-                raise ValueError(f"Risposta inaspettata dal proxy AI: {resp_data}")
+                    return _safe_parse_json_products(content, lang=lang)
+                raise ValueError(
+                    tr_msg(
+                        lang,
+                        f"Risposta inaspettata dal proxy AI: {resp_data}",
+                        f"Unexpected response from AI proxy: {resp_data}",
+                    )
+                )
             elif response.status in (429, 500, 502, 503, 504) and attempt < 2:
                 time.sleep(1.0 * (attempt + 1))
                 continue
             else:
-                raise RuntimeError(f"Errore Proxy AI ({response.status}): {resp_data}")
+                raise RuntimeError(
+                    tr_msg(
+                        lang,
+                        f"Errore Proxy AI ({response.status}): {resp_data}",
+                        f"AI Proxy error ({response.status}): {resp_data}",
+                    )
+                )
         except (OSError, http.client.HTTPException, ValueError, RuntimeError) as e:
             last_err = e
             if attempt < 2:
                 time.sleep(1.0 * (attempt + 1))
                 continue
-            raise RuntimeError(f"Errore di connessione proxy AI: {e!s}") from e
+            raise RuntimeError(
+                tr_msg(
+                    lang,
+                    f"Errore di connessione proxy AI: {e!s}",
+                    f"AI proxy connection error: {e!s}",
+                )
+            ) from e
         finally:
             conn.close()
 
@@ -165,13 +190,13 @@ def parse_product_with_ai(prompt: str) -> list[dict[str, Any]]:
         raise last_err
 
 
-def parse_excel_with_ai(raw_text: str, user_hint: str = "") -> list[dict[str, Any]]:
+def parse_excel_with_ai(raw_text: str, user_hint: str = "", lang: str = "it") -> list[dict[str, Any]]:
     """
     Analizza l'intero contenuto testuale di un file Excel/CSV con una singola
     chiamata al Cloudflare Worker proxy e restituisce la lista di prodotti estratti in formato JSON.
     """
     if not WORKER_URL:
-        raise RuntimeError("WORKER_URL non è configurato.")
+        raise RuntimeError(tr_msg(lang, "WORKER_URL non è configurato.", "WORKER_URL is not configured."))
 
     hint_clause = f'\nNOTA DELL\'UTENTE SULLA STRUTTURA DEL FILE:\n"{user_hint.strip()}"\n' if user_hint.strip() else ""
 
@@ -257,21 +282,45 @@ def parse_excel_with_ai(raw_text: str, user_hint: str = "") -> list[dict[str, An
         response = conn.getresponse()
         resp_data = response.read().decode("utf-8")
         if response.status != 200:
-            raise RuntimeError(f"Errore Proxy AI ({response.status}): {resp_data}")
+            raise RuntimeError(
+                tr_msg(
+                    lang,
+                    f"Errore Proxy AI ({response.status}): {resp_data}",
+                    f"AI Proxy error ({response.status}): {resp_data}",
+                )
+            )
         result = json.loads(resp_data)
         if "candidates" in result and len(result["candidates"]) > 0:
             content = result["candidates"][0]["content"]["parts"][0]["text"]
-            return _safe_parse_json_products(content)
-        raise ValueError(f"Risposta AI inaspettata dal proxy: {resp_data}")
+            return _safe_parse_json_products(content, lang=lang)
+        raise ValueError(
+            tr_msg(
+                lang,
+                f"Risposta AI inaspettata dal proxy: {resp_data}",
+                f"Unexpected AI response from proxy: {resp_data}",
+            )
+        )
     except TimeoutError:
-        raise RuntimeError("Tempo scaduto: il server proxy AI ha impiegato più di 3 minuti. Riprova.") from None
+        raise RuntimeError(
+            tr_msg(
+                lang,
+                "Tempo scaduto: il server proxy AI ha impiegato più di 3 minuti. Riprova.",
+                "Timeout: the AI proxy server took more than 3 minutes. Please retry.",
+            )
+        ) from None
     except (OSError, http.client.HTTPException, ValueError) as e:
-        raise RuntimeError(f"Errore proxy AI Excel import: {e!s}") from e
+        raise RuntimeError(
+            tr_msg(
+                lang,
+                f"Errore proxy AI Excel import: {e!s}",
+                f"AI Excel import proxy error: {e!s}",
+            )
+        ) from e
     finally:
         conn.close()
 
 
-def parse_shipping_address_with_ai(raw_text: str) -> dict[str, Any]:
+def parse_shipping_address_with_ai(raw_text: str, lang: str = "it") -> dict[str, Any]:
     """Estrae dati anagrafici destinatario e dettagli pacco da un testo libero
 
     (es. chat WhatsApp, Vinted, eBay, Instagram DM) tramite Google Gemini.
@@ -279,7 +328,7 @@ def parse_shipping_address_with_ai(raw_text: str) -> dict[str, Any]:
     """
     cleaned = raw_text.strip()
     if not cleaned:
-        raise ValueError("Testo indirizzo vuoto.")
+        raise ValueError(tr_msg(lang, "Testo indirizzo vuoto.", "Empty address text."))
 
     from .packlink import fallback_regex_parse_address
 

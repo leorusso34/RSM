@@ -12,6 +12,7 @@ from email.header import decode_header
 from typing import Any
 
 from .config import RSM_AUTH_KEY, STATUS_PREORDER, WORKER_URL
+from .utils import tr_msg
 
 
 def _clean_header(header_value: str | None) -> str:
@@ -94,12 +95,16 @@ def _extract_body(msg: email.message.Message) -> str:
     return body.strip()
 
 
-def test_gmail_connection(email_addr: str, app_password: str) -> tuple[bool, str]:
+def test_gmail_connection(email_addr: str, app_password: str, lang: str = "it") -> tuple[bool, str]:
     """Testa la connessione a Gmail con l'indirizzo email e la password per le app."""
     clean_email = email_addr.strip()
     clean_pass = app_password.replace(" ", "").strip()
     if not clean_email or not clean_pass:
-        return False, "Inserisci sia l'indirizzo email che la password per le app."
+        return False, tr_msg(
+            lang,
+            "Inserisci sia l'indirizzo email che la password per le app.",
+            "Please enter both your email address and app password.",
+        )
 
     try:
         mail = imaplib.IMAP4_SSL("imap.gmail.com", 993)
@@ -108,18 +113,38 @@ def test_gmail_connection(email_addr: str, app_password: str) -> tuple[bool, str
         mail.close()
         mail.logout()
         if status == "OK":
-            return True, "Connessione a Gmail stabilita con successo!"
-        return False, "Impossibile accedere alla cartella INBOX."
+            return True, tr_msg(
+                lang,
+                "Connessione a Gmail stabilita con successo!",
+                "Gmail connection established successfully!",
+            )
+        return False, tr_msg(
+            lang,
+            "Impossibile accedere alla cartella INBOX.",
+            "Unable to access the INBOX folder.",
+        )
     except imaplib.IMAP4.error as exc:
         msg = str(exc)
         if "Application-specific password required" in msg or "Invalid credentials" in msg:
             return (
                 False,
-                "Credenziali non valide: assicurati di usare la Password per le App a 16 caratteri creata su Google.",
+                tr_msg(
+                    lang,
+                    "Credenziali non valide: assicurati di usare la Password per le App a 16 caratteri creata su Google.",
+                    "Invalid credentials: make sure you are using the 16-character Google App Password.",
+                ),
             )
-        return False, f"Errore autenticazione IMAP: {msg}"
+        return False, tr_msg(
+            lang,
+            f"Errore autenticazione IMAP: {msg}",
+            f"IMAP authentication error: {msg}",
+        )
     except OSError as exc:
-        return False, f"Errore di connessione: {exc}"
+        return False, tr_msg(
+            lang,
+            f"Errore di connessione: {exc}",
+            f"Connection error: {exc}",
+        )
 
 
 def fetch_unread_order_emails(email_addr: str, app_password: str, max_emails: int = 20) -> list[dict[str, Any]]:
@@ -217,10 +242,10 @@ def mark_emails_as_read(email_addr: str, app_password: str, email_uids: list[str
             pass
 
 
-def parse_order_email_with_gemini(email_item: dict[str, Any]) -> list[dict[str, Any]]:
+def parse_order_email_with_gemini(email_item: dict[str, Any], lang: str = "it") -> list[dict[str, Any]]:
     """Invia il contenuto dell'email a Cloudflare Worker per estrarre i dati dei prodotti tramite Gemini AI."""
     if not WORKER_URL:
-        raise RuntimeError("WORKER_URL non è configurato.")
+        raise RuntimeError(tr_msg(lang, "WORKER_URL non è configurato.", "WORKER_URL is not configured."))
 
     product_schema = {
         "type": "OBJECT",
@@ -303,7 +328,13 @@ def parse_order_email_with_gemini(email_item: dict[str, Any]) -> list[dict[str, 
         response = conn.getresponse()
         resp_data = response.read().decode("utf-8")
         if response.status != 200:
-            raise RuntimeError(f"Errore Proxy AI ({response.status}): {resp_data}")
+            raise RuntimeError(
+                tr_msg(
+                    lang,
+                    f"Errore Proxy AI ({response.status}): {resp_data}",
+                    f"AI Proxy error ({response.status}): {resp_data}",
+                )
+            )
         result = json.loads(resp_data)
         if "candidates" in result and len(result["candidates"]) > 0:
             content = result["candidates"][0]["content"]["parts"][0]["text"]
@@ -326,6 +357,8 @@ def parse_order_email_with_gemini(email_item: dict[str, Any]) -> list[dict[str, 
         IndexError,
         TypeError,
     ) as exc:
-        raise RuntimeError(f"Errore Proxy AI Gemini: {exc}") from exc
+        raise RuntimeError(
+            tr_msg(lang, f"Errore Proxy AI Gemini: {exc}", f"Gemini AI Proxy error: {exc}")
+        ) from exc
     finally:
         conn.close()

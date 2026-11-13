@@ -118,6 +118,46 @@ def run_level9_i18n_checks(page: Page, console_errors: list[str]) -> dict[str, A
     expect(toast_locator).to_have_text("View: Stock", timeout=5000)
     details.append("Scenario B3 superato: toast navigazione localizzato in inglese ('View: Stock')")
 
+    # Verifica toast integrazione Email Sync e traduzione fallback messaggi backend in inglese
+    page.locator(".nav-item", has_text="Email Sync").click()
+    page.wait_for_selector("#emailSyncModal.open", timeout=5000)
+    page.fill("#email-sync-address", "")
+    page.fill("#email-sync-pwd", "")
+    page.evaluate("() => { const inp = document.getElementById('email-sync-pwd'); if (inp) inp.dataset.hasSaved = 'false'; }")
+    page.locator('#emailSyncModal button[onclick="testEmailConnection()"]').click()
+    expect(toast_locator).to_have_text("Please fill in Email and App Password first.", timeout=5000)
+
+    captured_lang_header: list[str] = []
+
+    def _intercept_email_test(route):
+        hdrs = route.request.headers
+        captured_lang_header.append(hdrs.get("x-app-lang", ""))
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body='{"success": false, "message": "Invalid credentials: make sure you are using the 16-character Google App Password."}',
+        )
+
+    page.route("**/api/test-email-connection", _intercept_email_test)
+    page.fill("#email-sync-address", "test@gmail.com")
+    page.fill("#email-sync-pwd", "abcd efgh ijkl mnop")
+    page.locator('#emailSyncModal button[onclick="testEmailConnection()"]').click()
+    expect(toast_locator).to_contain_text("Error: Invalid credentials:", timeout=5000)
+    page.unroute("**/api/test-email-connection")
+    assert captured_lang_header and captured_lang_header[0] == "en", (
+        f"Atteso header X-App-Lang: en verso il bridge, ottenuto: {captured_lang_header}"
+    )
+
+    # Verifica traduzione di sicurezza in showToast per messaggi italiani residui dal backend
+    page.evaluate(
+        '() => showToast(t("toasts.genericError", { error: "Credenziali non valide: assicurati di usare la Password per le App a 16 caratteri creata su Google." }))'
+    )
+    expect(toast_locator).to_contain_text("Error: Invalid credentials:", timeout=5000)
+    page.evaluate("() => closeModal()")
+    details.append(
+        "Scenario B4 superato: notifiche toast Email Sync e messaggi backend localizzati in inglese con header X-App-Lang: en"
+    )
+
     # =========================================================================
     # SCENARIO C: Persistenza della lingua attraverso il ricaricamento (Reload)
     # =========================================================================
