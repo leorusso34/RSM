@@ -6,15 +6,41 @@ Usa sounddevice per la cattura a 16kHz Mono e supporta interruzione istantanea e
 import io
 import threading
 from collections.abc import Callable
+from typing import Any
 
 
-def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> str | None:
+def _normalize_language(language: Any = "it-IT") -> str:
+    """Normalizza il codice lingua per la trascrizione ('en*' -> 'en-US', fallback 'it-IT')."""
+    if not language:
+        return "it-IT"
+    if isinstance(language, (list, tuple)) and language:
+        language = language[0]
+    cleaned = str(language or "").strip().lower()
+    if cleaned.startswith("en"):
+        return "en-US"
+    return "it-IT"
+
+
+normalize_language = _normalize_language
+
+
+def _transcribe_with_gemini(wav_bytes: bytes, api_key: str, language: str = "it-IT") -> str | None:
     """Tenta la trascrizione fedele e veloce dell'audio tramite l'API Gemini 2.5 Flash."""
     import base64
     import http.client
     import json
 
     try:
+        norm_lang = _normalize_language(language)
+        if norm_lang == "en-US":
+            prompt_text = (
+                "Transcribe the audio accurately into text. Return ONLY the spoken words, without explanations."
+            )
+        else:
+            prompt_text = (
+                "Trascrivi l'audio in testo italiano. Restituisci SOLO le parole pronunciate, senza spiegazioni."
+            )
+
         b64_audio = base64.b64encode(wav_bytes).decode("utf-8")
         host = "generativelanguage.googleapis.com"
         path = f"/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
@@ -25,7 +51,7 @@ def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> str | None:
                     "parts": [
                         {"inlineData": {"mimeType": "audio/wav", "data": b64_audio}},
                         {
-                            "text": "Trascrivi l'audio in testo italiano. Restituisci SOLO le parole pronunciate, senza spiegazioni."
+                            "text": prompt_text,
                         },
                     ]
                 }
@@ -42,13 +68,39 @@ def _transcribe_with_gemini(wav_bytes: bytes, api_key: str) -> str | None:
             resp = conn.getresponse()
             if resp.status == 200:
                 result = json.loads(resp.read().decode("utf-8"))
-                if result.get("candidates"):
-                    text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    if text:
-                        return text
+                if isinstance(result, dict):
+                    candidates = result.get("candidates")
+                    if isinstance(candidates, list) and candidates:
+                        for candidate in candidates:
+                            if not isinstance(candidate, dict):
+                                continue
+                            content = candidate.get("content")
+                            if not isinstance(content, dict):
+                                continue
+                            parts = content.get("parts")
+                            if not isinstance(parts, list) or not parts:
+                                continue
+                            chunks = [
+                                part["text"].strip()
+                                for part in parts
+                                if isinstance(part, dict)
+                                and not part.get("thought")
+                                and isinstance(part.get("text"), str)
+                                and part["text"].strip()
+                            ]
+                            if chunks:
+                                return " ".join(chunks)
         finally:
             conn.close()
-    except (OSError, http.client.HTTPException, json.JSONDecodeError, ValueError, KeyError):
+    except (
+        OSError,
+        http.client.HTTPException,
+        json.JSONDecodeError,
+        ValueError,
+        LookupError,
+        AttributeError,
+        TypeError,
+    ):
         pass
     return None
 
@@ -78,6 +130,7 @@ class SpeechTranscriber:
         if self._is_recording:
             return
 
+        normalized_lang = _normalize_language(language)
         self._stop_event.clear()
         self._is_recording = True
 
@@ -130,7 +183,7 @@ class SpeechTranscriber:
 
                 # 1. Prova prima con Gemini 2.5 Flash
                 if api_key:
-                    gemini_text = _transcribe_with_gemini(wav_bytes, api_key)
+                    gemini_text = _transcribe_with_gemini(wav_bytes, api_key, language=normalized_lang)
                     if gemini_text:
                         on_result(gemini_text)
                         return
@@ -139,7 +192,7 @@ class SpeechTranscriber:
                 wav_buffer.seek(0)
                 recognizer = sr.Recognizer()
                 audio = sr.AudioData(wav_buffer.read(), sample_rate, 2)
-                text = recognizer.recognize_google(audio, language=language)
+                text = recognizer.recognize_google(audio, language=normalized_lang)
                 on_result(text)
 
             except Exception as e:  # noqa: BLE001
@@ -179,6 +232,7 @@ def transcribe_from_microphone(
     language: str = "it-IT",
 ) -> SpeechTranscriber:
     """Helper per avviare la trascrizione vocale restituendo l'istanza controllabile."""
+    normalized_lang = _normalize_language(language)
     transcriber = SpeechTranscriber()
-    transcriber.start(on_result, on_error, on_listening, api_key=api_key, language=language)
+    transcriber.start(on_result, on_error, on_listening, api_key=api_key, language=normalized_lang)
     return transcriber

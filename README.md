@@ -6,6 +6,11 @@
 
 Applicazione desktop moderna ad altissime prestazioni (**Tauri + Rust & Python**) per la gestione di inventario, pre-ordini, vendite attive e storiche, con cruscotto KPI, grafici statistici interattivi, sincronizzazione email, monitoraggio spedizioni in tempo reale (17TRACK) e inserimento intelligente con AI (testuale e vocale).
 
+<p align="center">
+  <a href="./README.md"><img src="https://img.shields.io/badge/Lingua-Italiano-2563eb?style=flat-square" alt="Italiano"></a>
+  <a href="./README.en.md"><img src="https://img.shields.io/badge/Language-English-64748b?style=flat-square" alt="English"></a>
+</p>
+
 <!-- Badges -->
 <p align="center">
   <a href="https://leorusso34.github.io/RSM/"><img src="https://img.shields.io/badge/Showcase-Live%20Website-4f46e5?logo=githubpages&logoColor=white" alt="Showcase Website"></a>
@@ -154,6 +159,8 @@ RUSSO STOCK/
 ├── build.py                      # Script di packaging e compilazione nativa Tauri
 ├── config.json                   # Configurazione credenziali esterna
 ├── LICENSE                       # Licenza Open Source MIT
+├── README.md                     # Documentazione principale in italiano
+├── README.en.md                  # Documentazione completa del progetto in inglese
 ├── requirements.txt              # Dipendenze Python unificate
 └── rsm.py                        # Launcher principale
 ```

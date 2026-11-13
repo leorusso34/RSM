@@ -20,7 +20,7 @@
     <div class="titlebar-controls" onmousedown="event.stopPropagation()">
       <!-- Casella Notifiche Consegne (Opzione C) -->
       <div class="titlebar-notif-wrap" id="titlebarNotifWrap" onmousedown="event.stopPropagation()">
-        <button type="button" class="titlebar-notif-btn" id="titlebarNotifBtn" title="Notifiche Consegne" onclick="toggleNotificationsPopover(event)" aria-label="Notifiche Consegne">
+        <button type="button" class="titlebar-notif-btn" id="titlebarNotifBtn" title="Notifiche Consegne" data-i18n-title="titlebar.deliveryNotifications" onclick="toggleNotificationsPopover(event)" aria-label="Notifiche Consegne" data-i18n-aria-label="titlebar.deliveryNotifications">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
             <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
@@ -31,10 +31,10 @@
         <div class="notif-popover" id="notifPopover" onclick="event.stopPropagation()">
           <div class="notif-popover-header">
             <div class="notif-popover-title">
-              <span>Notifiche Consegne</span>
+              <span data-i18n="titlebar.deliveryNotifications">Notifiche Consegne</span>
               <span class="notif-popover-count" id="notifPopoverCount" style="display: none;">0</span>
             </div>
-            <button type="button" class="notif-clear-all-btn" id="notifClearAllBtn" onclick="clearAllNotifications(event)" disabled>
+            <button type="button" class="notif-clear-all-btn" id="notifClearAllBtn" onclick="clearAllNotifications(event)" disabled data-i18n="titlebar.clearAll">
               Pulisci tutto
             </button>
           </div>
@@ -44,23 +44,23 @@
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
                 <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
               </svg>
-              <span>Nessuna notifica presente</span>
+              <span data-i18n="titlebar.noNotifications">Nessuna notifica presente</span>
             </div>
           </div>
         </div>
       </div>
 
-      <button type="button" class="window-ctrl-btn" id="windowMinBtn" title="Riduci a icona" onclick="minimizeWindow()" aria-label="Riduci a icona">
+      <button type="button" class="window-ctrl-btn" id="windowMinBtn" title="Riduci a icona" data-i18n-title="titlebar.minimize" onclick="minimizeWindow()" aria-label="Riduci a icona" data-i18n-aria-label="titlebar.minimize">
         <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor">
           <rect width="10" height="1"/>
         </svg>
       </button>
-      <button type="button" class="window-ctrl-btn" id="windowMaxBtn" title="Ingrandisci" onclick="toggleMaximizeWindow()" aria-label="Ingrandisci o Ripristina">
+      <button type="button" class="window-ctrl-btn" id="windowMaxBtn" title="Ingrandisci o Ripristina" data-i18n-title="titlebar.maximize" onclick="toggleMaximizeWindow()" aria-label="Ingrandisci o Ripristina" data-i18n-aria-label="titlebar.maximize">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2">
           <rect width="9" height="9" x="0.5" y="0.5"/>
         </svg>
       </button>
-      <button type="button" class="window-ctrl-btn close" id="windowCloseBtn" title="Chiudi" onclick="closeWindow()" aria-label="Chiudi finestra">
+      <button type="button" class="window-ctrl-btn close" id="windowCloseBtn" title="Chiudi finestra" data-i18n-title="titlebar.close" onclick="closeWindow()" aria-label="Chiudi finestra" data-i18n-aria-label="titlebar.close">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2">
           <path d="M1 1l8 8M9 1L1 9"/>
         </svg>
@@ -72,7 +72,7 @@
   <div class="app-layout">
     
     <!-- Pulsante fluttuante per riaprire la sidebar a tutto schermo -->
-    <button class="open-sidebar-btn" id="openSidebarBtn" title="Apri barra laterale" onclick="toggleSidebar(true)">
+    <button class="open-sidebar-btn" id="openSidebarBtn" title="Apri barra laterale" data-i18n-title="sidebar.openSidebar" onclick="toggleSidebar(true)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>
       </svg>
@@ -85,13 +85,13 @@
       <div>
         <!-- Testata Sidebar: Pulsante Nuovo Prodotto e Chiusura Tendina -->
         <div class="sidebar-top-row">
-          <button class="btn-sidebar-add" onclick="openAddProductModal()" title="Aggiungi prodotto all'inventario">
+          <button class="btn-sidebar-add" onclick="openAddProductModal()" title="Aggiungi prodotto all'inventario" data-i18n-title="sidebar.addProductTooltip">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            <span>Nuovo Prodotto</span>
+            <span data-i18n="sidebar.newProduct">Nuovo Prodotto</span>
           </button>
-          <button class="sidebar-toggle-btn" id="closeSidebarBtn" title="Nascondi barra laterale" onclick="toggleSidebar(false)">
+          <button class="sidebar-toggle-btn" id="closeSidebarBtn" title="Nascondi barra laterale" data-i18n-title="sidebar.closeSidebar" onclick="toggleSidebar(false)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
             </svg>
@@ -99,81 +99,81 @@
         </div>
 
         <!-- Menu di Navigazione Principale -->
-        <div class="nav-group-title">PANORAMICA</div>
+        <div class="nav-group-title" data-i18n="nav.overview">PANORAMICA</div>
         <ul class="nav-list">
           <li class="nav-item active" data-section="dashboard">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-              <span>Dashboard & Grafici</span>
+              <span data-i18n="nav.dashboard">Dashboard & Grafici</span>
             </div>
           </li>
           <li class="nav-item" data-section="magazzino">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-              <span>Magazzino</span>
+              <span data-i18n="nav.stock">Magazzino</span>
             </div>
             <span class="nav-badge" id="badge-stock">24</span>
           </li>
           <li class="nav-item" data-section="preordini">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>Pre-ordini</span>
+              <span data-i18n="nav.preorders">Pre-ordini</span>
             </div>
             <span class="nav-badge" id="badge-preorder">6</span>
           </li>
           <li class="nav-item" data-section="vendite">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m20.59 13.41-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" x2="7.01" y1="7" y2="7"/></svg>
-              <span>Vendite Attive</span>
+              <span data-i18n="nav.activeSales">Vendite Attive</span>
             </div>
             <span class="nav-badge" id="badge-active">8</span>
           </li>
           <li class="nav-item" data-section="storico">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              <span>Storico Vendite</span>
+              <span data-i18n="nav.salesHistory">Storico Vendite</span>
             </div>
             <span class="nav-badge" id="badge-completed">84</span>
           </li>
         </ul>
 
-        <div class="nav-group-title">INTEGRAZIONI</div>
+        <div class="nav-group-title" data-i18n="nav.integrations">INTEGRAZIONI</div>
         <ul class="nav-list">
           <li class="nav-item" onclick="openAIModal()">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
-              <span>Assistente AI Gemini</span>
+              <span data-i18n="nav.aiAssistant">Assistente AI Gemini</span>
             </div>
           </li>
           <li class="nav-item" onclick="openEmailSyncModal()">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-              <span>Sincronizzazione Email</span>
+              <span data-i18n="nav.emailSync">Sincronizzazione Email</span>
             </div>
           </li>
           <li class="nav-item" onclick="triggerExcelFileInput()">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              <span>Importa Excel / CSV</span>
+              <span data-i18n="nav.importExcel">Importa Excel / CSV</span>
             </div>
           </li>
           <li class="nav-item" onclick="openManagePlacesModal()">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><circle cx="7" cy="7" r="1.5"/></svg>
-              <span>Canali & Luoghi</span>
+              <span data-i18n="nav.channelsPlaces">Canali & Luoghi</span>
             </div>
           </li>
           <li class="nav-item" onclick="openPacklinkModal()">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-              <span>Spedizioni Packlink</span>
+              <span data-i18n="nav.packlinkShipments">Spedizioni Packlink</span>
             </div>
             <span id="packlink-nav-badge" class="nav-badge" style="background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); font-weight: 700; font-size: 9px; padding: 1.5px 5px; border-radius: 4px;">BETA</span>
           </li>
           <li class="nav-item" id="nav-item-updater" onclick="checkForUpdates(true)">
             <div class="nav-item-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-              <span>Aggiornamenti</span>
+              <span data-i18n="nav.updates">Aggiornamenti</span>
             </div>
             <span id="update-badge" class="nav-badge" style="display: none; background: #10b981; color: #fff; font-weight: 700;">NEW</span>
           </li>
@@ -186,12 +186,19 @@
         <div class="status-pill">
           <div class="status-indicator" id="bridge-status-indicator"></div>
           <div>
-            <div style="font-weight: 600; color: #fff;">Database Locale SQLite</div>
-            <div style="font-size: 10px; color: var(--text-dim);">Sincronizzato • Latenza <span id="bridge-latency-val">1ms</span></div>
+            <div style="font-weight: 600; color: #fff;" data-i18n="sidebar.sqliteDb">Database Locale SQLite</div>
+            <div style="font-size: 10px; color: var(--text-dim);">
+              <span data-i18n="sidebar.syncedLatency">Sincronizzato • Latenza</span> <span id="bridge-latency-val">1ms</span>
+            </div>
           </div>
         </div>
-        <div style="font-size: 10px; color: var(--text-dim); margin-top: 6px; text-align: center; letter-spacing: 0.3px;">
-          RSM v<span id="app-version-label">1.6.4</span>
+        <div class="sidebar-version-row">
+          <span class="sidebar-version-text">RSM v<span id="app-version-label">1.6.4</span></span>
+          <div class="lang-switcher-capsule" role="group" aria-label="Selettore lingua" data-i18n-aria-label="sidebar.langSelector">
+            <button type="button" class="lang-btn active" id="lang-btn-it" data-lang="it" onclick="setAppLanguage('it')">IT</button>
+            <span class="lang-divider" aria-hidden="true">|</span>
+            <button type="button" class="lang-btn" id="lang-btn-en" data-lang="en" onclick="setAppLanguage('en')">EN</button>
+          </div>
         </div>
       </div>
     </aside>
@@ -213,14 +220,14 @@
           <div class="flat-card kpi-card blue">
             <div class="card-content">
               <div class="kpi-card-header">
-                <span class="kpi-title">Capitale Investito</span>
+                <span class="kpi-title" data-i18n="kpi.investedCapital">Capitale Investito</span>
                 <div class="kpi-icon-wrap">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
                 </div>
               </div>
               <div class="kpi-value" id="kpi-invested">€ 0,00</div>
               <div class="kpi-footer">
-                <span class="kpi-subtext" id="kpi-invested-sub">Magazzino e pre-ordini</span>
+                <span class="kpi-subtext" id="kpi-invested-sub" data-i18n="kpi.investedSub">Magazzino e pre-ordini</span>
               </div>
             </div>
           </div>
@@ -229,14 +236,14 @@
           <div class="flat-card kpi-card emerald">
             <div class="card-content">
               <div class="kpi-card-header">
-                <span class="kpi-title">Valore Magazzino</span>
+                <span class="kpi-title" data-i18n="kpi.stockValue">Valore Magazzino</span>
                 <div class="kpi-icon-wrap">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
                 </div>
               </div>
               <div class="kpi-value" id="kpi-stock">€ 0,00</div>
               <div class="kpi-footer">
-                <span class="kpi-subtext" id="kpi-stock-sub">Quota capitale investito</span>
+                <span class="kpi-subtext" id="kpi-stock-sub" data-i18n="kpi.stockSub">Quota capitale investito</span>
               </div>
             </div>
           </div>
@@ -245,7 +252,7 @@
           <div class="flat-card kpi-card purple">
             <div class="card-content">
               <div class="kpi-card-header">
-                <span class="kpi-title">Profitto Netto & ROI</span>
+                <span class="kpi-title" data-i18n="kpi.profitRoi">Profitto Netto & ROI</span>
                 <div class="kpi-icon-wrap">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                 </div>
@@ -253,7 +260,7 @@
               <div class="kpi-value" id="kpi-profit">€ 0,00</div>
               <div class="kpi-footer">
                 <span class="kpi-trend positive" id="kpi-roi">+0.0% ROI</span>
-                <span class="kpi-subtext" id="kpi-profit-sub">Storico vendite e attive</span>
+                <span class="kpi-subtext" id="kpi-profit-sub" data-i18n="kpi.profitSub">Storico vendite e attive</span>
               </div>
             </div>
           </div>
@@ -263,11 +270,11 @@
         <!-- Card Salute Magazzino & Allerta Dead Stock (Design Ultra-Sottile: Grafico a Righe + Legenda + Freccetta Sotto) -->
         <div id="stockHealthCard" class="stock-health-card" style="display: none;">
           <!-- Barra di Progresso Segmentata (Health Bar a tutta larghezza) -->
-          <div class="stock-health-bar-wrap" onclick="toggleStockHealthDetails()" title="Clicca per espandere/comprimere il dettaglio macro-blocchi">
+          <div class="stock-health-bar-wrap" onclick="toggleStockHealthDetails()" title="Clicca per espandere/comprimere il dettaglio macro-blocchi" data-i18n-title="stockHealth.toggleTooltip">
             <div class="stock-health-bar">
-              <div id="healthBarNormal" class="health-bar-segment normal" style="width: 100%;" title="Regolare (<60gg)"></div>
-              <div id="healthBarWarning" class="health-bar-segment warning" style="width: 0%;" title="Attenzione (60-90gg)"></div>
-              <div id="healthBarCritical" class="health-bar-segment critical" style="width: 0%;" title="Dead Stock (>90gg)"></div>
+              <div id="healthBarNormal" class="health-bar-segment normal" style="width: 100%;" title="Regolare (<60gg)" data-i18n-title="stockHealth.normalTooltip"></div>
+              <div id="healthBarWarning" class="health-bar-segment warning" style="width: 0%;" title="Attenzione (60-90gg)" data-i18n-title="stockHealth.warningTooltip"></div>
+              <div id="healthBarCritical" class="health-bar-segment critical" style="width: 0%;" title="Dead Stock (>90gg)" data-i18n-title="stockHealth.criticalTooltip"></div>
             </div>
             <div class="stock-health-bar-legend">
               <div class="legend-item"><span class="legend-dot normal"></span>&lt; 60 gg: <strong id="legendNormalText">€ 0,00</strong> (<span id="legendNormalCount">0 pz</span>)</div>
@@ -278,8 +285,8 @@
 
           <!-- Freccettina discreta posizionata sotto le scritte -->
           <div class="stock-health-toggle-wrap">
-            <button type="button" class="btn-stock-health-toggle-under" id="btnStockHealthToggle" onclick="toggleStockHealthDetails()" title="Espandi / Comprimi dettagli">
-              <span id="stockHealthToggleLabel">Dettagli</span>
+            <button type="button" class="btn-stock-health-toggle-under" id="btnStockHealthToggle" onclick="toggleStockHealthDetails()" title="Espandi / Comprimi dettagli" data-i18n-title="stockHealth.detailsTooltip">
+              <span id="stockHealthToggleLabel" data-i18n="stockHealth.details">Dettagli</span>
               <svg id="stockHealthChevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition: transform 0.2s ease;">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
@@ -290,10 +297,10 @@
           <div id="stockHealthDetails" class="stock-health-details" style="display: none;">
             <div class="stock-health-grid">
               <!-- Macro Blocco 1: Regolare (<60gg) -->
-              <div class="stock-macro-block normal" id="macroBlockNormal" onclick="filterByAgingBracket('normal')" title="Clicca per filtrare prodotti regolari (<60gg)">
+              <div class="stock-macro-block normal" id="macroBlockNormal" onclick="filterByAgingBracket('normal')" title="Clicca per filtrare prodotti regolari (<60gg)" data-i18n-title="stockHealth.filterNormalTooltip">
                 <div class="macro-block-header">
-                  <span class="macro-badge normal">&lt; 60 giorni</span>
-                  <span class="macro-label">Regolare</span>
+                  <span class="macro-badge normal" data-i18n="stockHealth.normalBadge">&lt; 60 giorni</span>
+                  <span class="macro-label" data-i18n="stockHealth.normalLabel">Regolare</span>
                 </div>
                 <div class="macro-capital" id="macroNormalCapital">€ 0,00</div>
                 <div class="macro-meta">
@@ -302,10 +309,10 @@
               </div>
 
               <!-- Macro Blocco 2: Attenzione (60-90gg) -->
-              <div class="stock-macro-block warning" id="macroBlockWarning" onclick="filterByAgingBracket('warning')" title="Clicca per filtrare prodotti in attenzione (60-90gg)">
+              <div class="stock-macro-block warning" id="macroBlockWarning" onclick="filterByAgingBracket('warning')" title="Clicca per filtrare prodotti in attenzione (60-90gg)" data-i18n-title="stockHealth.filterWarningTooltip">
                 <div class="macro-block-header">
-                  <span class="macro-badge warning">60 - 90 giorni</span>
-                  <span class="macro-label">Attenzione</span>
+                  <span class="macro-badge warning" data-i18n="stockHealth.warningBadge">60 - 90 giorni</span>
+                  <span class="macro-label" data-i18n="stockHealth.warningLabel">Attenzione</span>
                 </div>
                 <div class="macro-capital" id="macroWarningCapital">€ 0,00</div>
                 <div class="macro-meta">
@@ -314,10 +321,10 @@
               </div>
 
               <!-- Macro Blocco 3: Dead Stock (>90gg) -->
-              <div class="stock-macro-block critical" id="macroBlockCritical" onclick="filterByAgingBracket('critical')" title="Clicca per filtrare prodotti dead stock (>90gg)">
+              <div class="stock-macro-block critical" id="macroBlockCritical" onclick="filterByAgingBracket('critical')" title="Clicca per filtrare prodotti dead stock (>90gg)" data-i18n-title="stockHealth.filterCriticalTooltip">
                 <div class="macro-block-header">
-                  <span class="macro-badge critical">&gt; 90 giorni</span>
-                  <span class="macro-label">Dead Stock</span>
+                  <span class="macro-badge critical" data-i18n="stockHealth.criticalBadge">&gt; 90 giorni</span>
+                  <span class="macro-label" data-i18n="stockHealth.criticalLabel">Dead Stock</span>
                 </div>
                 <div class="macro-capital" id="macroCriticalCapital">€ 0,00</div>
                 <div class="macro-meta">
@@ -338,13 +345,13 @@
             <div class="card-content">
               <div class="chart-card-header">
                 <div class="chart-card-title">
-                  <h3>Andamento Profitto Mensile (€)</h3>
-                  <p>Guadagno netto mese per mese</p>
+                  <h3 data-i18n="charts.monthlyProfitTitle">Andamento Profitto Mensile (€)</h3>
+                  <p data-i18n="charts.monthlyProfitSub">Guadagno netto mese per mese</p>
                 </div>
                 <div class="timeframe-pills">
-                  <button type="button" class="timeframe-pill active" data-range="year" onclick="setProfitTimeframe('year')">1 Anno</button>
-                  <button type="button" class="timeframe-pill" data-range="6m" onclick="setProfitTimeframe('6m')">6 Mesi</button>
-                  <button type="button" class="timeframe-pill" data-range="all" onclick="setProfitTimeframe('all')">Tutto</button>
+                  <button type="button" class="timeframe-pill active" data-range="year" onclick="setProfitTimeframe('year')" data-i18n="charts.timeframe1Year">1 Anno</button>
+                  <button type="button" class="timeframe-pill" data-range="6m" onclick="setProfitTimeframe('6m')" data-i18n="charts.timeframe6Months">6 Mesi</button>
+                  <button type="button" class="timeframe-pill" data-range="all" onclick="setProfitTimeframe('all')" data-i18n="charts.timeframeAll">Tutto</button>
                 </div>
               </div>
               <div class="chart-canvas-container">
@@ -358,8 +365,8 @@
             <div class="card-content">
               <div class="chart-card-header">
                 <div class="chart-card-title">
-                  <h3>Canali di Vendita</h3>
-                  <p>Ripartizione numero vendite</p>
+                  <h3 data-i18n="charts.salesChannelsTitle">Canali di Vendita</h3>
+                  <p data-i18n="charts.salesChannelsSub">Ripartizione numero vendite</p>
                 </div>
               </div>
               <div class="chart-canvas-container">
@@ -379,11 +386,11 @@
             <!-- Barra Superiore della Tabella: Schede a Sinistra, Ricerca a Destra -->
             <div class="table-header-bar">
               <div class="table-tabs">
-                <button class="table-tab-pill active" data-filter="all">Tutti i Prodotti</button>
-                <button class="table-tab-pill" data-filter="stock">Magazzino</button>
-                <button class="table-tab-pill" data-filter="preorder">Pre-ordini</button>
-                <button class="table-tab-pill" data-filter="active-sale">Vendite Attive</button>
-                <button class="table-tab-pill" data-filter="completed">Vendite Completate</button>
+                <button class="table-tab-pill active" data-filter="all" data-i18n="table.tabAll">Tutti i Prodotti</button>
+                <button class="table-tab-pill" data-filter="stock" data-i18n="table.tabStock">Magazzino</button>
+                <button class="table-tab-pill" data-filter="preorder" data-i18n="table.tabPreorder">Pre-ordini</button>
+                <button class="table-tab-pill" data-filter="active-sale" data-i18n="table.tabActive">Vendite Attive</button>
+                <button class="table-tab-pill" data-filter="completed" data-i18n="table.tabCompleted">Vendite Completate</button>
               </div>
 
               <!-- Controlli a destra: Ricerca + Filtri Avanzati + Ordinamento -->
@@ -392,67 +399,67 @@
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
                   </svg>
-                  <input type="text" id="global-search-input" placeholder="Cerca prodotto o luogo..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+                  <input type="text" id="global-search-input" placeholder="Cerca prodotto o luogo..." data-i18n-placeholder="table.searchPlaceholder" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
                 </div>
 
                 <!-- Pulsante Attiva/Disattiva Selezione Multipla -->
-                <button type="button" class="btn-toggle-select" id="btnToggleSelect" onclick="toggleSelectionMode()" title="Attiva/Disattiva modalità selezione">
+                <button type="button" class="btn-toggle-select" id="btnToggleSelect" onclick="toggleSelectionMode()" title="Attiva/Disattiva modalità selezione" data-i18n-title="table.toggleSelectTooltip">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                     <polyline points="9 11 12 14 22 4"></polyline>
                   </svg>
-                  <span>Seleziona</span>
+                  <span data-i18n="table.select">Seleziona</span>
                   <span id="selectedCountBadge" class="selection-count-badge" style="display: none;">0</span>
                 </button>
 
                 <!-- Pulsante Mostra/Nascondi Filtri Avanzati -->
-                <button type="button" class="btn-toggle-filters" id="btnToggleFilters" onclick="toggleAdvancedFilters()" title="Mostra/Nascondi filtri avanzati">
+                <button type="button" class="btn-toggle-filters" id="btnToggleFilters" onclick="toggleAdvancedFilters()" title="Mostra/Nascondi filtri avanzati" data-i18n-title="table.toggleFiltersTooltip">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
                   </svg>
-                  <span>Filtri</span>
+                  <span data-i18n="table.filters">Filtri</span>
                   <svg id="toggleFilterArrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition: transform 0.2s ease;">
                     <path d="m6 9 6 6 6-6"/>
                   </svg>
                 </button>
 
                 <!-- Pulsante Rapido Azzera Filtri -->
-                <button type="button" class="btn btn-secondary" id="btnResetFilters" onclick="resetAllFilters()" title="Azzera tutti i filtri" style="display: none; align-items: center; justify-content: center; height: 28px; font-size: 11px; padding: 0 8px; line-height: 1;">
+                <button type="button" class="btn btn-secondary" id="btnResetFilters" onclick="resetAllFilters()" title="Azzera tutti i filtri" data-i18n-title="table.resetFilters" data-i18n="table.resetFilters" style="display: none; align-items: center; justify-content: center; height: 28px; font-size: 11px; padding: 0 8px; line-height: 1;">
                   Azzera
                 </button>
 
                 <!-- Mini Quadratino Ordinamento -->
                 <div class="sort-dropdown-wrap">
-                  <button class="btn-sort-square" id="sortDropdownBtn" title="Ordina tabella" onclick="toggleSortMenu(event)">
+                  <button class="btn-sort-square" id="sortDropdownBtn" title="Ordina tabella" data-i18n-title="table.sortTooltip" onclick="toggleSortMenu(event)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/>
                     </svg>
                   </button>
                   <div class="sort-menu" id="sortMenu">
-                    <div class="sort-menu-header">CRITERIO DI ORDINAMENTO</div>
+                    <div class="sort-menu-header" data-i18n="sort.header">CRITERIO DI ORDINAMENTO</div>
                     <div class="sort-menu-item active" data-sort-key="date-desc" onclick="applySort('date', 'desc')">
-                      <span>Ultima aggiunta (Recenti)</span>
+                      <span data-i18n="sort.dateDesc">Ultima aggiunta (Recenti)</span>
                     </div>
                     <div class="sort-menu-item" data-sort-key="date-asc" onclick="applySort('date', 'asc')">
-                      <span>Prima aggiunta (Vecchi)</span>
+                      <span data-i18n="sort.dateAsc">Prima aggiunta (Vecchi)</span>
                     </div>
                     <div class="sort-menu-item" data-sort-key="purchasedPrice-desc" onclick="applySort('purchasedPrice', 'desc')">
-                      <span>Prezzo acquisto (Più alto)</span>
+                      <span data-i18n="sort.buyPriceDesc">Prezzo acquisto (Più alto)</span>
                     </div>
                     <div class="sort-menu-item" data-sort-key="purchasedPrice-asc" onclick="applySort('purchasedPrice', 'asc')">
-                      <span>Prezzo acquisto (Più basso)</span>
+                      <span data-i18n="sort.buyPriceAsc">Prezzo acquisto (Più basso)</span>
                     </div>
                     <div class="sort-menu-item" data-sort-key="salePrice-desc" onclick="applySort('salePrice', 'desc')">
-                      <span>Prezzo vendita (Più alto)</span>
+                      <span data-i18n="sort.sellPriceDesc">Prezzo vendita (Più alto)</span>
                     </div>
                     <div class="sort-menu-item" data-sort-key="profit-desc" onclick="applySort('profit', 'desc')">
-                      <span>Utile netto (Maggiore)</span>
+                      <span data-i18n="sort.profitDesc">Utile netto (Maggiore)</span>
                     </div>
                     <div class="sort-menu-item" data-sort-key="roi-desc" onclick="applySort('roi', 'desc')">
-                      <span>ROI (%) (Maggiore)</span>
+                      <span data-i18n="sort.roiDesc">ROI (%) (Maggiore)</span>
                     </div>
                     <div class="sort-menu-item" data-sort-key="name-asc" onclick="applySort('name', 'asc')">
-                      <span>Nome prodotto (A → Z)</span>
+                      <span data-i18n="sort.nameAsc">Nome prodotto (A → Z)</span>
                     </div>
                   </div>
                 </div>
@@ -464,35 +471,35 @@
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) 80px; gap: 12px; align-items: flex-end;">
                 <!-- Luogo Acquisto -->
                 <div>
-                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Luogo Acquisto</label>
+                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="filters.buyPlace">Luogo Acquisto</label>
                   <select id="filter-purchased-place" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" onchange="onFilterChanged()">
-                    <option value="">Tutti i luoghi</option>
+                    <option value="" data-i18n="filters.allPlaces">Tutti i luoghi</option>
                   </select>
                 </div>
 
                 <!-- Luogo Vendita -->
                 <div>
-                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Luogo Vendita</label>
+                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="filters.sellPlace">Luogo Vendita</label>
                   <select id="filter-selling-place" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" onchange="onFilterChanged()">
-                    <option value="">Tutti i marketplace</option>
+                    <option value="" data-i18n="filters.allMarketplaces">Tutti i marketplace</option>
                   </select>
                 </div>
 
                 <!-- Prezzo Minimo -->
                 <div>
-                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Prezzo Min (€)</label>
+                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="filters.minPrice">Prezzo Min (€)</label>
                   <input type="number" step="0.01" min="0" id="filter-min-price" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" oninput="onFilterChanged()" autocomplete="off" spellcheck="false" />
                 </div>
 
                 <!-- Prezzo Massimo -->
                 <div>
-                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Prezzo Max (€)</label>
+                  <label style="display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="filters.maxPrice">Prezzo Max (€)</label>
                   <input type="number" step="0.01" min="0" id="filter-max-price" class="form-input" style="height: 32px; font-size: 11.5px; padding: 4px 8px; width: 100%;" oninput="onFilterChanged()" autocomplete="off" spellcheck="false" />
                 </div>
 
                 <!-- Bottone Reset rapido -->
                 <div>
-                  <button type="button" class="btn btn-secondary" onclick="resetAllFilters()" style="display: inline-flex; align-items: center; justify-content: center; height: 28px; width: 100%; font-size: 11px; padding: 0; line-height: 1;">
+                  <button type="button" class="btn btn-secondary" onclick="resetAllFilters()" style="display: inline-flex; align-items: center; justify-content: center; height: 28px; width: 100%; font-size: 11px; padding: 0; line-height: 1;" data-i18n="filters.reset">
                     Azzera
                   </button>
                 </div>
@@ -520,7 +527,7 @@
            PILLOLA FLOTTANTE: RIEPILOGO DATI PRODOTTI SELEZIONATI (ZERO-LAG)
            Posizionata all'interno di main-wrapper per ancorarsi al centro della tabella
            ==================================================================== -->
-      <div id="selectionFloatingCapsule" class="selection-floating-capsule" style="display: none;" role="region" aria-label="Riepilogo prodotti selezionati">
+      <div id="selectionFloatingCapsule" class="selection-floating-capsule" style="display: none;" role="region" aria-label="Riepilogo prodotti selezionati" data-i18n-aria-label="selection.capsuleRegion">
         <div class="capsule-inner">
           <!-- Indicatore e Conteggio -->
           <div class="capsule-count">
@@ -532,13 +539,13 @@
 
           <!-- Spesa / Costo di Acquisto Totale -->
           <div class="capsule-stat">
-            <span class="capsule-stat-label">Spesa:</span>
+            <span class="capsule-stat-label" data-i18n="selection.costLabel">Spesa:</span>
             <span id="capsuleTotalCost" class="capsule-stat-value">€ 0,00</span>
           </div>
 
           <!-- Costo Medio di Acquisto -->
           <div class="capsule-stat">
-            <span class="capsule-stat-label">Media:</span>
+            <span class="capsule-stat-label" data-i18n="selection.avgLabel">Media:</span>
             <span id="capsuleAvgCost" class="capsule-stat-value">€ 0,00</span>
           </div>
 
@@ -547,12 +554,12 @@
             <div class="capsule-divider" aria-hidden="true"></div>
 
             <div class="capsule-stat">
-              <span class="capsule-stat-label">Vendita:</span>
+              <span class="capsule-stat-label" data-i18n="selection.saleLabel">Vendita:</span>
               <span id="capsuleTotalSale" class="capsule-stat-value capsule-stat-sale">€ 0,00</span>
             </div>
 
             <div class="capsule-stat">
-              <span class="capsule-stat-label">Utile:</span>
+              <span class="capsule-stat-label" data-i18n="selection.profitLabel">Utile:</span>
               <span id="capsuleTotalProfit" class="capsule-stat-value">€ 0,00</span>
               <span id="capsuleRoiBadge" class="capsule-roi-badge">+0.0% ROI</span>
             </div>
@@ -561,7 +568,7 @@
           <div class="capsule-divider" aria-hidden="true"></div>
 
           <!-- Pulsante rapido deseleziona tutto -->
-          <button type="button" class="capsule-btn-clear" onclick="clearAllSelections()" title="Deseleziona tutti i prodotti (Esc)" aria-label="Deseleziona tutto">
+          <button type="button" class="capsule-btn-clear" onclick="clearAllSelections()" title="Deseleziona tutti i prodotti (Esc)" data-i18n-title="selection.clearTooltip" aria-label="Deseleziona tutti i prodotti (Esc)" data-i18n-aria-label="selection.clearTooltip">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -580,7 +587,7 @@
   <div class="modal-backdrop" id="productModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Aggiungi Prodotto all'Inventario</h3>
+        <h3 data-i18n="modal.addProductTitle">Aggiungi Prodotto all'Inventario</h3>
         <button class="modal-close-btn" onclick="closeModal()">&times;</button>
       </div>
       <form id="productForm" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -591,40 +598,40 @@
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            <span>Vendita attiva: anagrafica prodotto bloccata. Puoi modificare solo prezzi, spese e stato.</span>
+            <span data-i18n="modal.activeSaleNotice">Vendita attiva: anagrafica prodotto bloccata. Puoi modificare solo prezzi, spese e stato.</span>
           </div>
 
           <div class="form-group">
-            <label class="form-label" id="lbl-prod-name">Nome Prodotto / Modello</label>
+            <label class="form-label" id="lbl-prod-name" data-i18n="modal.productName">Nome Prodotto / Modello</label>
             <input type="text" id="prod-name" class="form-input" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" id="lbl-prod-size">Taglia</label>
+              <label class="form-label" id="lbl-prod-size" data-i18n="modal.size">Taglia</label>
               <input type="text" id="prod-size" class="form-input" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
             </div>
             <div class="form-group">
-              <label class="form-label" id="lbl-prod-qty">Quantità</label>
+              <label class="form-label" id="lbl-prod-qty" data-i18n="modal.quantity">Quantità</label>
               <input type="number" id="prod-qty" class="form-input" value="1" min="1" autocomplete="off" spellcheck="false" />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group" style="flex: 1;">
-              <label class="form-label" id="lbl-prod-buy-place">Luogo di Acquisto</label>
+              <label class="form-label" id="lbl-prod-buy-place" data-i18n="modal.purchasePlace">Luogo di Acquisto</label>
               <div class="autocomplete-wrap">
-                <input type="text" id="prod-buy-place" class="form-input" placeholder="es. Nike, SNKRS, Foot Locker..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+                <input type="text" id="prod-buy-place" class="form-input" placeholder="es. Nike, SNKRS, Foot Locker..." data-i18n-placeholder="modal.purchasePlacePlaceholder" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
                 <div id="dropdown-prod-buy-place" class="autocomplete-dropdown"></div>
               </div>
             </div>
             <div class="form-group" style="flex: 1;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                <label class="form-label" id="lbl-prod-sell-place" style="margin-bottom: 0;">Canale di Vendita</label>
-                <button type="button" class="btn-input-action" id="btn-manage-places" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi">Gestisci</button>
+                <label class="form-label" id="lbl-prod-sell-place" style="margin-bottom: 0;" data-i18n="modal.sellingChannel">Canale di Vendita</label>
+                <button type="button" class="btn-input-action" id="btn-manage-places" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi" data-i18n-title="modal.manage" data-i18n="modal.manage">Gestisci</button>
               </div>
               <div class="autocomplete-wrap">
-                <input type="text" id="prod-sell-place" class="form-input" placeholder="es. StockX, Vinted, eBay, Privato..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+                <input type="text" id="prod-sell-place" class="form-input" placeholder="es. StockX, Vinted, eBay, Privato..." data-i18n-placeholder="modal.sellingChannelPlaceholder" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
                 <div id="dropdown-prod-sell-place" class="autocomplete-dropdown"></div>
               </div>
             </div>
@@ -633,46 +640,46 @@
           <!-- Blocco Finanziario con Calcolo Utile in Tempo Reale (Opzione A) -->
           <div style="background: rgba(14, 19, 31, 0.7); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span style="font-size: 11px; font-weight: 700; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.05em;">Dati Economici</span>
-              <span id="prod-modal-profit-badge" style="font-size: 11px; font-weight: 700; color: #8b9bb4; background: rgba(139, 155, 180, 0.1); border: 1px solid rgba(139, 155, 180, 0.2); padding: 2px 8px; border-radius: 6px;">
+              <span style="font-size: 11px; font-weight: 700; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.05em;" data-i18n="modal.economicData">Dati Economici</span>
+              <span id="prod-modal-profit-badge" style="font-size: 11px; font-weight: 700; color: #8b9bb4; background: rgba(139, 155, 180, 0.1); border: 1px solid rgba(139, 155, 180, 0.2); padding: 2px 8px; border-radius: 6px;" data-i18n="modal.profitStockNoSale">
                 In Stock (Nessuna vendita)
               </span>
             </div>
             <div class="form-row" style="margin-bottom: 0;">
               <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                <label class="form-label" style="font-size: 11px;">Prezzo Acquisto (€) *</label>
+                <label class="form-label" style="font-size: 11px;" data-i18n="modal.buyPrice">Prezzo Acquisto (€) *</label>
                 <input type="number" step="0.01" id="prod-buy-price" class="form-input" style="background: #151b2b;" required oninput="updateModalProfitPreview()" autocomplete="off" spellcheck="false" />
               </div>
               <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                <label class="form-label" style="font-size: 11px;">Prezzo Vendita (€)</label>
+                <label class="form-label" style="font-size: 11px;" data-i18n="modal.salePrice">Prezzo Vendita (€)</label>
                 <input type="number" step="0.01" id="prod-sold-price" class="form-input" style="background: #151b2b;" oninput="updateModalProfitPreview()" autocomplete="off" spellcheck="false" />
               </div>
               <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                <label class="form-label" style="font-size: 11px; color: #93c5fd;">Commissioni / Spese (€)</label>
+                <label class="form-label" style="font-size: 11px; color: #93c5fd;" data-i18n="modal.fees">Commissioni / Spese (€)</label>
                 <input type="number" step="0.01" id="prod-fees" class="form-input" style="background: #151b2b; border-color: rgba(59, 130, 246, 0.35);" placeholder="0.00" oninput="updateModalProfitPreview()" autocomplete="off" spellcheck="false" />
               </div>
             </div>
           </div>
 
           <div class="form-group" style="margin-top: 6px;">
-            <label class="form-label">Stato</label>
+            <label class="form-label" data-i18n="modal.status">Stato</label>
             <select id="prod-status" class="form-input" style="background:#0b101c; color:#fff;" onchange="onModalStatusChange(this.value)">
-              <option value="stock">Magazzino</option>
-              <option value="preorder">Pre-ordine</option>
-              <option value="active-sale">Vendita attiva</option>
-              <option value="completed">Venduto</option>
+              <option value="stock" data-i18n="modal.statusStock">Magazzino</option>
+              <option value="preorder" data-i18n="modal.statusPreorder">Pre-ordine</option>
+              <option value="active-sale" data-i18n="modal.statusActive">Vendita attiva</option>
+              <option value="completed" data-i18n="modal.statusCompleted">Venduto</option>
             </select>
           </div>
 
           <div class="form-group" style="margin-top: 6px;">
-            <label class="form-label" id="lbl-prod-notes">Note</label>
+            <label class="form-label" id="lbl-prod-notes" data-i18n="modal.notes">Note</label>
             <input type="text" id="prod-notes" class="form-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           </div>
 
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
-          <button type="submit" class="btn btn-primary">Salva nel Database</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal()" data-i18n="common.cancel">Annulla</button>
+          <button type="submit" class="btn btn-primary" data-i18n="modal.saveToDb">Salva nel Database</button>
         </div>
       </form>
     </div>
@@ -685,8 +692,8 @@
     <div class="modal-card" style="width: 480px; max-width: 92vw;">
       <div class="modal-header">
         <div>
-          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Prezzi di Mercato eBay</h3>
-          <p id="ebay-subtitle" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;" data-i18n="ebay.marketPrices">Prezzi di Mercato eBay</h3>
+          <p id="ebay-subtitle" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" data-i18n="ebay.loading">
             Caricamento...
           </p>
         </div>
@@ -694,21 +701,21 @@
       </div>
       <div class="modal-body">
         <div id="ebay-loading" style="text-align: center; padding: 28px; color: var(--text-muted);">
-          <div style="font-size: 12.5px;">Recupero prezzi in corso...</div>
+          <div style="font-size: 12.5px;" data-i18n="ebay.fetching">Recupero prezzi in corso...</div>
         </div>
 
         <div id="ebay-results" style="display: none; margin-top: 6px;">
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;">
             <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 12px 8px; border-radius: 8px; text-align: center;">
-              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">MINIMO</div>
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="ebay.minimum">MINIMO</div>
               <div style="font-size: 16px; font-weight: 800; color: #10b981; margin-top: 4px;" id="ebay-min-val">€ 0,00</div>
             </div>
             <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 12px 8px; border-radius: 8px; text-align: center;">
-              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">MEDIO</div>
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="ebay.average">MEDIO</div>
               <div style="font-size: 16px; font-weight: 800; color: #3b82f6; margin-top: 4px;" id="ebay-avg-val">€ 0,00</div>
             </div>
             <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 12px 8px; border-radius: 8px; text-align: center;">
-              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">MASSIMO</div>
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="ebay.maximum">MASSIMO</div>
               <div style="font-size: 16px; font-weight: 800; color: #f59e0b; margin-top: 4px;" id="ebay-max-val">€ 0,00</div>
             </div>
           </div>
@@ -718,10 +725,10 @@
         </div>
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-        <button type="button" class="btn btn-secondary" id="btn-ebay-browser" onclick="openEbayInBrowser()">
+        <button type="button" class="btn btn-secondary" id="btn-ebay-browser" onclick="openEbayInBrowser()" data-i18n="ebay.viewOnEbay">
           Vedi su eBay
         </button>
-        <button type="button" class="btn btn-secondary" onclick="closeModal()">Chiudi</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal()" data-i18n="common.close">Chiudi</button>
       </div>
     </div>
   </div>
@@ -733,8 +740,8 @@
     <div class="modal-card" style="width: 580px; max-width: 92vw;">
       <div class="modal-header">
         <div>
-          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Inserimento Rapido con AI</h3>
-          <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;" data-i18n="ai.quickEntry">Inserimento Rapido con AI</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" data-i18n="ai.description">
             Descrivi i prodotti a voce o per testo e Gemini estrarrà automaticamente tutti i dati.
           </p>
         </div>
@@ -744,8 +751,8 @@
         
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span style="font-size: 11px; font-weight: 700; color: var(--text-main); letter-spacing: 0.5px;">COSA VUOI AGGIUNGERE?</span>
-            <button type="button" id="btn-mic" class="btn-icon-square" onclick="toggleVoiceRecording()" title="Dettatura vocale con microfono">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-main); letter-spacing: 0.5px;" data-i18n="ai.promptLabel">COSA VUOI AGGIUNGERE?</span>
+            <button type="button" id="btn-mic" class="btn-icon-square" onclick="toggleVoiceRecording()" title="Dettatura vocale con microfono" data-i18n-title="ai.voiceDictationTooltip">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -760,16 +767,16 @@
 
         <!-- Tabella anteprima prodotti estratti -->
         <div id="ai-results-wrap" style="display: none; margin-top: 12px;">
-          <div style="font-size: 11px; font-weight: 700; color: #818cf8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Prodotti Estratti:</div>
+          <div style="font-size: 11px; font-weight: 700; color: #818cf8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="ai.extractedProducts">Prodotti Estratti:</div>
           <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #0b101c;">
             <table class="inventory-table">
               <thead>
                 <tr>
-                  <th style="width: 44%;">Prodotto</th>
-                  <th class="col-center" style="width: 14%;">Taglia</th>
-                  <th class="col-center" style="width: 12%;">Q.tà</th>
-                  <th class="col-center" style="width: 16%;">P. Acquisto</th>
-                  <th style="width: 14%;">Luogo</th>
+                  <th style="width: 44%;" data-i18n="ai.colProduct">Prodotto</th>
+                  <th class="col-center" style="width: 14%;" data-i18n="ai.colSize">Taglia</th>
+                  <th class="col-center" style="width: 12%;" data-i18n="ai.colQty">Q.tà</th>
+                  <th class="col-center" style="width: 16%;" data-i18n="ai.colBuyPrice">P. Acquisto</th>
+                  <th style="width: 14%;" data-i18n="ai.colPlace">Luogo</th>
                 </tr>
               </thead>
               <tbody id="ai-results-body"></tbody>
@@ -779,10 +786,10 @@
 
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-        <button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal()" data-i18n="common.cancel">Annulla</button>
         <div style="display: flex; gap: 8px;">
-          <button type="button" id="btn-ai-analyze" class="btn btn-primary" onclick="handleAIAnalyze()">Analizza e Crea</button>
-          <button type="button" id="btn-ai-save-all" class="btn btn-primary" style="background: #059669; display: none;" onclick="handleAISaveAll()">Salva nell'Inventario</button>
+          <button type="button" id="btn-ai-analyze" class="btn btn-primary" onclick="handleAIAnalyze()" data-i18n="ai.analyzeAndCreate">Analizza e Crea</button>
+          <button type="button" id="btn-ai-save-all" class="btn btn-primary" style="background: #059669; display: none;" onclick="handleAISaveAll()" data-i18n="ai.saveToInventory">Salva nell'Inventario</button>
         </div>
       </div>
     </div>
@@ -795,8 +802,8 @@
     <div class="modal-card" style="width: 860px; max-width: 94vw;">
       <div class="modal-header">
         <div>
-          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Sincronizzazione Ordini via Email</h3>
-          <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;" data-i18n="email.syncOrders">Sincronizzazione Ordini via Email</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" data-i18n="email.description">
             Scarica le conferme d'ordine non lette da Gmail ed estrai i prodotti nei Pre-ordini con Gemini.
           </p>
         </div>
@@ -808,24 +815,24 @@
         <div style="background: #0b101c; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 16px;">
           <div style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 4px;">
-              <label class="form-label" for="email-sync-address" style="display: block; font-size: 11px; margin-bottom: 2px;">Email Gmail:</label>
+              <label class="form-label" for="email-sync-address" style="display: block; font-size: 11px; margin-bottom: 2px;" data-i18n="email.addressLabel">Email Gmail:</label>
               <input type="email" id="email-sync-address" class="form-input" style="height: 32px; font-size: 12px; width: 100%; box-sizing: border-box;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
             </div>
             <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 4px;">
-              <label class="form-label" for="email-sync-pwd" style="display: block; font-size: 11px; margin-bottom: 2px;">Password App (16 car.):</label>
+              <label class="form-label" for="email-sync-pwd" style="display: block; font-size: 11px; margin-bottom: 2px;" data-i18n="email.pwdLabel">Password App (16 car.):</label>
               <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
-                <input type="password" id="email-sync-pwd" class="form-input" style="height: 32px; font-size: 12px; flex: 1; box-sizing: border-box;" autocomplete="new-password" spellcheck="false" placeholder="Inserisci password a 16 caratteri" />
+                <input type="password" id="email-sync-pwd" class="form-input" style="height: 32px; font-size: 12px; flex: 1; box-sizing: border-box;" autocomplete="new-password" spellcheck="false" placeholder="Inserisci password a 16 caratteri" data-i18n-placeholder="email.pwdPlaceholder" />
                 <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; white-space: nowrap;">
-                  <input type="checkbox" id="email-show-pwd" onchange="toggleEmailPwdVisibility(this.checked)" /> Mostra
+                  <input type="checkbox" id="email-show-pwd" onchange="toggleEmailPwdVisibility(this.checked)" /> <span data-i18n="common.show">Mostra</span>
                 </label>
               </div>
             </div>
             <div style="display: flex; gap: 8px; margin-bottom: 1px;">
-              <button type="button" class="btn btn-secondary" style="height: 32px; font-size: 11.5px;" onclick="testEmailConnection()">Test Connessione</button>
-              <button type="button" class="btn btn-primary" style="height: 32px; font-size: 11.5px; background: #2563eb;" onclick="saveEmailCredentials()">Salva Dati</button>
+              <button type="button" class="btn btn-secondary" style="height: 32px; font-size: 11.5px;" onclick="testEmailConnection()" data-i18n="email.testConnection">Test Connessione</button>
+              <button type="button" class="btn btn-primary" style="height: 32px; font-size: 11.5px; background: #2563eb;" onclick="saveEmailCredentials()" data-i18n="email.saveCredentials">Salva Dati</button>
             </div>
           </div>
-          <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 8px;">
+          <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 8px;" data-i18n="email.helpText">
             Inserisci una password per le app di Google generata con verifica a 2 fattori attiva.
           </div>
         </div>
@@ -834,9 +841,9 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; margin-bottom: 2px; flex-wrap: wrap; gap: 10px;">
           <button type="button" id="btn-start-email-scan" class="btn btn-primary" onclick="startEmailScan()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-            <span>Avvia Scansione Email Non Lette</span>
+            <span data-i18n="email.startScan">Avvia Scansione Email Non Lette</span>
           </button>
-          <div id="email-scan-status" style="font-size: 11.5px; color: var(--text-muted);">Pronto per la scansione delle email.</div>
+          <div id="email-scan-status" style="font-size: 11.5px; color: var(--text-muted);" data-i18n="email.readyStatus">Pronto per la scansione delle email.</div>
         </div>
 
         <!-- Tabella Prodotti Rilevati -->
@@ -844,17 +851,17 @@
           <table class="inventory-table">
             <thead>
               <tr>
-                <th style="width: 36%;">PRODOTTO RILEVATO</th>
-                <th class="col-center" style="width: 12%;">TAGLIA</th>
-                <th class="col-center" style="width: 10%;">Q.TÀ</th>
-                <th class="col-center" style="width: 14%;">PREZZO (€)</th>
-                <th style="width: 14%;">NEGOZIO / SITO</th>
-                <th class="col-center" style="width: 14%;">DATA ORDINE</th>
+                <th style="width: 36%;" data-i18n="email.colDetectedProduct">PRODOTTO RILEVATO</th>
+                <th class="col-center" style="width: 12%;" data-i18n="email.colSize">TAGLIA</th>
+                <th class="col-center" style="width: 10%;" data-i18n="email.colQty">Q.TÀ</th>
+                <th class="col-center" style="width: 14%;" data-i18n="email.colPrice">PREZZO (€)</th>
+                <th style="width: 14%;" data-i18n="email.colStore">NEGOZIO / SITO</th>
+                <th class="col-center" style="width: 14%;" data-i18n="email.colOrderDate">DATA ORDINE</th>
               </tr>
             </thead>
             <tbody id="email-sync-table-body">
               <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 20px;">
+                <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 20px;" data-i18n="email.emptyList">
                   Nessun prodotto in attesa di importazione. Fai clic su "Avvia Scansione Email Non Lette".
                 </td>
               </tr>
@@ -864,12 +871,12 @@
 
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-        <div id="email-sync-count-info" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">
+        <div id="email-sync-count-info" style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="email.syncCountEmpty">
           Nessun prodotto in attesa di importazione.
         </div>
         <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">Chiudi</button>
-          <button type="button" id="btn-save-email-preorders" class="btn btn-primary" style="background: #059669; display: none;" onclick="saveEmailPreorders()">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()" data-i18n="common.close">Chiudi</button>
+          <button type="button" id="btn-save-email-preorders" class="btn btn-primary" style="background: #059669; display: none;" onclick="saveEmailPreorders()" data-i18n="email.saveAllPreorders">
             Salva Tutti nei Pre-ordini
           </button>
         </div>
@@ -884,7 +891,7 @@
     <div class="modal-card" style="width: 540px; max-width: 92vw;">
       <div class="modal-header">
         <div>
-          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Suggerimento per l'AI (opzionale)</h3>
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;" data-i18n="excel.hintTitle">Suggerimento per l'AI (opzionale)</h3>
           <p id="excel-hint-filename" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
             File selezionato: -
           </p>
@@ -892,21 +899,21 @@
         <button class="modal-close-btn" onclick="closeModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+        <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;" data-i18n="excel.hintDesc">
           Puoi fornire indicazioni contestuali per aiutare Gemini a interpretare correttamente il foglio di calcolo. Lascia vuoto per procedere con le regole standard.
         </p>
 
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px;">
-          <textarea id="excel-hint-text" class="form-input" style="height: 100px; resize: vertical; line-height: 1.5; font-family: inherit; width: 100%;" placeholder="Es: Dalla riga 15 in poi sono pre-ordini, oppure il campo Costo corrisponde al prezzo di acquisto..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+          <textarea id="excel-hint-text" class="form-input" style="height: 100px; resize: vertical; line-height: 1.5; font-family: inherit; width: 100%;" placeholder="Es: Dalla riga 15 in poi sono pre-ordini, oppure il campo Costo corrisponde al prezzo di acquisto..." data-i18n-placeholder="excel.hintPlaceholder" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
         </div>
 
         <div id="excel-parse-status" style="font-size: 11.5px; color: #818cf8; min-height: 16px; margin-top: 8px;"></div>
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-        <button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal()" data-i18n="common.cancel">Annulla</button>
         <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn btn-secondary" id="btn-excel-no-hint" onclick="executeExcelAnalysis(false)">Procedi senza note</button>
-          <button type="button" class="btn btn-primary" id="btn-excel-with-hint" onclick="executeExcelAnalysis(true)">Procedi con nota</button>
+          <button type="button" class="btn btn-secondary" id="btn-excel-no-hint" onclick="executeExcelAnalysis(false)" data-i18n="excel.proceedWithoutHint">Procedi senza note</button>
+          <button type="button" class="btn btn-primary" id="btn-excel-with-hint" onclick="executeExcelAnalysis(true)" data-i18n="excel.proceedWithHint">Procedi con nota</button>
         </div>
       </div>
     </div>
@@ -919,8 +926,8 @@
     <div class="modal-card" style="width: 860px; max-width: 95vw;">
       <div class="modal-header">
         <div>
-          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Importazione Excel con AI</h3>
-          <p id="excel-preview-subtitle" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;" data-i18n="excel.previewTitle">Importazione Excel con AI</h3>
+          <p id="excel-preview-subtitle" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" data-i18n="excel.previewSubtitle">
             L'AI ha analizzato il file e identificato i prodotti pronti per l'importazione.
           </p>
         </div>
@@ -932,13 +939,13 @@
           <table class="inventory-table">
             <thead>
               <tr>
-                <th style="width: 30%;">PRODOTTO</th>
-                <th class="col-center" style="width: 10%;">TAGLIA</th>
-                <th class="col-center" style="width: 9%;">Q.TÀ</th>
-                <th class="col-center" style="width: 14%;">P. ACQUISTO</th>
-                <th style="width: 13%;">L. ACQUISTO</th>
-                <th style="width: 13%;">L. VENDITA</th>
-                <th class="col-center" style="width: 11%;">STATO</th>
+                <th style="width: 30%;" data-i18n="excel.colProduct">PRODOTTO</th>
+                <th class="col-center" style="width: 10%;" data-i18n="excel.colSize">TAGLIA</th>
+                <th class="col-center" style="width: 9%;" data-i18n="excel.colQty">Q.TÀ</th>
+                <th class="col-center" style="width: 14%;" data-i18n="excel.colBuyPrice">P. ACQUISTO</th>
+                <th style="width: 13%;" data-i18n="excel.colBuyPlace">L. ACQUISTO</th>
+                <th style="width: 13%;" data-i18n="excel.colSellPlace">L. VENDITA</th>
+                <th class="col-center" style="width: 11%;" data-i18n="excel.colStatus">STATO</th>
               </tr>
             </thead>
             <tbody id="excel-preview-tbody">
@@ -952,8 +959,8 @@
           0 prodotti pronti per l'importazione.
         </div>
         <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
-          <button type="button" id="btn-excel-confirm-save" class="btn btn-primary" style="background: #059669;" onclick="saveExcelExtractedProducts()">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()" data-i18n="common.cancel">Annulla</button>
+          <button type="button" id="btn-excel-confirm-save" class="btn btn-primary" style="background: #059669;" onclick="saveExcelExtractedProducts()" data-i18n="excel.confirmAndSave">
             Conferma e Salva
           </button>
         </div>
@@ -975,7 +982,7 @@
           <span id="drawerStatusText">Magazzino</span>
         </span>
       </div>
-      <button class="drawer-close-btn" onclick="closeDrawer()" title="Chiudi (ESC)">
+      <button class="drawer-close-btn" onclick="closeDrawer()" title="Chiudi (ESC)" data-i18n-title="common.closeEsc">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     </div>
@@ -991,37 +998,37 @@
       <!-- Quick Metrics Grid -->
       <div class="drawer-metrics-grid">
         <div class="drawer-metric-card">
-          <div class="drawer-metric-label">Acquisto</div>
+          <div class="drawer-metric-label" data-i18n="drawer.metricBuy">Acquisto</div>
           <div class="drawer-metric-val" id="drawerBuyPrice">€ 0,00</div>
         </div>
         <div class="drawer-metric-card">
-          <div class="drawer-metric-label">Vendita / Stima</div>
+          <div class="drawer-metric-label" data-i18n="drawer.metricSell">Vendita / Stima</div>
           <div class="drawer-metric-val" id="drawerSellPrice">€ 0,00</div>
         </div>
         <div class="drawer-metric-card">
-          <div class="drawer-metric-label">Utile Netto</div>
+          <div class="drawer-metric-label" data-i18n="drawer.metricProfit">Utile Netto</div>
           <div class="drawer-metric-val profit" id="drawerProfit">+€ 0,00</div>
         </div>
       </div>
 
       <!-- Dati Acquisto & Logistica -->
       <div class="drawer-section">
-        <div class="drawer-section-title">Dati Acquisto & Logistica</div>
+        <div class="drawer-section-title" data-i18n="drawer.secPurchaseLogistics">Dati Acquisto & Logistica</div>
         <div class="drawer-grid-fields">
           <div>
-            <span class="drawer-field-label">Taglia / Misura:</span>
+            <span class="drawer-field-label" data-i18n="drawer.fieldSize">Taglia / Misura:</span>
             <span class="drawer-field-val" id="drawerSize">EU 43</span>
           </div>
           <div>
-            <span class="drawer-field-label">Quantità:</span>
+            <span class="drawer-field-label" data-i18n="drawer.fieldQty">Quantità:</span>
             <span class="drawer-field-val" id="drawerQty">1 pz</span>
           </div>
           <div>
-            <span class="drawer-field-label">Store / Fornitore:</span>
+            <span class="drawer-field-label" data-i18n="drawer.fieldStore">Store / Fornitore:</span>
             <span class="drawer-field-val" id="drawerStore">SNKRS</span>
           </div>
           <div>
-            <span class="drawer-field-label">Data Inserimento:</span>
+            <span class="drawer-field-label" data-i18n="drawer.fieldDate">Data Inserimento:</span>
             <span class="drawer-field-val" id="drawerDate">2026-10-01</span>
           </div>
         </div>
@@ -1029,18 +1036,18 @@
 
       <!-- Canale & Vendita -->
       <div class="drawer-section">
-        <div class="drawer-section-title">Canale & Vendita</div>
+        <div class="drawer-section-title" data-i18n="drawer.secChannelSale">Canale & Vendita</div>
         <div class="drawer-grid-fields">
           <div>
-            <span class="drawer-field-label">Piattaforma:</span>
+            <span class="drawer-field-label" data-i18n="drawer.fieldPlatform">Piattaforma:</span>
             <span class="drawer-field-val" id="drawerChannel" style="color: #818cf8;">-</span>
           </div>
           <div>
-            <span class="drawer-field-label">ROI Calcolato:</span>
+            <span class="drawer-field-label" data-i18n="drawer.fieldRoi">ROI Calcolato:</span>
             <span class="drawer-field-val" id="drawerRoi" style="color: #34d399;">-</span>
           </div>
           <div style="grid-column: span 2;">
-            <span class="drawer-field-label">Commissioni Piattaforma:</span>
+            <span class="drawer-field-label" data-i18n="drawer.fieldFees">Commissioni Piattaforma:</span>
             <span class="drawer-field-val" id="drawerFees">€ 0,00</span>
           </div>
         </div>
@@ -1048,7 +1055,7 @@
 
       <!-- Note e Condizioni -->
       <div class="drawer-section">
-        <div class="drawer-section-title">Note e Condizioni</div>
+        <div class="drawer-section-title" data-i18n="drawer.secNotes">Note e Condizioni</div>
         <p id="drawerNotes" style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin: 0;">
           Prodotto originale verificato con scatola integra e accessori originali inclusi.
         </p>
@@ -1057,7 +1064,7 @@
       <!-- Cronologia & Tracking Spedizione 17TRACK (Opzione A) -->
       <div class="drawer-section" id="drawerTrackingSection">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-          <div class="drawer-section-title" id="drawerTrackingSectionTitle" style="margin-bottom: 0;">Spedizione &amp; Tracking (17TRACK)</div>
+          <div class="drawer-section-title" id="drawerTrackingSectionTitle" style="margin-bottom: 0;" data-i18n="drawer.secTracking">Spedizione &amp; Tracking (17TRACK)</div>
           <span id="drawerTrackingStatusBadge" class="drawer-tracking-badge" style="display: none;"></span>
         </div>
         <div id="drawerTimeline">
@@ -1070,11 +1077,11 @@
     <div class="drawer-footer">
       <button type="button" class="btn btn-secondary" id="drawerEbayBtn">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <span>Lookup eBay</span>
+        <span data-i18n="drawer.btnEbayLookup">Lookup eBay</span>
       </button>
       <div style="display: flex; gap: 6px;">
-        <button type="button" class="btn btn-secondary" id="drawerEditBtn">Modifica</button>
-        <button type="button" class="btn btn-primary" id="drawerStatusActionBtn">Segna Venduto</button>
+        <button type="button" class="btn btn-secondary" id="drawerEditBtn" data-i18n="common.edit">Modifica</button>
+        <button type="button" class="btn btn-primary" id="drawerStatusActionBtn" data-i18n="drawer.markAsSold">Segna Venduto</button>
       </div>
     </div>
   </aside>
@@ -1087,38 +1094,38 @@
     <div class="context-menu-separator"></div>
     <button type="button" class="context-menu-item" id="ctxItemEdit" onclick="ctxActionEdit()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-      <span>Modifica</span>
+      <span data-i18n="contextMenu.edit">Modifica</span>
     </button>
     <button type="button" class="context-menu-item" id="ctxItemDuplicate" onclick="ctxActionDuplicate()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-      <span>Duplica</span>
+      <span data-i18n="contextMenu.duplicate">Duplica</span>
     </button>
     <div class="context-menu-separator" id="ctxSepStatus"></div>
     <button type="button" class="context-menu-item" id="ctxItemSell" onclick="ctxActionSell()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-      <span>Metti in vendita</span>
+      <span data-i18n="contextMenu.putOnSale">Metti in vendita</span>
     </button>
     <button type="button" class="context-menu-item" id="ctxItemStock" onclick="ctxActionStock()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
-      <span>Conferma in magazzino</span>
+      <span data-i18n="contextMenu.confirmStock">Conferma in magazzino</span>
     </button>
     <button type="button" class="context-menu-item" id="ctxItemComplete" onclick="ctxActionComplete()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      <span>Completa Vendita</span>
+      <span data-i18n="contextMenu.completeSale">Completa Vendita</span>
     </button>
     <div class="context-menu-separator" id="ctxSepEbay"></div>
     <button type="button" class="context-menu-item" id="ctxItemSearchEbay" onclick="ctxActionSearchEbay()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      <span>Cerca su eBay</span>
+      <span data-i18n="contextMenu.searchEbay">Cerca su eBay</span>
     </button>
     <button type="button" class="context-menu-item" id="ctxItemEbayPrices" onclick="ctxActionEbayPrices()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-      <span>Stima Prezzi eBay</span>
+      <span data-i18n="contextMenu.ebayPrices">Stima Prezzi eBay</span>
     </button>
     <div class="context-menu-separator"></div>
     <button type="button" class="context-menu-item danger" id="ctxItemDelete" onclick="ctxActionDelete()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-      <span>Elimina</span>
+      <span data-i18n="contextMenu.delete">Elimina</span>
     </button>
   </div>
 
@@ -1128,45 +1135,45 @@
   <div class="modal-backdrop" id="bulkSaleModal">
     <div class="modal-card" style="max-width: 460px;">
       <div class="modal-header">
-        <h3 id="bulkSaleModalTitle">Metti in Vendita</h3>
+        <h3 id="bulkSaleModalTitle" data-i18n="bulkSale.title">Metti in Vendita</h3>
         <button class="modal-close-btn" onclick="closeBulkSaleModal()">&times;</button>
       </div>
       <form id="bulkSaleForm" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onsubmit="handleBulkSaleSubmit(event)">
         <div class="modal-body">
-          <p id="bulkSaleModalSubtitle" style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
+          <p id="bulkSaleModalSubtitle" style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;" data-i18n="bulkSale.subtitle">
             Stai per mettere in vendita i prodotti selezionati. Il prezzo totale e le commissioni verranno ripartiti equamente e verrà creato un gruppo di vendita unico.
           </p>
 
           <div class="form-group" id="bulk-sale-qty-group" style="margin-bottom: 12px; display: none;">
-            <label class="form-label">Quantità da mettere in vendita</label>
+            <label class="form-label" data-i18n="bulkSale.qtyLabel">Quantità da mettere in vendita</label>
             <select id="bulk-sale-qty-select" class="form-input"></select>
             <span id="bulk-sale-qty-hint" style="display: block; font-size: 10.5px; color: var(--text-dim); margin-top: 4px;"></span>
           </div>
 
           <div class="form-group" style="margin-bottom: 12px;">
-            <label class="form-label" id="bulk-sale-price-label">Prezzo di Vendita TOTALE (€) *</label>
+            <label class="form-label" id="bulk-sale-price-label" data-i18n="bulkSale.totalPriceLabel">Prezzo di Vendita TOTALE (€) *</label>
             <input type="number" step="0.01" min="0" id="bulk-sale-total-price" class="form-input" placeholder="0.00" required autocomplete="off" spellcheck="false" />
           </div>
 
           <div class="form-group" style="margin-bottom: 12px;">
-            <label class="form-label">Commissioni / Spese TOTALI (€)</label>
+            <label class="form-label" data-i18n="bulkSale.totalFeesLabel">Commissioni / Spese TOTALI (€)</label>
             <input type="number" step="0.01" min="0" id="bulk-sale-total-fees" class="form-input" value="0.00" autocomplete="off" spellcheck="false" />
           </div>
 
           <div class="form-group" style="margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-              <label class="form-label" style="margin-bottom: 0;">Canale di Vendita</label>
-              <button type="button" class="btn-input-action" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi">Gestisci</button>
+              <label class="form-label" style="margin-bottom: 0;" data-i18n="modal.sellingChannel">Canale di Vendita</label>
+              <button type="button" class="btn-input-action" onclick="openManagePlacesModal()" title="Gestisci canali e luoghi" data-i18n-title="modal.manage" data-i18n="modal.manage">Gestisci</button>
             </div>
             <div class="autocomplete-wrap">
-              <input type="text" id="bulk-sale-place" class="form-input" placeholder="es. Vinted, StockX, Wallapop..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <input type="text" id="bulk-sale-place" class="form-input" placeholder="es. Vinted, StockX, Wallapop..." data-i18n-placeholder="bulkSale.placePlaceholder" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
               <div id="dropdown-bulk-sale-place" class="autocomplete-dropdown"></div>
             </div>
           </div>
         </div>
         <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button type="button" class="btn btn-secondary" onclick="closeBulkSaleModal()">Annulla</button>
-          <button type="submit" class="btn btn-primary">Conferma Vendita</button>
+          <button type="button" class="btn btn-secondary" onclick="closeBulkSaleModal()" data-i18n="common.cancel">Annulla</button>
+          <button type="submit" class="btn btn-primary" data-i18n="bulkSale.confirm">Conferma Vendita</button>
         </div>
       </form>
     </div>
@@ -1178,28 +1185,28 @@
   <div class="modal-backdrop" id="confirmStockModal">
     <div class="modal-card" style="max-width: 460px;">
       <div class="modal-header">
-        <h3 id="confirmStockModalTitle">Conferma in Magazzino</h3>
+        <h3 id="confirmStockModalTitle" data-i18n="confirmStock.title">Conferma in Magazzino</h3>
         <button class="modal-close-btn" onclick="closeConfirmStockModal()">&times;</button>
       </div>
       <form id="confirmStockForm" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onsubmit="handleConfirmStockSubmit(event)">
         <div class="modal-body">
-          <p id="confirmStockModalSubtitle" style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
+          <p id="confirmStockModalSubtitle" style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;" data-i18n="confirmStock.subtitle">
             Conferma l'arrivo dei prodotti in magazzino per renderli disponibili per la vendita.
           </p>
 
           <div class="form-group" id="confirm-stock-qty-group" style="margin-bottom: 12px; display: none;">
-            <label class="form-label">Quantità arrivata in Magazzino</label>
+            <label class="form-label" data-i18n="confirmStock.qtyLabel">Quantità arrivata in Magazzino</label>
             <select id="confirm-stock-qty-select" class="form-input"></select>
             <span id="confirm-stock-qty-hint" style="display: block; font-size: 10.5px; color: var(--text-dim); margin-top: 4px;"></span>
           </div>
 
-          <div id="confirm-stock-single-hint" style="font-size: 11px; color: var(--text-muted); padding: 10px 12px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); margin-bottom: 8px;">
+          <div id="confirm-stock-single-hint" style="font-size: 11px; color: var(--text-muted); padding: 10px 12px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); margin-bottom: 8px;" data-i18n="confirmStock.singleHint">
             Il prodotto selezionato passerà dallo stato di Pre-ordine a Disponibile in Magazzino.
           </div>
         </div>
         <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button type="button" class="btn btn-secondary" onclick="closeConfirmStockModal()">Annulla</button>
-          <button type="submit" class="btn btn-primary" id="btnConfirmStockSubmit">Conferma Spostamento</button>
+          <button type="button" class="btn btn-secondary" onclick="closeConfirmStockModal()" data-i18n="common.cancel">Annulla</button>
+          <button type="submit" class="btn btn-primary" id="btnConfirmStockSubmit" data-i18n="confirmStock.confirm">Conferma Spostamento</button>
         </div>
       </form>
     </div>
@@ -1212,8 +1219,8 @@
     <div class="modal-card" style="width: 520px; max-width: 94vw;">
       <div class="modal-header">
         <div>
-          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Gestione Canali e Luoghi</h3>
-          <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;" data-i18n="managePlaces.title">Gestione Canali e Luoghi</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" data-i18n="managePlaces.subtitle">
             Personalizza i marketplace e visualizza i canali di vendita e acquisto disponibili.
           </p>
         </div>
@@ -1223,9 +1230,9 @@
         
         <!-- Form Aggiunta Nuovo Canale -->
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 14px;">
-          <label class="form-label" for="new-place-input" style="font-size: 11px; margin-bottom: 6px;">AGGIUNGI NUOVO CANALE DI VENDITA</label>
+          <label class="form-label" for="new-place-input" style="font-size: 11px; margin-bottom: 6px;" data-i18n="managePlaces.addNewLabel">AGGIUNGI NUOVO CANALE DI VENDITA</label>
           <div style="display: flex; gap: 8px;">
-            <input type="text" id="new-place-input" class="form-input" placeholder="es. Vestiaire Collective, Subito..." style="flex: 1;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitAddCustomPlace();}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+            <input type="text" id="new-place-input" class="form-input" placeholder="es. Vestiaire Collective, Subito..." data-i18n-placeholder="managePlaces.inputPlaceholder" style="flex: 1;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitAddCustomPlace();}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
             <button type="button" class="btn btn-primary" onclick="submitAddCustomPlace()" style="white-space: nowrap;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               <span>Aggiungi</span>
@@ -1236,7 +1243,7 @@
         <!-- Sezione Canali di Vendita Attivi -->
         <div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span style="font-size: 11px; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px;">Canali di Vendita & Marketplace</span>
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="managePlaces.salesChannelsTitle">Canali di Vendita & Marketplace</span>
             <span style="font-size: 10.5px; color: var(--text-dim);" id="selling-places-count">0 canali</span>
           </div>
           <div class="places-grid" id="selling-places-chips">
@@ -1247,7 +1254,7 @@
         <!-- Sezione Luoghi di Acquisto -->
         <div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span style="font-size: 11px; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px;">Luoghi di Acquisto Registrati</span>
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="managePlaces.purchasePlacesTitle">Luoghi di Acquisto Registrati</span>
             <span style="font-size: 10.5px; color: var(--text-dim);" id="purchased-places-count">0 luoghi</span>
           </div>
           <div class="places-grid" id="purchased-places-chips">
@@ -1257,7 +1264,7 @@
 
       </div>
       <div class="modal-footer" style="display: flex; justify-content: flex-end;">
-        <button type="button" class="btn btn-secondary" onclick="closeManagePlacesModal()">Chiudi</button>
+        <button type="button" class="btn btn-secondary" onclick="closeManagePlacesModal()" data-i18n="common.close">Chiudi</button>
       </div>
     </div>
   </div>
@@ -1269,7 +1276,7 @@
     <div class="modal-card" style="max-width: 980px; width: 95vw;">
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #fff;">Nuova Spedizione Packlink PRO</h3>
+          <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #fff;" data-i18n="packlink.modalTitle">Nuova Spedizione Packlink PRO</h3>
           <span id="packlink-api-badge" style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">REST API v1</span>
         </div>
         <button class="modal-close-btn" onclick="closePacklinkModal()">&times;</button>
@@ -1278,15 +1285,15 @@
       <!-- Banner Configurazione API Key (visibile se non configurata o al click su Chiave API) -->
       <div id="pk-api-key-banner" style="background: rgba(245, 158, 11, 0.08); border-bottom: 1px solid rgba(245, 158, 11, 0.2); padding: 10px 20px; font-size: 11px; display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span id="pk-banner-status-text" style="color: #f59e0b; font-weight: 600;">Configura Chiave API Packlink PRO</span>
-          <span style="color: var(--text-dim); font-size: 10px;">Salvata localmente nel tuo config.json personale</span>
+          <span id="pk-banner-status-text" style="color: #f59e0b; font-weight: 600;" data-i18n="packlink.configApiKey">Configura Chiave API Packlink PRO</span>
+          <span style="color: var(--text-dim); font-size: 10px;" data-i18n="packlink.savedLocally">Salvata localmente nel tuo config.json personale</span>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-          <input type="password" id="pk-api-key-input" class="form-input" placeholder="Incolla qui la tua API Key di Packlink PRO..." style="font-size: 11px; padding: 6px 10px; flex: 1;" />
+          <input type="password" id="pk-api-key-input" class="form-input" placeholder="Incolla qui la tua API Key di Packlink PRO..." data-i18n-placeholder="packlink.apiKeyPlaceholder" style="font-size: 11px; padding: 6px 10px; flex: 1;" />
           <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; white-space: nowrap; user-select: none;">
-            <input type="checkbox" id="pk-show-key" onchange="togglePacklinkKeyVisibility(this.checked)" /> Mostra
+            <input type="checkbox" id="pk-show-key" onchange="togglePacklinkKeyVisibility(this.checked)" /> <span data-i18n="common.show">Mostra</span>
           </label>
-          <button type="button" class="btn btn-primary" onclick="savePacklinkApiKey()" style="font-size: 11px; padding: 6px 14px; white-space: nowrap;">Salva Chiave</button>
+          <button type="button" class="btn btn-primary" onclick="savePacklinkApiKey()" style="font-size: 11px; padding: 6px 14px; white-space: nowrap;" data-i18n="packlink.saveKey">Salva Chiave</button>
         </div>
       </div>
 
@@ -1298,17 +1305,17 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #818cf8;"></span>
-                <span style="font-size: 11px; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 0.5px;">Incolla Rapido con AI</span>
+                <span style="font-size: 11px; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="packlink.quickPasteAi">Incolla Rapido con AI</span>
               </div>
-              <span id="pk-ai-status-hint" style="font-size: 11px; color: var(--text-dim);">Incolla il testo grezzo dell'ordine e clicca il pulsante per compilare automaticamente tutti i campi del destinatario.</span>
+              <span id="pk-ai-status-hint" style="font-size: 11px; color: var(--text-dim);" data-i18n="packlink.aiHint">Incolla il testo grezzo dell'ordine e clicca il pulsante per compilare automaticamente tutti i campi del destinatario.</span>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 220px; gap: 12px; align-items: stretch;">
-              <textarea id="pk-smart-paste" class="form-input" rows="3" placeholder="Incolla qui l'intero testo dell'ordine (es. 'Spedisci a Marco Rossi, via roma 14 scala B int 3, cap 20121 Milano, tel 333 1234567, email marco.rossi@email.it, pacco scarpe 1.2kg')..." style="font-size: 11.5px; height: 78px; resize: none;"></textarea>
+              <textarea id="pk-smart-paste" class="form-input" rows="3" placeholder="Incolla qui l'intero testo dell'ordine (es. 'Spedisci a Marco Rossi, via roma 14 scala B int 3, cap 20121 Milano, tel 333 1234567, email marco.rossi@email.it, pacco scarpe 1.2kg')..." data-i18n-placeholder="packlink.smartPastePlaceholder" style="font-size: 11.5px; height: 78px; resize: none;"></textarea>
               
-              <button type="button" class="btn btn-primary" id="btn-pk-ai-extract" onclick="handlePacklinkAiExtract()" style="width: 100%; height: 100%; min-height: 78px; font-weight: 700; font-size: 12px; padding: 10px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s ease;">
+              <button type="button" class="btn btn-primary" id="btn-pk-ai-extract" onclick="handlePacklinkAiExtract()" style="width: 100%; height: 100%; min-height: 78px; font-weight: 700; font-size: 12px; padding: 10px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: border-radius: var(--radius-sm); transition: all 0.15s ease;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
-                <span>Invia a Gemini &amp; Compila Campi</span>
+                <span data-i18n="packlink.sendToGemini">Invia a Gemini &amp; Compila Campi</span>
               </button>
             </div>
           </div>
@@ -1320,57 +1327,57 @@
             <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; margin-bottom: 10px;">
-                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;" data-i18n="packlink.recipientData">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     Dati Destinatario
                   </span>
-                  <span style="font-size: 10px; color: var(--text-dim);">Mittente da account</span>
+                  <span style="font-size: 10px; color: var(--text-dim);" data-i18n="packlink.senderFromAccount">Mittente da account</span>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 8px;">
-                  <label class="form-label">Nome e Cognome / Ragione Sociale *</label>
+                  <label class="form-label" data-i18n="packlink.fullName">Nome e Cognome / Ragione Sociale *</label>
                   <input type="text" id="pk-name" class="form-input" placeholder="Mario Rossi" required />
                 </div>
 
                 <div class="form-group" style="margin-bottom: 8px;">
-                  <label class="form-label">Indirizzo (Via/Piazza e Civico) *</label>
+                  <label class="form-label" data-i18n="packlink.address">Indirizzo (Via/Piazza e Civico) *</label>
                   <input type="text" id="pk-street1" class="form-input" placeholder="Via Roma 14" required />
                 </div>
 
                 <div class="form-group" style="margin-bottom: 8px;">
-                  <label class="form-label">Interno / Scala / Citofono (Opzionale)</label>
+                  <label class="form-label" data-i18n="packlink.address2">Interno / Scala / Citofono (Opzionale)</label>
                   <input type="text" id="pk-street2" class="form-input" placeholder="Scala B, Int. 4" />
                 </div>
 
                 <div style="display: grid; grid-template-columns: 110px 1fr; gap: 8px; margin-bottom: 8px;">
                   <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">CAP *</label>
+                    <label class="form-label" data-i18n="packlink.zip">CAP *</label>
                     <input type="text" id="pk-zip" class="form-input" placeholder="20121" maxlength="10" required />
                   </div>
                   <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">Città *</label>
+                    <label class="form-label" data-i18n="packlink.city">Città *</label>
                     <input type="text" id="pk-city" class="form-input" placeholder="Milano" required />
                   </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 80px; gap: 8px; margin-bottom: 8px;">
                   <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">Provincia</label>
+                    <label class="form-label" data-i18n="packlink.province">Provincia</label>
                     <input type="text" id="pk-state" class="form-input" placeholder="MI" maxlength="4" />
                   </div>
                   <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">Nazione</label>
+                    <label class="form-label" data-i18n="packlink.country">Nazione</label>
                     <input type="text" id="pk-country" class="form-input" value="IT" maxlength="2" />
                   </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                   <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">Telefono *</label>
+                    <label class="form-label" data-i18n="packlink.phone">Telefono *</label>
                     <input type="tel" id="pk-phone" class="form-input" placeholder="+39 333 1234567" required />
                   </div>
                   <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">Email (Opzionale)</label>
+                    <label class="form-label" data-i18n="packlink.email">Email (Opzionale)</label>
                     <input type="email" id="pk-email" class="form-input" placeholder="cliente@email.it" />
                   </div>
                 </div>
@@ -1381,27 +1388,27 @@
             <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;">
               <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 6px; margin-bottom: 10px;">
-                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;" data-i18n="packlink.parcelDataPreset">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                     Dati Pacco &amp; Preset
                   </span>
-                  <span style="font-size: 10px; color: var(--text-dim);">1 collo</span>
+                  <span style="font-size: 10px; color: var(--text-dim);" data-i18n="packlink.oneParcel">1 collo</span>
                 </div>
 
                 <!-- Preset Buttons -->
                 <div style="margin-bottom: 12px;">
-                  <label class="form-label" style="margin-bottom: 6px;">Preset Rapidi Formato</label>
+                  <label class="form-label" style="margin-bottom: 6px;" data-i18n="packlink.formatPresets">Preset Rapidi Formato</label>
                   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
                     <button type="button" class="btn btn-secondary pk-preset-btn active" id="btnPresetShoes" onclick="setPacklinkPreset('shoes')" style="padding: 7px 6px; text-align: center; font-size: 11px;">
-                      <div style="font-weight: 600;">Scarpe</div>
+                      <div style="font-weight: 600;" data-i18n="packlink.presetShoes">Scarpe</div>
                       <div style="font-size: 9.5px; opacity: 0.75;">1.2 kg • 34x23x13</div>
                     </button>
                     <button type="button" class="btn btn-secondary pk-preset-btn" id="btnPresetEnvelope" onclick="setPacklinkPreset('envelope')" style="padding: 7px 6px; text-align: center; font-size: 11px;">
-                      <div style="font-weight: 600;">Busta</div>
+                      <div style="font-weight: 600;" data-i18n="packlink.presetEnvelope">Busta</div>
                       <div style="font-size: 9.5px; opacity: 0.75;">0.3 kg • 25x20x5</div>
                     </button>
                     <button type="button" class="btn btn-secondary pk-preset-btn" id="btnPresetCustom" onclick="setPacklinkPreset('custom')" style="padding: 7px 6px; text-align: center; font-size: 11px;">
-                      <div style="font-weight: 600;">Custom</div>
+                      <div style="font-weight: 600;" data-i18n="packlink.presetCustom">Custom</div>
                       <div style="font-size: 9.5px; opacity: 0.75;">Personalizzato</div>
                     </button>
                   </div>
@@ -1409,13 +1416,13 @@
 
                 <!-- Peso -->
                 <div class="form-group" style="margin-bottom: 10px;">
-                  <label class="form-label">Peso Effettivo (kg) *</label>
+                  <label class="form-label" data-i18n="packlink.actualWeight">Peso Effettivo (kg) *</label>
                   <input type="number" id="pk-weight" class="form-input" value="1.2" step="0.1" min="0.1" placeholder="0.0" style="font-size: 12px; font-weight: 600;" required />
                 </div>
 
                 <!-- Misure Grid -->
                 <div class="form-group" style="margin-bottom: 10px;">
-                  <label class="form-label">Dimensioni Pacco (L &times; W &times; H cm) *</label>
+                  <label class="form-label" data-i18n="packlink.dimensions">Dimensioni Pacco (L &times; W &times; H cm) *</label>
                   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                     <div style="position: relative;">
                       <input type="number" id="pk-length" class="form-input" value="34" step="1" min="1" placeholder="0" style="text-align: center; font-size: 12px; padding: 6px 2px;" required />
@@ -1433,14 +1440,14 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">Descrizione Contenuto per Corriere</label>
-                  <input type="text" id="pk-content" class="form-input" value="Scarpe / Sneakers" placeholder="Es. Abbigliamento, Sneakers..." />
+                  <label class="form-label" data-i18n="packlink.contentDesc">Descrizione Contenuto per Corriere</label>
+                  <input type="text" id="pk-content" class="form-input" value="Scarpe / Sneakers" placeholder="Es. Abbigliamento, Sneakers..." data-i18n-placeholder="packlink.contentPlaceholder" />
                 </div>
               </div>
 
               <div style="padding: 8px 10px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-sm); font-size: 10.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; margin-top: 4px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-                <span>Genera la bozza con calcolo automatico tariffe corrieri.</span>
+                <span data-i18n="packlink.draftTariffsHint">Genera la bozza con calcolo automatico tariffe corrieri.</span>
               </div>
             </div>
 
@@ -1451,12 +1458,12 @@
         <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;">
           <div style="font-size: 10.5px; color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #818cf8;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span>Genera bozza su Packlink PRO per pagamento ed etichetta</span>
+            <span data-i18n="packlink.footerHint">Genera bozza su Packlink PRO per pagamento ed etichetta</span>
           </div>
           <div style="display: flex; gap: 8px;">
-            <button type="button" class="btn btn-secondary" onclick="togglePacklinkConfigBanner()" id="btnTogglePkKey" style="font-size: 11px;">Chiave API</button>
-            <button type="button" class="btn btn-secondary" onclick="closePacklinkModal()">Annulla</button>
-            <button type="submit" class="btn btn-primary" id="btnPacklinkSubmit" style="font-weight: 600;">
+            <button type="button" class="btn btn-secondary" onclick="togglePacklinkConfigBanner()" id="btnTogglePkKey" style="font-size: 11px;" data-i18n="packlink.apiKeyBtn">Chiave API</button>
+            <button type="button" class="btn btn-secondary" onclick="closePacklinkModal()" data-i18n="common.cancel">Annulla</button>
+            <button type="submit" class="btn btn-primary" id="btnPacklinkSubmit" style="font-weight: 600;" data-i18n="packlink.createDraft">
               Crea Bozza Packlink
             </button>
           </div>
@@ -1472,7 +1479,7 @@
     <div class="modal-card" style="width: 540px; max-width: 94vw;">
       <div class="modal-header">
         <div>
-          <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Nuova Versione Disponibile</h3>
+          <h3 style="font-size: 14px; font-weight: 700; color: #fff;" data-i18n="update.modalTitle">Nuova Versione Disponibile</h3>
           <p id="update-subtitle" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
             Versione <strong id="update-target-version" style="color: #10b981;">v...</strong> disponibile (versione attuale: <span id="update-current-version">v1.6.4</span>)
           </p>
@@ -1482,7 +1489,7 @@
       <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
         
         <div>
-          <span style="font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">NOVITÀ DELL'AGGIORNAMENTO:</span>
+          <span style="font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="update.changelogTitle">NOVITÀ DELL'AGGIORNAMENTO:</span>
           <div id="update-changelog-box" style="margin-top: 6px; background: #0b101c; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; font-size: 11.5px; line-height: 1.6; color: #cbd5e1; max-height: 180px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; scrollbar-width: thin; scrollbar-color: #334155 #0b101c;">
             <!-- Popolato dinamicamente -->
           </div>
@@ -1491,7 +1498,7 @@
         <!-- Garanzia sicurezza dati e configurazione locale -->
         <div style="display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-sm); padding: 8px 12px;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="flex-shrink: 0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <span style="font-size: 11px; color: #34d399; font-weight: 500;">
+          <span style="font-size: 11px; color: #34d399; font-weight: 500;" data-i18n="update.dataSafetyGuarantee">
             I tuoi dati locali (database SQLite e configurazioni) sono protetti e non verranno toccati.
           </span>
         </div>
@@ -1501,17 +1508,17 @@
           <div style="background: #1e293b; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
             <div id="update-progress-bar" style="background: #10b981; height: 100%; width: 0%; transition: width 0.15s ease;"></div>
           </div>
-          <div id="update-status-label" style="font-size: 11.5px; color: #cbd5e1; font-weight: 500;">
+          <div id="update-status-label" style="font-size: 11.5px; color: #cbd5e1; font-weight: 500;" data-i18n="update.downloadInProgress">
             Download dell'aggiornamento in corso...
           </div>
         </div>
 
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-        <button type="button" class="btn btn-secondary" id="btn-update-cancel" onclick="closeUpdateModal()">Più Tardi</button>
+        <button type="button" class="btn btn-secondary" id="btn-update-cancel" onclick="closeUpdateModal()" data-i18n="update.later">Più Tardi</button>
         <button type="button" class="btn btn-primary" id="btn-update-start" style="background: #059669;" onclick="startAppUpdate()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-          <span>Aggiorna Ora</span>
+          <span data-i18n="update.updateNow">Aggiorna Ora</span>
         </button>
       </div>
     </div>
@@ -1528,8 +1535,8 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </div>
           <div>
-            <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Motore Locale non Raggiungibile</h3>
-            <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+            <h3 style="font-size: 14px; font-weight: 700; color: #fff;" data-i18n="bridgeOffline.modalTitle">Motore Locale non Raggiungibile</h3>
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" data-i18n="bridgeOffline.modalSubtitle">
               Il server bridge Python locale (porta 28472) non risponde alle chiamate.
             </p>
           </div>
@@ -1537,22 +1544,22 @@
         <button class="modal-close-btn" onclick="closeBridgeOfflineModal()">&times;</button>
       </div>
       <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
-        <p style="font-size: 12px; color: #cbd5e1; line-height: 1.6; margin: 0;">
+        <p style="font-size: 12px; color: #cbd5e1; line-height: 1.6; margin: 0;" data-i18n="bridgeOffline.description">
           L'applicazione non riesce a comunicare con il backend locale. Se il motore Python non è riuscito ad avviarsi, consulta il file di log per individuare l'errore:
         </p>
         <div style="background: #0b101c; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; font-family: monospace; font-size: 11.5px; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <span>data/bridge.log</span>
         </div>
-        <div style="font-size: 11px; color: var(--text-dim); line-height: 1.5;">
+        <div style="font-size: 11px; color: var(--text-dim); line-height: 1.5;" data-i18n="bridgeOffline.possibleCauses">
           Possibili cause: permessi di esecuzione, librerie mancanti o porta occupata da un altro processo.
         </div>
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-        <button type="button" class="btn btn-secondary" onclick="closeBridgeOfflineModal()">Continua Comunque</button>
+        <button type="button" class="btn btn-secondary" onclick="closeBridgeOfflineModal()" data-i18n="bridgeOffline.continueAnyway">Continua Comunque</button>
         <button type="button" class="btn btn-primary" id="btn-retry-bridge" style="background: #2563eb;" onclick="retryBridgeConnection()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-          <span id="btn-retry-bridge-label">Riprova Connessione</span>
+          <span id="btn-retry-bridge-label" data-i18n="bridgeOffline.retryConnection">Riprova Connessione</span>
         </button>
       </div>
     </div>
@@ -1561,6 +1568,8 @@
   <!-- Toast Notifiche -->
   <div class="toast" id="toastNotification"></div>
 
+  <!-- Modulo Internazionalizzazione (Caricato prima di app.js) -->
+  <script src="i18n.js"></script>
   <!-- Script Applicativo -->
   <script src="app.js"></script>
 </body>

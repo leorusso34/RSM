@@ -73,11 +73,16 @@ _transcription_status = {
 }
 
 
-def _start_voice_recording() -> tuple[bool, str]:
+def _start_voice_recording(language: str = "it-IT") -> tuple[bool, str]:
+    """Avvia la registrazione vocale in background e imposta i callback per la trascrizione."""
     global _active_transcriber
     with _speech_lock:
         if _active_transcriber and getattr(_active_transcriber, "is_recording", False):
             return True, "already_recording"
+
+        # Normalizzazione lingua: "en*" -> "en-US", altrimenti fallback deterministico a "it-IT"
+        raw_lang = str(language or "").strip().lower()
+        normalized_lang = "en-US" if raw_lang.startswith("en") else "it-IT"
 
         _transcription_status["is_recording"] = True
         _transcription_status["is_processing"] = False
@@ -112,7 +117,7 @@ def _start_voice_recording() -> tuple[bool, str]:
                 on_listening=_on_listening,
                 api_key=api_key,
                 max_duration=300,  # fino a 5 minuti senza spegnimento automatico
-                language="it-IT",
+                language=normalized_lang,
             )
             return True, "started"
         except Exception as exc:  # noqa: BLE001
@@ -244,13 +249,20 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         self._send_json({"success": False, "error": message}, status=status)
 
     def _read_body_json(self) -> dict[str, Any]:
-        content_length = int(self.headers.get("Content-Length", 0))
+        """Legge ed esegue il parsing difensivo del payload JSON dal body HTTP."""
+        try:
+            raw_len = self.headers.get("Content-Length", 0) if self.headers else 0
+            content_length = int(raw_len)
+        except (ValueError, TypeError):
+            return {}
         if content_length <= 0:
             return {}
-        body = self.rfile.read(content_length).decode("utf-8")
         try:
-            return json.loads(body)
-        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+            body_bytes = self.rfile.read(content_length)
+            body_text = body_bytes.decode("utf-8")
+            parsed = json.loads(body_text)
+            return parsed if isinstance(parsed, dict) else {}
+        except (json.JSONDecodeError, UnicodeDecodeError, ValueError, OSError):
             return {}
 
     # --------------------------------------------------------------------------
@@ -387,8 +399,10 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
         # Stima prezzi di mercato eBay
         if path == "/api/ebay-prices":
-            name = params.get("name", [""])[0]
-            size = params.get("size", [""])[0]
+            name_vals = params.get("name")
+            name = str(name_vals[0]).strip() if isinstance(name_vals, list) and name_vals else ""
+            size_vals = params.get("size")
+            size = str(size_vals[0]).strip() if isinstance(size_vals, list) and size_vals else ""
             if not name:
                 self._send_error("Parametro 'name' richiesto.")
                 return
@@ -422,7 +436,9 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 return
 
             query_params = parse_qs(parsed_url.query)
-            force_refresh = query_params.get("refresh", ["0"])[0].lower() in ("1", "true")
+            ref_vals = query_params.get("refresh")
+            ref_str = str(ref_vals[0]).strip() if isinstance(ref_vals, list) and ref_vals else "0"
+            force_refresh = ref_str.lower() in ("1", "true")
             tracking_num = str(product.get("tracking_number") or "").strip()
             carrier = str(product.get("carrier") or "").strip()
             cache_raw = str(product.get("tracking_cache") or "").strip()
@@ -481,8 +497,10 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         # Query diretta generica di tracking /api/tracking?number=...&carrier=...
         if path == "/api/tracking":
             query_params = parse_qs(parsed_url.query)
-            num = query_params.get("number", [""])[0].strip()
-            carrier = query_params.get("carrier", [""])[0].strip()
+            num_vals = query_params.get("number")
+            num = str(num_vals[0]).strip() if isinstance(num_vals, list) and num_vals else ""
+            car_vals = query_params.get("carrier")
+            carrier = str(car_vals[0]).strip() if isinstance(car_vals, list) and car_vals else ""
             if not num:
                 self._send_error("Parametro 'number' mancante o vuoto.")
                 return
@@ -554,7 +572,12 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                 import src.config
 
                 importlib.reload(src.config)
-                curr_ver = params.get("current_version", [src.config.APP_VERSION])[0]
+                ver_vals = params.get("current_version")
+                curr_ver = (
+                    str(ver_vals[0]).strip()
+                    if isinstance(ver_vals, list) and ver_vals
+                    else src.config.APP_VERSION
+                )
                 update_info = check_for_updates(current_version=curr_ver)
                 with _updater_lock:
                     _update_state["latest_info"] = update_info
@@ -592,12 +615,33 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
     # GESTIONE METODI POST
     # --------------------------------------------------------------------------
     def do_POST(self) -> None:
-        path = urlparse(self.path).path.rstrip("/") or "/"
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path.rstrip("/") or "/"
         body = self._read_body_json()
 
-        # Avvio registrazione vocale SpeechTranscriber
+        # Avvio registrazione vocale SpeechTranscriber con supporto lingua (IT | EN)
         if path == "/api/speech/start":
-            ok, msg = _start_voice_recording()
+            # Estrazione difensiva lingua da JSON body o query parameters con fallback a "it-IT"
+            requested_lang: str | None = None
+            if isinstance(body, dict):
+                raw_body_lang = body.get("language") or body.get("lang")
+                if isinstance(raw_body_lang, (list, tuple)) and raw_body_lang:
+                    raw_body_lang = raw_body_lang[0]
+                if raw_body_lang is not None and str(raw_body_lang).strip():
+                    requested_lang = str(raw_body_lang).strip()
+
+            if not requested_lang:
+                params = parse_qs(parsed_url.query)
+                for q_key in ("language", "lang"):
+                    q_vals = params.get(q_key)
+                    if isinstance(q_vals, list) and q_vals:
+                        val = str(q_vals[0]).strip()
+                        if val:
+                            requested_lang = val
+                            break
+
+            language = requested_lang or "it-IT"
+            ok, msg = _start_voice_recording(language=language)
             if ok:
                 self._send_json({"success": True, "status": msg})
             else:
@@ -798,11 +842,13 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
         # Salvataggio impostazioni
         if path == "/api/settings":
             if "email_sync_address" in body:
-                self.db.set_setting("email_sync_address", body["email_sync_address"].strip())
-            if "email_sync_app_password" in body and body["email_sync_app_password"].strip():
-                self.db.set_setting("email_sync_app_password", body["email_sync_app_password"].strip())
+                self.db.set_setting("email_sync_address", str(body.get("email_sync_address") or "").strip())
+            if "email_sync_app_password" in body:
+                pwd_val = str(body.get("email_sync_app_password") or "").strip()
+                if pwd_val:
+                    self.db.set_setting("email_sync_app_password", pwd_val)
             if "packlink_api_key" in body:
-                self.db.set_setting("packlink_api_key", body["packlink_api_key"].strip())
+                self.db.set_setting("packlink_api_key", str(body.get("packlink_api_key") or "").strip())
             self._send_json({"success": True, "message": "Impostazioni salvate con successo!"})
             return
 
@@ -1063,7 +1109,8 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
         # Operazioni massive: Aggiornamento stato di gruppo
         if path == "/api/products/bulk-status":
-            ids = [int(i) for i in body.get("ids", []) if str(i).isdigit()]
+            raw_ids = body.get("ids")
+            ids = [int(i) for i in raw_ids if str(i).isdigit()] if isinstance(raw_ids, list) else []
             if not ids:
                 self._send_error("Nessun ID prodotto fornito.")
                 return
@@ -1217,7 +1264,8 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
         # Operazioni massive: Eliminazione di gruppo
         if path == "/api/products/bulk-delete":
-            ids = [int(i) for i in body.get("ids", []) if str(i).isdigit()]
+            raw_ids = body.get("ids")
+            ids = [int(i) for i in raw_ids if str(i).isdigit()] if isinstance(raw_ids, list) else []
             if not ids:
                 self._send_error("Nessun ID prodotto fornito.")
                 return
@@ -1230,7 +1278,8 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
 
         # Operazioni massive: Duplicazione prodotti
         if path == "/api/products/duplicate":
-            ids = [int(i) for i in body.get("ids", []) if str(i).isdigit()]
+            raw_ids = body.get("ids")
+            ids = [int(i) for i in raw_ids if str(i).isdigit()] if isinstance(raw_ids, list) else []
             if not ids:
                 self._send_error("Nessun ID prodotto fornito.")
                 return

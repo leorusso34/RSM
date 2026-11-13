@@ -39,6 +39,98 @@ function formatMoney(val) {
   })}`;
 }
 
+// Gestore globale del cambio lingua applicativo (Milestone M3)
+window.onAppLanguageChanged = function(lang) {
+  // 1. Re-render della tabella principale (mantiene filtri, selezioni, ordinamento)
+  if (typeof renderTable === "function") {
+    renderTable();
+  }
+
+  // 2. Aggiornamento contatori e sub-testi KPI
+  if (typeof updateDashboardMetrics === "function") {
+    updateDashboardMetrics();
+  }
+
+  // 3. Aggiornamento capsula di selezione flottante
+  if (typeof updateSelectionBadge === "function") {
+    updateSelectionBadge();
+  }
+
+  // 4. Ricreazione pulita dei grafici Chart.js con etichette localizzate
+  if (typeof initCharts === "function") {
+    initCharts();
+  }
+
+  // 5. Aggiornamento etichetta bottone filtro Dead Stock
+  const btnDeadStockText = document.getElementById("btnFilterDeadStockText");
+  if (btnDeadStockText && typeof t === "function") {
+    btnDeadStockText.textContent = filterDeadStockOnly ? t("filters.showAll") : t("filters.deadStockFilter");
+  }
+
+  // 6. Aggiornamento popover notifiche
+  if (typeof renderNotificationsUI === "function") {
+    renderNotificationsUI();
+  }
+
+  // 7. Se il Side Drawer è aperto, ri-esegui il render dei suoi testi dinamici senza chiuderlo
+  if (typeof currentDrawerItem !== "undefined" && currentDrawerItem && document.getElementById("sideDrawer")?.classList.contains("open")) {
+    if (typeof renderDrawerTrackingOrTimeline === "function") {
+      renderDrawerTrackingOrTimeline(currentDrawerItem);
+    }
+    const drawerPlace = document.getElementById("drawerPlace");
+    if (drawerPlace && typeof t === "function") {
+      drawerPlace.textContent = currentDrawerItem.purchasedPlace 
+        ? `${t("drawer.purchasePlacePrefix")}: ${currentDrawerItem.purchasedPlace}`
+        : t("drawer.directPurchase");
+    }
+    const drawerStore = document.getElementById("drawerStore");
+    if (drawerStore && typeof t === "function" && !currentDrawerItem.purchasedPlace) {
+      drawerStore.textContent = t("drawer.officialStore");
+    }
+    const drawerDate = document.getElementById("drawerDate");
+    if (drawerDate && typeof t === "function" && !currentDrawerItem.date) {
+      drawerDate.textContent = t("drawer.recent");
+    }
+    const statusBtn = document.getElementById("drawerStatusActionBtn");
+    if (statusBtn && currentDrawerItem.status !== "completed" && typeof t === "function") {
+      statusBtn.textContent = t("drawer.markAsSold");
+    }
+  }
+
+  // 8. Se il modale prodotto è aperto, aggiorna titolo, bottone e profit preview
+  const prodModal = document.getElementById("productModal");
+  if (prodModal && prodModal.classList.contains("open") && typeof t === "function") {
+    const modalTitle = document.querySelector("#productModal .modal-header h3");
+    const submitBtn = document.querySelector("#productModal .modal-footer button[type='submit']");
+    if (currentEditingId !== null) {
+      if (modalTitle) modalTitle.textContent = `${t("modal.editProductTitle")} #${currentEditingId}`;
+      if (submitBtn) submitBtn.textContent = t("modal.updateProduct");
+    } else {
+      if (modalTitle) modalTitle.textContent = t("modal.addProductTitle");
+      if (submitBtn) submitBtn.textContent = t("modal.saveToDb");
+    }
+    if (typeof updateModalProfitPreview === "function") {
+      updateModalProfitPreview();
+    }
+  }
+
+  // 9. Se il modale Bulk Sale è aperto, ri-sincronizza i testi
+  const bulkModal = document.getElementById("bulkSaleModal");
+  if (bulkModal && bulkModal.classList.contains("open") && typeof bulkSaleTargetIds !== "undefined" && bulkSaleTargetIds && bulkSaleTargetIds.length > 0) {
+    if (typeof openBulkSaleModal === "function") {
+      openBulkSaleModal(bulkSaleTargetIds);
+    }
+  }
+
+  // 10. Se il modale Confirm Stock è aperto, ri-sincronizza i testi
+  const stockModal = document.getElementById("confirmStockModal");
+  if (stockModal && stockModal.classList.contains("open") && typeof confirmStockTargetIds !== "undefined" && confirmStockTargetIds && confirmStockTargetIds.length > 0) {
+    if (typeof openConfirmStockModal === "function") {
+      openConfirmStockModal(confirmStockTargetIds);
+    }
+  }
+};
+
 // Calcolo giorni di giacenza per dead stock (Zero-Lag, robusto contro fusi orari)
 function getProductAgeDays(item) {
   if (!item) return 0;
@@ -426,7 +518,7 @@ function resetAllFilters() {
   filterDeadStockOnly = false;
   filterAgingBracket = null;
   const btnFilterDeadStockText = document.getElementById("btnFilterDeadStockText");
-  if (btnFilterDeadStockText) btnFilterDeadStockText.textContent = "Filtra Fermi (>60gg)";
+  if (btnFilterDeadStockText) btnFilterDeadStockText.textContent = t("filters.deadStockFilter");
 
   const blkNorm = document.getElementById("macroBlockNormal");
   const blkWarn = document.getElementById("macroBlockWarning");
@@ -503,9 +595,9 @@ function updateDashboardMetrics() {
       kpiRoi.className = `kpi-trend ${avgRoi >= 0 ? "positive" : "negative"}`;
     }
     const stockPct = totalInvested > 0 ? Math.round((totalStockValue / totalInvested) * 100) : 0;
-    if (kpiInvestedSub) kpiInvestedSub.textContent = `${stockCount} in stock • ${preorderCount} pre-ordini`;
-    if (kpiStockSub) kpiStockSub.textContent = `${stockPct}% del capitale investito`;
-    if (kpiProfitSub) kpiProfitSub.textContent = `${completedCount} completate • ${activeCount} attive`;
+    if (kpiInvestedSub) kpiInvestedSub.textContent = t("kpi.investedSub", { stockCount, preorderCount });
+    if (kpiStockSub) kpiStockSub.textContent = t("kpi.stockSub", { pct: stockPct });
+    if (kpiProfitSub) kpiProfitSub.textContent = t("kpi.profitSub", { completedCount, activeCount });
   } else {
     // Calcolo fedele basato sullo stato reale dei prodotti SQLite
     inventoryData.forEach((item) => {
@@ -550,9 +642,9 @@ function updateDashboardMetrics() {
       kpiRoi.textContent = `${avgRoi >= 0 ? "+" : ""}${avgRoi.toFixed(1)}% ROI`;
       kpiRoi.className = `kpi-trend ${avgRoi >= 0 ? "positive" : "negative"}`;
     }
-    if (kpiInvestedSub) kpiInvestedSub.textContent = `${stockCount} in stock • ${preorderCount} pre-ordini`;
-    if (kpiStockSub) kpiStockSub.textContent = `${stockPct}% del capitale investito`;
-    if (kpiProfitSub) kpiProfitSub.textContent = `${completedCount} completate • ${activeCount} attive`;
+    if (kpiInvestedSub) kpiInvestedSub.textContent = t("kpi.investedSub", { stockCount, preorderCount });
+    if (kpiStockSub) kpiStockSub.textContent = t("kpi.stockSub", { pct: stockPct });
+    if (kpiProfitSub) kpiProfitSub.textContent = t("kpi.profitSub", { completedCount, activeCount });
   }
 
   // Aggiorna badge laterali
@@ -626,11 +718,11 @@ function updateDashboardMetrics() {
       const legCritCnt = document.getElementById("legendCriticalCount");
 
       if (legNormTxt) legNormTxt.textContent = formatMoney(normalCapital);
-      if (legNormCnt) legNormCnt.textContent = `${normalCount} pz`;
+      if (legNormCnt) legNormCnt.textContent = `${normalCount} ${t("common.pcs")}`;
       if (legWarnTxt) legWarnTxt.textContent = formatMoney(warningCapital);
-      if (legWarnCnt) legWarnCnt.textContent = `${warningCount} pz`;
+      if (legWarnCnt) legWarnCnt.textContent = `${warningCount} ${t("common.pcs")}`;
       if (legCritTxt) legCritTxt.textContent = formatMoney(criticalCapital);
-      if (legCritCnt) legCritCnt.textContent = `${criticalCount} pz`;
+      if (legCritCnt) legCritCnt.textContent = `${criticalCount} ${t("common.pcs")}`;
 
       // 3 Macro-Blocchi a Scomparsa
       const macroNormCap = document.getElementById("macroNormalCapital");
@@ -646,15 +738,15 @@ function updateDashboardMetrics() {
       const macroCritPct = document.getElementById("macroCriticalPct");
 
       if (macroNormCap) macroNormCap.textContent = formatMoney(normalCapital);
-      if (macroNormCnt) macroNormCnt.textContent = `${normalCount} pz`;
+      if (macroNormCnt) macroNormCnt.textContent = `${normalCount} ${t("common.pcs")}`;
       if (macroNormPct) macroNormPct.textContent = `${pctNormal.toFixed(0)}%`;
 
       if (macroWarnCap) macroWarnCap.textContent = formatMoney(warningCapital);
-      if (macroWarnCnt) macroWarnCnt.textContent = `${warningCount} pz`;
+      if (macroWarnCnt) macroWarnCnt.textContent = `${warningCount} ${t("common.pcs")}`;
       if (macroWarnPct) macroWarnPct.textContent = `${pctWarning.toFixed(0)}%`;
 
       if (macroCritCap) macroCritCap.textContent = formatMoney(criticalCapital);
-      if (macroCritCnt) macroCritCnt.textContent = `${criticalCount} pz`;
+      if (macroCritCnt) macroCritCnt.textContent = `${criticalCount} ${t("common.pcs")}`;
       if (macroCritPct) macroCritPct.textContent = `${pctCritical.toFixed(0)}%`;
 
       // Evidenziazione blocco attivo se filtrato
@@ -694,7 +786,7 @@ function filterByAgingBracket(bracket) {
     filterAgingBracket = bracket;
     filterDeadStockOnly = false;
     const btnText = document.getElementById("btnFilterDeadStockText");
-    if (btnText) btnText.textContent = "Filtra Fermi (>60gg)";
+    if (btnText) btnText.textContent = t("filters.deadStockFilter");
 
     if (activeFilter !== "stock" && activeFilter !== "preorder") {
       activeFilter = "stock";
@@ -741,12 +833,12 @@ function toggleDeadStockFilter() {
       });
     }
     const btnText = document.getElementById("btnFilterDeadStockText");
-    if (btnText) btnText.textContent = "Mostra Tutti";
-    showToast("Filtro Dead Stock: mostrati capi con oltre 60 giorni di giacenza");
+    if (btnText) btnText.textContent = t("filters.showAll");
+    showToast(t("toasts.deadStockFilterActive"));
   } else {
     const btnText = document.getElementById("btnFilterDeadStockText");
-    if (btnText) btnText.textContent = "Filtra Fermi (>60gg)";
-    showToast("Filtro Dead Stock rimosso");
+    if (btnText) btnText.textContent = t("filters.deadStockFilter");
+    showToast(t("toasts.deadStockFilterRemoved"));
   }
 
   // Deseleziona macro blocchi
@@ -976,29 +1068,29 @@ function renderTable() {
       thead.innerHTML = `
         <tr>
           ${checkboxTh}
-          <th class="col-prod ${getSortClass('name')}" data-sort="name">Prodotto</th>
-          <th class="col-size col-center">Taglia</th>
-          <th class="col-qty col-center">Q.tà</th>
-          <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
-          <th class="col-place">L. Acquisto</th>
-          <th class="col-status col-center">Stato</th>
-          <th class="col-actions col-center">Azioni</th>
+          <th class="col-prod ${getSortClass('name')}" data-sort="name">${t("table.colProduct")}</th>
+          <th class="col-size col-center">${t("table.colSize")}</th>
+          <th class="col-qty col-center">${t("table.colQty")}</th>
+          <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">${t("table.colBuyPrice")}</th>
+          <th class="col-place">${t("table.colBuyPlace")}</th>
+          <th class="col-status col-center">${t("table.colStatus")}</th>
+          <th class="col-actions col-center">${t("table.colActions")}</th>
         </tr>
       `;
     } else {
       thead.innerHTML = `
         <tr>
           ${checkboxTh}
-          <th class="col-prod ${getSortClass('name')}" data-sort="name">Prodotto</th>
-          <th class="col-qty col-center">Q.tà</th>
-          <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">P. Acquisto</th>
-          <th class="col-sell ${getSortClass('salePrice')}" data-sort="salePrice">P. Vendita</th>
-          <th class="col-channel">Canale</th>
-          <th class="col-fees ${getSortClass('fees')}" data-sort="fees">Spese / Comm.</th>
-          <th class="col-profit ${getSortClass('profit')}" data-sort="profit">Utile Netto</th>
-          <th class="col-roi col-center ${getSortClass('roi')}" data-sort="roi">ROI</th>
-          <th class="col-status col-center">Stato</th>
-          <th class="col-actions col-center">Azioni</th>
+          <th class="col-prod ${getSortClass('name')}" data-sort="name">${t("table.colProduct")}</th>
+          <th class="col-qty col-center">${t("table.colQty")}</th>
+          <th class="col-buy ${getSortClass('purchasedPrice')}" data-sort="purchasedPrice">${t("table.colBuyPrice")}</th>
+          <th class="col-sell ${getSortClass('salePrice')}" data-sort="salePrice">${t("table.colSellPrice")}</th>
+          <th class="col-channel">${t("table.colChannel")}</th>
+          <th class="col-fees ${getSortClass('fees')}" data-sort="fees">${t("table.colFees")}</th>
+          <th class="col-profit ${getSortClass('profit')}" data-sort="profit">${t("table.colProfit")}</th>
+          <th class="col-roi col-center ${getSortClass('roi')}" data-sort="roi">${t("table.colRoi")}</th>
+          <th class="col-status col-center">${t("table.colStatus")}</th>
+          <th class="col-actions col-center">${t("table.colActions")}</th>
         </tr>
       `;
     }
@@ -1013,7 +1105,7 @@ function renderTable() {
       <tr>
         <td colspan="${totalCols}" style="text-align: center; padding: 40px; color: var(--text-dim);">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <div style="font-size: 12px; font-weight: 500;">Nessun prodotto trovato per i criteri selezionati.</div>
+          <div style="font-size: 12px; font-weight: 500;">${t("table.emptyState")}</div>
         </td>
       </tr>
     `;
@@ -1060,7 +1152,7 @@ function renderTable() {
       const isExpanded = expandedBundles.has(bId);
 
       const distinctNames = Array.from(new Set(bItems.map((r) => r.name))).sort();
-      let bundleTitle = `Vendita Multipla (${distinctNames.join(", ")})`;
+      let bundleTitle = t("table.bundleTitle", { names: distinctNames.join(", ") });
       if (bundleTitle.length > 55) {
         bundleTitle = bundleTitle.substring(0, 52) + "...)";
       }
@@ -1073,7 +1165,7 @@ function renderTable() {
       const totalRoi = totalPurchased > 0 ? (totalProfit / totalPurchased) * 100 : 0;
       const sellingPlace = bItems[0].sellingPlace || "-";
       const bundleStatus = bItems[0].status || "active-sale";
-      const bundleStatusLabel = bundleStatus === "completed" ? "Venduto" : "In Vendita";
+      const bundleStatusLabel = bundleStatus === "completed" ? t("status.completed") : t("status.activeSale");
       const bundleStatusClass = bundleStatus === "completed" ? "completed" : "active-sale";
 
       const isAllChecked = bItems.every((r) => selectedProductIds.has(r.id));
@@ -1090,7 +1182,7 @@ function renderTable() {
 
       const actionBtnsHtml = `
         <div class="action-btns">
-          <button class="btn-action-icon delete" title="Elimina Vendita Multipla" onclick="event.stopPropagation(); deleteBundle('${bId}')">
+          <button class="btn-action-icon delete" title="${t("table.deleteBundle")}" onclick="event.stopPropagation(); deleteBundle('${bId}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
           </button>
         </div>
@@ -1101,15 +1193,15 @@ function renderTable() {
           ${checkboxTd}
           <td class="col-prod" title="${distinctNames.join(", ")}">
             <div class="product-cell" style="flex-direction: row; align-items: center; gap: 8px;">
-              <span class="bundle-chevron" onclick="event.stopPropagation(); toggleBundleExpand('${bId}')" title="${isExpanded ? 'Comprimi' : 'Espandi'}">
+              <span class="bundle-chevron" onclick="event.stopPropagation(); toggleBundleExpand('${bId}')" title="${isExpanded ? t("table.collapse") : t("table.expand")}">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'}; transition: transform 0.15s ease;"><path d="m9 18 6-6-6-6"/></svg>
               </span>
-              <span class="bundle-tag">Bundle</span>
+              <span class="bundle-tag">${t("table.bundleTag")}</span>
               <span class="product-name" style="font-weight: 700;">${bundleTitle}</span>
             </div>
           </td>
           <td class="col-size col-center" style="color: var(--text-dim);">-</td>
-          <td class="col-qty col-center"><strong>${totalQty} pz</strong></td>
+          <td class="col-qty col-center"><strong>${totalQty} ${t("common.pcs")}</strong></td>
           <td class="col-buy">${formatMoney(totalPurchased)}</td>
           <td class="col-place" style="color: var(--text-muted);">${sellingPlace}</td>
           <td class="col-status col-center">
@@ -1125,14 +1217,14 @@ function renderTable() {
           ${checkboxTd}
           <td class="col-prod" title="${distinctNames.join(", ")}">
             <div class="product-cell" style="flex-direction: row; align-items: center; gap: 8px;">
-              <span class="bundle-chevron" onclick="event.stopPropagation(); toggleBundleExpand('${bId}')" title="${isExpanded ? 'Comprimi' : 'Espandi'}">
+              <span class="bundle-chevron" onclick="event.stopPropagation(); toggleBundleExpand('${bId}')" title="${isExpanded ? t("table.collapse") : t("table.expand")}">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'}; transition: transform 0.15s ease;"><path d="m9 18 6-6-6-6"/></svg>
               </span>
-              <span class="bundle-tag">Bundle</span>
+              <span class="bundle-tag">${t("table.bundleTag")}</span>
               <span class="product-name" style="font-weight: 700;">${bundleTitle}</span>
             </div>
           </td>
-          <td class="col-qty col-center"><strong>${totalQty} pz</strong></td>
+          <td class="col-qty col-center"><strong>${totalQty} ${t("common.pcs")}</strong></td>
           <td class="col-buy">${formatMoney(totalPurchased)}</td>
           <td class="col-sell"><strong>${formatMoney(totalSold)}</strong></td>
           <td class="col-channel"><span style="font-size: 11.5px; color: var(--text-muted);">${sellingPlace}</span></td>
@@ -1195,7 +1287,7 @@ function renderTable() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               </button>
               ${childEditBtnHtml}
-              <button class="btn-action-icon delete" title="Elimina" onclick="event.stopPropagation(); deleteProduct(${child.id})">
+              <button class="btn-action-icon delete" title="${t("table.delete")}" onclick="event.stopPropagation(); deleteProduct(${child.id})">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
               </button>
             </div>
@@ -1207,14 +1299,14 @@ function renderTable() {
               <td class="col-prod" title="${child.name}">
                 <div class="product-cell" style="padding-left: 28px;">
                   <div class="product-name" style="color: var(--text-secondary); font-size: 12px;">${child.name}</div>
-                  <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "Magazzino"}</div>
+                  <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || t("status.stock")}</div>
                 </div>
               </td>
               <td class="col-size col-center"><strong>${child.size}</strong></td>
-              <td class="col-qty col-center">${child.quantity} pz</td>
+              <td class="col-qty col-center">${child.quantity} ${t("common.pcs")}</td>
               <td class="col-buy">${formatMoney(child.purchasedPrice)}</td>
               <td class="col-place" style="color: var(--text-dim);">${child.purchasedPlace || "-"}</td>
-              <td class="col-status col-center"><span style="color: var(--text-dim); font-size: 11px;">(incluso)</span></td>
+              <td class="col-status col-center"><span style="color: var(--text-dim); font-size: 11px;">${t("table.included")}</span></td>
               <td class="col-actions col-center">${childActionsHtml}</td>
             `;
           } else {
@@ -1223,17 +1315,17 @@ function renderTable() {
               <td class="col-prod" title="${child.name}">
                 <div class="product-cell" style="padding-left: 28px;">
                   <div class="product-name" style="color: var(--text-secondary); font-size: 12px;">${child.name}</div>
-                  <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || "Magazzino"}</div>
+                  <div class="product-brand" style="font-size: 11px;">${child.purchasedPlace || t("status.stock")}</div>
                 </div>
               </td>
-              <td class="col-qty col-center">${child.quantity} pz</td>
+              <td class="col-qty col-center">${child.quantity} ${t("common.pcs")}</td>
               <td class="col-buy">${formatMoney(child.purchasedPrice)}</td>
               <td class="col-sell" style="color: var(--text-dim); font-size: 11.5px;">-</td>
               <td class="col-channel"><span style="font-size: 11.5px; color: var(--text-dim);">${child.sellingPlace || "-"}</span></td>
               <td class="col-fees" style="color: var(--text-dim); font-size: 11.5px;">-</td>
               <td class="col-profit" style="color: var(--text-dim);">-</td>
               <td class="col-roi col-center" style="color: var(--text-dim);">-</td>
-              <td class="col-status col-center"><span style="color: var(--text-dim); font-size: 11px;">(incluso)</span></td>
+              <td class="col-status col-center"><span style="color: var(--text-dim); font-size: 11px;">${t("table.included")}</span></td>
               <td class="col-actions col-center">${childActionsHtml}</td>
             `;
           }
@@ -1277,21 +1369,21 @@ function renderTable() {
 
       // Status Badge Info
       let statusClass = "stock";
-      let statusLabel = "Magazzino";
+      let statusLabel = t("status.stock");
       if (item.status === "preorder") {
         statusClass = "preorder";
-        statusLabel = "Pre-ordine";
+        statusLabel = t("status.preorder");
       } else if (item.status === "active-sale") {
         statusClass = "active-sale";
-        statusLabel = "In Vendita";
+        statusLabel = t("status.activeSale");
       } else if (item.status === "completed") {
         statusClass = "completed";
-        statusLabel = "Venduto";
+        statusLabel = t("status.completed");
       }
 
       // Le vendite completate non possono essere modificate (solo visualizzazione/storico)
       const editBtnHtml = (item.status === "completed") ? "" : `
-        <button class="btn-action-icon" title="Modifica Prodotto" onclick="event.stopPropagation(); editProduct(${item.id})">
+        <button class="btn-action-icon" title="${t("table.editProduct")}" onclick="event.stopPropagation(); editProduct(${item.id})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
         </button>
       `;
@@ -1299,11 +1391,11 @@ function renderTable() {
       // Action buttons html
       const actionBtnsHtml = `
         <div class="action-btns">
-          <button class="btn-action-icon" title="Stima Prezzi eBay" onclick="event.stopPropagation(); openEbayPriceLookup('${item.name.replace(/'/g, "\\'")}')">
+          <button class="btn-action-icon" title="${t("table.estimateEbayPrices")}" onclick="event.stopPropagation(); openEbayPriceLookup('${item.name.replace(/'/g, "\\'")}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           </button>
           ${editBtnHtml}
-          <button class="btn-action-icon delete" title="Elimina" onclick="event.stopPropagation(); deleteProduct(${item.id})">
+          <button class="btn-action-icon delete" title="${t("table.delete")}" onclick="event.stopPropagation(); deleteProduct(${item.id})">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
           </button>
         </div>
@@ -1314,20 +1406,20 @@ function renderTable() {
         if (item.status === "stock" || item.status === "preorder") {
           if (ageDays > 90) {
             tr.classList.add("row-tint-danger");
-            tr.title = `In giacenza da ${ageDays} giorni (> 90 gg - Dead Stock)`;
+            tr.title = t("table.agingCriticalTooltip", { days: ageDays });
           } else if (ageDays >= 60) {
             tr.classList.add("row-tint-warning");
-            tr.title = `In giacenza da ${ageDays} giorni (60-90 gg)`;
+            tr.title = t("table.agingWarningTooltip", { days: ageDays });
           }
         }
 
         let ageTagHtml = "";
         if (ageDays > 90) {
-          ageTagHtml = `<span class="dead-stock-tag critical" title="In giacenza da ${ageDays} giorni (> 90 gg)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${ageDays} gg</span>`;
+          ageTagHtml = `<span class="dead-stock-tag critical" title="${t("table.agingCriticalTooltip", { days: ageDays })}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${ageDays} ${t("common.daysShort")}</span>`;
         } else if (ageDays >= 60) {
-          ageTagHtml = `<span class="dead-stock-tag warning" title="In giacenza da ${ageDays} giorni (60-90 gg)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${ageDays} gg</span>`;
+          ageTagHtml = `<span class="dead-stock-tag warning" title="${t("table.agingWarningTooltip", { days: ageDays })}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${ageDays} ${t("common.daysShort")}</span>`;
         } else {
-          ageTagHtml = `<span class="dead-stock-tag normal" title="In giacenza da ${ageDays} giorni">${ageDays} gg</span>`;
+          ageTagHtml = `<span class="dead-stock-tag normal" title="${t("table.agingNormalTooltip", { days: ageDays })}">${ageDays} ${t("common.daysShort")}</span>`;
         }
 
         tr.innerHTML = `
@@ -1335,11 +1427,11 @@ function renderTable() {
           <td class="col-prod" title="${item.name}">
             <div class="product-cell">
               <div class="product-name">${item.name}</div>
-              <div class="product-brand">${item.purchasedPlace || "Magazzino"}</div>
+              <div class="product-brand">${item.purchasedPlace || t("status.stock")}</div>
             </div>
           </td>
           <td class="col-size col-center"><strong>${item.size}</strong></td>
-          <td class="col-qty col-center">${item.quantity} pz</td>
+          <td class="col-qty col-center">${item.quantity} ${t("common.pcs")}</td>
           <td class="col-buy">${formatMoney(item.purchasedPrice)}</td>
           <td class="col-place" style="color: var(--text-muted);">${item.purchasedPlace}</td>
           <td class="col-status col-center">
@@ -1394,10 +1486,10 @@ function renderTable() {
           <td class="col-prod" title="${item.name}">
             <div class="product-cell">
               <div class="product-name">${item.name}</div>
-              <div class="product-brand">${item.purchasedPlace || "Canale Diretto"}</div>
+              <div class="product-brand">${item.purchasedPlace || t("table.directChannel")}</div>
             </div>
           </td>
-          <td class="col-qty col-center">${item.quantity} pz</td>
+          <td class="col-qty col-center">${item.quantity} ${t("common.pcs")}</td>
           <td class="col-buy">${formatMoney(item.purchasedPrice)}</td>
           <td class="col-sell">${salePriceHtml}</td>
           <td class="col-channel">${sellingPlaceHtml}</td>
@@ -1478,7 +1570,9 @@ function updateMonthlyChart() {
     dataset = dataset.slice(-12);
   }
 
-  const itMonths = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+  const monthNames = (typeof t === "function" && Array.isArray(t("charts.months")))
+    ? t("charts.months")
+    : ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
   let labels = [];
   let data = [];
 
@@ -1488,13 +1582,13 @@ function updateMonthlyChart() {
       if (parts.length === 2) {
         const mIdx = parseInt(parts[1], 10) - 1;
         const yr = parts[0].slice(2);
-        return `${itMonths[mIdx] || parts[1]} '${yr}`;
+        return `${monthNames[mIdx] || parts[1]} '${yr}`;
       }
       return m.month || "Mese";
     });
     data = dataset.map((m) => Number(m.profit || 0));
   } else {
-    labels = ["Nessun dato vendite"];
+    labels = [t("charts.noSalesData")];
     data = [0];
   }
 
@@ -1531,7 +1625,7 @@ function initCharts() {
         labels: [],
         datasets: [
           {
-            label: "Utile Netto (€)",
+            label: t("charts.netProfitLabel"),
             data: [],
             borderColor: "#6366f1",
             borderWidth: 3,
@@ -1562,7 +1656,7 @@ function initCharts() {
             padding: 12,
             displayColors: false,
             callbacks: {
-              label: (context) => ` Utile: € ${Number(context.parsed.y).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              label: (context) => ` ${t("charts.profitTooltip")}: € ${Number(context.parsed.y).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             }
           }
         },
@@ -1656,12 +1750,12 @@ function initCharts() {
       platData = sortedChannels.map((item) => Number(((item.count / totalSalesUnits) * 100).toFixed(1)));
       platCounts = sortedChannels.map((item) => item.count);
     } else {
-      platLabels = ["Nessuna vendita"];
+      platLabels = [t("charts.noSales")];
       platData = [100];
       platCounts = [0];
     }
 
-    const isNoSales = platLabels[0] === "Nessuna vendita";
+    const isNoSales = platLabels[0] === t("charts.noSales");
 
     platformPieChart = new Chart(ctxPlatform, {
       type: "doughnut",
@@ -1733,14 +1827,14 @@ function initCharts() {
             cornerRadius: 6,
             callbacks: {
               label: (context) => {
-                if (platLabels[0] === "Nessuna vendita") {
-                  return " Nessuna vendita registrata";
+                if (platLabels[0] === t("charts.noSales")) {
+                  return ` ${t("charts.noSalesRecorded")}`;
                 }
                 const idx = context.dataIndex;
                 const pct = context.parsed;
                 const count = platCounts[idx] || 0;
-                const plural = count === 1 ? "pezzo venduto" : "pezzi venduti";
-                return ` ${context.label}: ${count} ${plural} (${pct}% del totale)`;
+                const plural = count === 1 ? t("charts.soldItemSingle") : t("charts.soldItemPlural");
+                return ` ${context.label}: ${count} ${plural} ${t("charts.pctOfTotal", { pct })}`;
               }
             }
           }
@@ -1805,9 +1899,9 @@ function openAddProductModal() {
   modal.classList.add("open");
 
   const modalTitle = document.querySelector("#productModal .modal-header h3");
-  if (modalTitle) modalTitle.textContent = "Aggiungi Nuovo Prodotto";
+  if (modalTitle) modalTitle.textContent = t("modal.addProductTitle");
   const submitBtn = document.querySelector("#productModal .modal-footer button[type='submit']");
-  if (submitBtn) submitBtn.textContent = "Salva nel Database";
+  if (submitBtn) submitBtn.textContent = t("modal.saveToDb");
 
   applyActiveSaleFieldLocks(false);
 
@@ -1910,9 +2004,9 @@ function openDrawer(id) {
   }
 
   if (drawerSize) drawerSize.textContent = item.size;
-  if (drawerQty) drawerQty.textContent = `${item.quantity} pz`;
-  if (drawerStore) drawerStore.textContent = item.purchasedPlace || "Store Ufficiale";
-  if (drawerDate) drawerDate.textContent = item.date || "Recente";
+  if (drawerQty) drawerQty.textContent = `${item.quantity} ${t("common.pcs")}`;
+  if (drawerStore) drawerStore.textContent = item.purchasedPlace || t("drawer.officialStore");
+  if (drawerDate) drawerDate.textContent = item.date || t("drawer.recent");
   if (drawerChannel) drawerChannel.textContent = item.sellingPlace || "-";
   if (drawerRoi) {
     if (hasSaleData) {
@@ -1926,23 +2020,23 @@ function openDrawer(id) {
   if (drawerFees) drawerFees.textContent = item.fees ? formatMoney(item.fees) : "€ 0,00";
 
   if (drawerNotes) {
-    drawerNotes.textContent = item.notes || `Prodotto autentico verificato (${item.name}). Condizioni perfette DSWT, scatola integra e accessori originali inclusi.`;
+    drawerNotes.textContent = item.notes || t("drawer.defaultNotes", { name: item.name });
   }
 
   // Badge di stato
   const badgeEl = document.getElementById("drawerStatusBadge");
   const textEl = document.getElementById("drawerStatusText");
   let statusClass = "stock";
-  let statusLabel = "Magazzino";
+  let statusLabel = t("status.stock");
   if (item.status === "preorder") {
     statusClass = "preorder";
-    statusLabel = "Pre-ordine";
+    statusLabel = t("status.preorder");
   } else if (item.status === "active-sale") {
     statusClass = "active-sale";
-    statusLabel = "In Vendita";
+    statusLabel = t("status.activeSale");
   } else if (item.status === "completed") {
     statusClass = "completed";
-    statusLabel = "Venduto";
+    statusLabel = t("status.completed");
   }
 
   if (badgeEl) badgeEl.className = `status-badge ${statusClass}`;
@@ -1977,7 +2071,7 @@ function openDrawer(id) {
     }
     if (statusBtn) {
       statusBtn.style.display = "inline-flex";
-      statusBtn.textContent = "Segna Venduto";
+      statusBtn.textContent = t("drawer.markAsSold");
       statusBtn.className = "btn btn-primary";
       statusBtn.onclick = () => {
         closeDrawer();
@@ -2014,27 +2108,27 @@ function renderDrawerTrackingOrTimeline(item, isEditing = false) {
   const isSoldOrTracked = item.status === "completed" || item.status === "active-sale" || Boolean(item.tracking_number);
 
   if (!isSoldOrTracked && !isEditing) {
-    if (sectionTitleEl) sectionTitleEl.textContent = "Cronologia Prodotto";
+    if (sectionTitleEl) sectionTitleEl.textContent = t("tracking.productTimeline");
     if (statusBadgeEl) statusBadgeEl.style.display = "none";
 
     let timelineHtml = `
       <div class="drawer-timeline-step completed">
-        <div class="drawer-timeline-title">Acquisto Confermato</div>
-        <div class="drawer-timeline-date">${item.date || "Ricevuto"} • Store: ${escapeHtml(item.purchasedPlace || "Ufficiale")}</div>
+        <div class="drawer-timeline-title">${t("tracking.purchaseConfirmed")}</div>
+        <div class="drawer-timeline-date">${item.date || t("tracking.received")} • ${t("tracking.store")} ${escapeHtml(item.purchasedPlace || t("tracking.officialStore"))}</div>
       </div>
     `;
     if (item.status === "stock") {
       timelineHtml += `
         <div class="drawer-timeline-step completed">
-          <div class="drawer-timeline-title">Arrivato in Magazzino</div>
-          <div class="drawer-timeline-date">Controllo integrità e taglia completato</div>
+          <div class="drawer-timeline-title">${t("tracking.arrivedStock")}</div>
+          <div class="drawer-timeline-date">${t("tracking.checkCompleted")}</div>
         </div>
       `;
     } else if (item.status === "preorder") {
       timelineHtml += `
         <div class="drawer-timeline-step">
-          <div class="drawer-timeline-title">In Transito verso Magazzino</div>
-          <div class="drawer-timeline-date">In attesa di consegna corriere</div>
+          <div class="drawer-timeline-title">${t("tracking.inTransitToStock")}</div>
+          <div class="drawer-timeline-date">${t("tracking.waitingDelivery")}</div>
         </div>
       `;
     }
@@ -2043,7 +2137,7 @@ function renderDrawerTrackingOrTimeline(item, isEditing = false) {
       <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
         <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="editDrawerTracking(${item.id})">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon></svg>
-          <span>Aggiungi Tracciamento 17TRACK</span>
+          <span>${t("tracking.addTrackingBtn")}</span>
         </button>
       </div>
     `;
@@ -2055,7 +2149,7 @@ function renderDrawerTrackingOrTimeline(item, isEditing = false) {
 
   // Prodotti venduti o con tracciamento attivo
   timelineEl.className = "";
-  if (sectionTitleEl) sectionTitleEl.textContent = "Spedizione & Tracking (17TRACK)";
+  if (sectionTitleEl) sectionTitleEl.textContent = t("tracking.shippingTitle");
 
   const hasTracking = Boolean(item.tracking_number && item.tracking_number.trim());
 
@@ -2077,21 +2171,21 @@ function renderDrawerTrackingOrTimeline(item, isEditing = false) {
           </svg>
         </div>
         <div style="font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 2px;">
-          ${hasTracking ? "Modifica Codice di Spedizione" : "Nessun tracciamento associato"}
+          ${hasTracking ? t("tracking.editTracking") : t("tracking.noTrackingAssociated")}
         </div>
         <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
-          Inserisci la lettera di vettura per monitorare le tappe del corriere in tempo reale con 17TRACK.
+          ${t("tracking.inputHint")}
         </div>
 
         <div style="display: grid; grid-template-columns: 1.4fr 1.1fr; gap: 8px; margin-bottom: 10px; text-align: left;">
           <div>
-            <label style="display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px;">Codice Spedizione *</label>
+            <label style="display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px;">${t("tracking.codeLabel")}</label>
             <input type="text" id="drawerTrackingInput" value="${currentNum}" placeholder="es. 179090188502104" style="width: 100%; font-family: monospace; font-size: 11.5px; padding: 6px 8px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; outline: none;">
           </div>
           <div>
-            <label style="display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px;">Corriere</label>
+            <label style="display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px;">${t("tracking.carrierLabel")}</label>
             <select id="drawerCarrierSelect" style="width: 100%; font-size: 11.5px; padding: 6px 4px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 4px; color: #fff; outline: none;">
-              <option value="" ${!currentCarrier ? "selected" : ""}>Auto (17TRACK)</option>
+              <option value="" ${!currentCarrier ? "selected" : ""}>${t("tracking.carrierAuto")}</option>
               <option value="brt" ${currentCarrier === "brt" ? "selected" : ""}>BRT Bartolini</option>
               <option value="poste" ${currentCarrier === "poste" ? "selected" : ""}>Poste / SDA</option>
               <option value="gls" ${currentCarrier === "gls" ? "selected" : ""}>GLS Italy</option>
@@ -2103,10 +2197,10 @@ function renderDrawerTrackingOrTimeline(item, isEditing = false) {
         </div>
 
         <div style="display: flex; gap: 6px;">
-          ${hasTracking ? `<button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; padding: 6px;" onclick="cancelDrawerTrackingEdit(${item.id})">Annulla</button>` : ""}
+          ${hasTracking ? `<button type="button" class="btn btn-secondary" style="flex: 1; font-size: 11px; padding: 6px;" onclick="cancelDrawerTrackingEdit(${item.id})">${t("common.cancel")}</button>` : ""}
           <button type="button" id="btnSaveDrawerTracking" class="btn btn-primary" style="flex: 2; font-size: 11px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="saveDrawerTracking(${item.id})">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-            <span>Salva e Monitora</span>
+            <span>${t("tracking.saveAndMonitor")}</span>
           </button>
         </div>
       </div>
@@ -2136,9 +2230,9 @@ function renderTrackingCardContent(item, data, isRefreshing = false) {
   const statusBadgeEl = document.getElementById("drawerTrackingStatusBadge");
   if (!timelineEl) return;
 
-  const rawStatus = (data && data.status) ? data.status : "In Lavorazione";
+  const rawStatus = (data && data.status) ? data.status : t("tracking.inProgress");
   const statusLabel = (data && data.status_label) ? data.status_label : rawStatus;
-  const carrierName = (data && data.carrier_name) ? data.carrier_name : (item.carrier ? item.carrier.toUpperCase() : "Corriere");
+  const carrierName = (data && data.carrier_name) ? data.carrier_name : (item.carrier ? item.carrier.toUpperCase() : t("tracking.carrierDefault"));
   const trackingNum = item.tracking_number || "";
 
   // Badge colorato in alto
@@ -2162,7 +2256,7 @@ function renderTrackingCardContent(item, data, isRefreshing = false) {
   if (eventsCount === 0) {
     timelineNodesHtml = `
       <div style="padding: 12px 0; text-align: center; color: var(--text-dim); font-size: 11px;">
-        ${data ? "Spedizione registrata su 17TRACK. In attesa del primo aggiornamento dal corriere." : "Connessione a 17TRACK in corso..."}
+        ${data ? t("tracking.registeredWaiting") : t("tracking.connecting")}
       </div>
     `;
   } else {
@@ -2179,7 +2273,7 @@ function renderTrackingCardContent(item, data, isRefreshing = false) {
             <div class="tracking-timeline-node ${nodeClass}">
               <span class="tracking-timeline-dot"></span>
               <div class="tracking-node-header">
-                <span class="tracking-node-status">${escapeHtml(ev.description || "Evento")}</span>
+                <span class="tracking-node-status">${escapeHtml(ev.description || t("tracking.eventDefault"))}</span>
                 <span class="tracking-node-date">${escapeHtml(ev.formatted_date || ev.time_iso || "")}</span>
               </div>
               ${ev.location ? `<div class="tracking-node-desc">${escapeHtml(ev.location)}</div>` : ""}
@@ -2193,7 +2287,7 @@ function renderTrackingCardContent(item, data, isRefreshing = false) {
               <div class="tracking-timeline-node">
                 <span class="tracking-timeline-dot"></span>
                 <div class="tracking-node-header">
-                  <span class="tracking-node-status" style="color: var(--text-muted); font-weight: 500;">${escapeHtml(ev.description || "Tappa")}</span>
+                  <span class="tracking-node-status" style="color: var(--text-muted); font-weight: 500;">${escapeHtml(ev.description || t("tracking.stepDefault"))}</span>
                   <span class="tracking-node-date">${escapeHtml(ev.formatted_date || ev.time_iso || "")}</span>
                 </div>
                 ${ev.location ? `<div class="tracking-node-desc" style="color: var(--text-dim);">${escapeHtml(ev.location)}</div>` : ""}
@@ -2207,7 +2301,7 @@ function renderTrackingCardContent(item, data, isRefreshing = false) {
     if (hiddenEvents.length > 0) {
       timelineNodesHtml += `
         <button id="drawerTrackingToggleBtn" class="tracking-expand-btn" onclick="toggleDrawerTrackingHistory(${hiddenEvents.length})">
-          <span id="drawerTrackingToggleText">Espandi cronologia completa (altre ${hiddenEvents.length} tappe)</span>
+          <span id="drawerTrackingToggleText">${t("tracking.expandHistory", { count: hiddenEvents.length })}</span>
           <svg id="drawerTrackingToggleIcon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.2s ease;">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
@@ -2221,7 +2315,7 @@ function renderTrackingCardContent(item, data, isRefreshing = false) {
       <div class="tracking-card-header">
         <div class="tracking-card-carrier">
           <span>${escapeHtml(carrierName)}</span>
-          <span class="tracking-code-pill" onclick="copyTrackingCode('${escapeHtml(trackingNum)}')" title="Clicca per copiare il codice">
+          <span class="tracking-code-pill" onclick="copyTrackingCode('${escapeHtml(trackingNum)}')" title="${t("tracking.clickToCopy")}">
             <span>${escapeHtml(trackingNum)}</span>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
@@ -2230,7 +2324,7 @@ function renderTrackingCardContent(item, data, isRefreshing = false) {
           </span>
         </div>
         <div style="display: flex; align-items: center; gap: 4px;">
-          <button type="button" class="tracking-icon-btn ${isRefreshing ? 'spin-anim' : ''}" onclick="refreshDrawerTracking(${item.id})" title="Aggiorna tracking da 17TRACK">
+          <button type="button" class="tracking-icon-btn ${isRefreshing ? 'spin-anim' : ''}" onclick="refreshDrawerTracking(${item.id})" title="${t("tracking.refreshTooltip")}">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
               <path d="M3 3v5h5"></path>
@@ -2238,12 +2332,12 @@ function renderTrackingCardContent(item, data, isRefreshing = false) {
               <path d="M16 21h5v-5"></path>
             </svg>
           </button>
-          <button type="button" class="tracking-icon-btn" onclick="editDrawerTracking(${item.id})" title="Modifica codice / corriere">
+          <button type="button" class="tracking-icon-btn" onclick="editDrawerTracking(${item.id})" title="${t("tracking.editTooltip")}">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
             </svg>
           </button>
-          <button type="button" class="tracking-icon-btn" onclick="deleteDrawerTracking(${item.id})" title="Rimuovi tracciamento" style="color: #f87171;">
+          <button type="button" class="tracking-icon-btn" onclick="deleteDrawerTracking(${item.id})" title="${t("tracking.removeTooltip")}" style="color: #f87171;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 6h18"></path>
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
@@ -2267,11 +2361,11 @@ function toggleDrawerTrackingHistory(remainingCount) {
   drawerTrackingIsExpanded = !drawerTrackingIsExpanded;
   if (drawerTrackingIsExpanded) {
     hiddenEl.style.display = "flex";
-    if (textEl) textEl.textContent = "Comprimi cronologia (mostra solo ultime)";
+    if (textEl) textEl.textContent = t("tracking.collapseHistory");
     if (iconEl) iconEl.style.transform = "rotate(180deg)";
   } else {
     hiddenEl.style.display = "none";
-    if (textEl) textEl.textContent = `Espandi cronologia completa (altre ${remainingCount} tappe)`;
+    if (textEl) textEl.textContent = t("tracking.expandHistory", { count: remainingCount });
     if (iconEl) iconEl.style.transform = "rotate(0deg)";
   }
 }
@@ -2279,7 +2373,7 @@ function toggleDrawerTrackingHistory(remainingCount) {
 function copyTrackingCode(code) {
   if (!code) return;
   navigator.clipboard.writeText(code).then(() => {
-    showToast(`Codice copiato: ${code}`);
+    showToast(t("toasts.codeCopied", { code }));
   }).catch(() => {
     showToast(`Codice: ${code}`);
   });
@@ -2378,7 +2472,7 @@ async function refreshDrawerTracking(productId) {
 }
 
 async function deleteDrawerTracking(productId) {
-  if (!confirm("Sei sicuro di voler rimuovere il tracciamento da questo prodotto?")) return;
+  if (!confirm(t("tracking.confirmRemove"))) return;
   try {
     const res = await callApi(`/products/${productId}/tracking`, { method: "DELETE" });
     const json = await res.json();
@@ -2393,7 +2487,7 @@ async function deleteDrawerTracking(productId) {
       renderDrawerTrackingOrTimeline(item, false);
     }
     loadNotificationsFromBackend();
-    showToast("Tracciamento rimosso con successo.");
+    showToast(t("toasts.trackingRemoved"));
   } catch (err) {
     showToast(`Errore: ${err.message}`);
   }
@@ -2466,7 +2560,7 @@ function renderNotificationsUI() {
           <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
         </svg>
-        <span>Nessuna notifica presente</span>
+        <span>${t("notifications.emptyState")}</span>
       </div>
     `;
     return;
@@ -2475,8 +2569,8 @@ function renderNotificationsUI() {
   listEl.innerHTML = notificationsData
     .map((n) => {
       const sizeText = n.product_size ? ` (${n.product_size})` : "";
-      const titleText = escapeHtml(`${n.product_name || "Prodotto"}${sizeText}`);
-      const subText = escapeHtml(n.message || "Il pacco risulta Consegnato");
+      const titleText = escapeHtml(`${n.product_name || t("table.colProduct")}${sizeText}`);
+      const subText = escapeHtml(n.message || t("notifications.deliveredDefault"));
       const timeText = n.event_time ? `<div class="notif-item-time">${escapeHtml(n.event_time)}</div>` : "";
       return `
         <div class="notif-item" onclick="handleNotificationItemClick(${Number(n.product_id)})">
@@ -2491,7 +2585,7 @@ function renderNotificationsUI() {
             <div class="notif-item-sub">${subText}</div>
             ${timeText}
           </div>
-          <button type="button" class="notif-dismiss-btn" onclick="dismissNotification(${Number(n.id)}, event)" title="Rimuovi notifica" aria-label="Rimuovi notifica">
+          <button type="button" class="notif-dismiss-btn" onclick="dismissNotification(${Number(n.id)}, event)" title="${t("notifications.dismissTooltip")}" aria-label="${t("notifications.dismissTooltip")}">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -2625,7 +2719,7 @@ function updateModalProfitPreview() {
     const netProfit = sell - totalCost - fees;
     const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0;
     const sign = netProfit >= 0 ? "+" : "";
-    badge.textContent = `Utile Netto: ${sign}${formatMoney(netProfit)} (${roi >= 0 ? "+" : ""}${roi.toFixed(1)}% ROI)`;
+    badge.textContent = `${t("modal.netProfitPrefix")} ${sign}${formatMoney(netProfit)} (${roi >= 0 ? "+" : ""}${roi.toFixed(1)}% ROI)`;
     if (netProfit >= 0) {
       badge.style.color = "#10b981";
       badge.style.background = "rgba(16, 185, 129, 0.12)";
@@ -2636,7 +2730,7 @@ function updateModalProfitPreview() {
       badge.style.borderColor = "rgba(244, 63, 94, 0.25)";
     }
   } else {
-    badge.textContent = "In Stock (Nessuna vendita)";
+    badge.textContent = t("modal.profitStockNoSale");
     badge.style.color = "#8b9bb4";
     badge.style.background = "rgba(139, 155, 180, 0.1)";
     badge.style.borderColor = "rgba(139, 155, 180, 0.2)";
@@ -2742,7 +2836,7 @@ async function deleteProduct(id) {
   const item = inventoryData.find((i) => i.id === id);
   if (!item) return;
 
-  if (confirm(`Confermi l'eliminazione di "${item.name}" dal database SQLite?`)) {
+  if (confirm(t("dialogs.confirmDeleteProduct", { name: item.name }))) {
     const snapshot = JSON.parse(JSON.stringify(item));
     try {
       const res = await callApi(`/products/${id}`, { method: "DELETE" });
@@ -2779,9 +2873,9 @@ function editProduct(id) {
   currentEditingId = id;
 
   const modalTitle = document.querySelector("#productModal .modal-header h3");
-  if (modalTitle) modalTitle.textContent = `Modifica Prodotto #${id}`;
+  if (modalTitle) modalTitle.textContent = `${t("modal.editProductTitle")} #${id}`;
   const submitBtn = document.querySelector("#productModal .modal-footer button[type='submit']");
-  if (submitBtn) submitBtn.textContent = "Aggiorna Prodotto";
+  if (submitBtn) submitBtn.textContent = t("modal.updateProduct");
 
   document.getElementById("prod-name").value = item.name || "";
   document.getElementById("prod-size").value = item.size || "";
@@ -2951,7 +3045,9 @@ function updateSelectionCapsule() {
   // 1. Conteggio selezionati & pezzi
   const countEl = document.getElementById("capsuleSelectedCount");
   if (countEl) {
-    countEl.textContent = totalQty !== count ? `${count} sel. (${totalQty} pz)` : `${count} sel.`;
+    countEl.textContent = totalQty !== count
+      ? t("capsule.countWithQty", { count, qty: totalQty })
+      : t("capsule.countOnly", { count });
   }
 
   // 2. Costo Totale e Costo Medio
@@ -3061,7 +3157,7 @@ function toggleBundleSelection(bundleId, forceChecked = null) {
 async function deleteBundle(bundleId) {
   const items = inventoryData.filter((p) => (p.bundle_id || p.bundleId) === bundleId);
   if (!items.length) return;
-  if (!confirm(`Sei sicuro di voler eliminare tutti i ${items.length} prodotti di questa vendita multipla dal database?`)) {
+  if (!confirm(t("dialogs.confirmDeleteBundle", { count: items.length }))) {
     return;
   }
   const snapshots = JSON.parse(JSON.stringify(items));
@@ -3218,7 +3314,7 @@ async function ctxActionComplete() {
   const ids = Array.from(selectedProductIds);
   hideContextMenu();
   if (ids.length === 0) return;
-  if (!confirm(`Contrassegnare ${ids.length} vendite come completate?`)) {
+  if (!confirm(t("dialogs.confirmCompleteSales", { count: ids.length }))) {
     if (!isSelectionModeActive) {
       selectedProductIds.clear();
       updateSelectionBadge();
@@ -3251,7 +3347,7 @@ async function ctxActionComplete() {
         pill.classList.toggle("active", pill.getAttribute("data-filter") === "completed");
       });
       await loadProductsFromBackend();
-      showToast(`${ids.length} vendite contrassegnate come completate!`);
+      showToast(t("toasts.salesCompleted", { count: ids.length }));
     } else {
       showToast(`Errore completamento: ${json.error}`);
     }
@@ -3285,7 +3381,7 @@ async function ctxActionSearchEbay() {
       opened++;
     } catch (_) {}
   }
-  showToast(`Aperte ${opened} schede di ricerca eBay nel browser.`);
+  showToast(t("toasts.ebayTabsOpened", { count: opened }));
 }
 
 function ctxActionEbayPrices() {
@@ -3308,8 +3404,8 @@ async function ctxActionDelete() {
   hideContextMenu();
   if (ids.length === 0) return;
   const msg = ids.length === 1
-    ? "Eliminare definitivamente il prodotto selezionato?"
-    : `Eliminare definitivamente ${ids.length} prodotti selezionati dal database SQLite?`;
+    ? t("dialogs.confirmDeleteSingle")
+    : t("dialogs.confirmDeleteMultiple", { count: ids.length });
   if (!confirm(msg)) {
     if (!isSelectionModeActive) {
       selectedProductIds.clear();
@@ -3339,7 +3435,7 @@ async function ctxActionDelete() {
       selectedProductIds.clear();
       updateSelectionBadge();
       await loadProductsFromBackend();
-      showToast(`Eliminati ${json.deleted_count} prodotti dal database.`);
+      showToast(t("toasts.productsDeleted", { count: json.deleted_count }));
     } else {
       showToast(`Errore eliminazione: ${json.error}`);
     }
@@ -3374,9 +3470,9 @@ function openBulkSaleModal(targetIds = null) {
   if (bulkSaleTargetIds.length === 1) {
     const singleId = bulkSaleTargetIds[0];
     const item = inventoryData.find((p) => p.id === singleId);
-    if (titleEl) titleEl.textContent = "Metti in Vendita";
-    if (subtitleEl) subtitleEl.textContent = `Configura la vendita per "${item ? item.name : "il prodotto selezionato"}".`;
-    if (priceLabel) priceLabel.textContent = "Prezzo di Vendita (€) *";
+    if (titleEl) titleEl.textContent = t("bulkSale.titleSingle");
+    if (subtitleEl) subtitleEl.textContent = t("bulkSale.subtitleSingle", { name: item ? item.name : t("bulkSale.defaultItem") });
+    if (priceLabel) priceLabel.textContent = t("bulkSale.priceLabelSingle");
 
     if (item && item.quantity > 1) {
       if (qtyGroup) qtyGroup.style.display = "block";
@@ -3385,7 +3481,7 @@ function openBulkSaleModal(targetIds = null) {
         for (let q = 1; q <= item.quantity; q++) {
           const opt = document.createElement("option");
           opt.value = q;
-          opt.textContent = `${q} di ${item.quantity} pz`;
+          opt.textContent = t("bulkSale.qtyOption", { current: q, total: item.quantity });
           if (q === item.quantity) opt.selected = true;
           qtySelect.appendChild(opt);
         }
@@ -3394,10 +3490,10 @@ function openBulkSaleModal(targetIds = null) {
           if (qtyHint) {
             const remaining = item.quantity - chosen;
             if (remaining > 0) {
-              const placeText = item.status === "preorder" ? "pre-ordine" : "magazzino";
-              qtyHint.textContent = `${chosen} pz andranno in Vendita Attiva, ${remaining} pz rimarranno in ${placeText}.`;
+              const placeText = item.status === "preorder" ? t("status.preorder") : t("status.stock");
+              qtyHint.textContent = t("bulkSale.qtySplitHint", { chosen, remaining, place: placeText });
             } else {
-              qtyHint.textContent = `Tutti i ${chosen} pz verranno messi in vendita.`;
+              qtyHint.textContent = t("bulkSale.qtyAllHint", { count: chosen });
             }
           }
         };
@@ -3407,9 +3503,9 @@ function openBulkSaleModal(targetIds = null) {
       if (qtyGroup) qtyGroup.style.display = "none";
     }
   } else {
-    if (titleEl) titleEl.textContent = `Metti in Vendita (${bulkSaleTargetIds.length} Prodotti)`;
-    if (subtitleEl) subtitleEl.textContent = "Stai per mettere in vendita i prodotti selezionati insieme come bundle. Il prezzo totale e le spese restano unici e vengono mostrati una sola volta sulla riga del bundle.";
-    if (priceLabel) priceLabel.textContent = "Prezzo di Vendita TOTALE (€) *";
+    if (titleEl) titleEl.textContent = t("bulkSale.titleMultiple", { count: bulkSaleTargetIds.length });
+    if (subtitleEl) subtitleEl.textContent = t("bulkSale.subtitleMultiple");
+    if (priceLabel) priceLabel.textContent = t("bulkSale.priceLabelMultiple");
     if (qtyGroup) qtyGroup.style.display = "none";
   }
 
@@ -3444,7 +3540,7 @@ async function handleBulkSaleSubmit(e) {
   }
   const ids = bulkSaleTargetIds.length > 0 ? Array.from(bulkSaleTargetIds) : Array.from(selectedProductIds);
   if (ids.length === 0) {
-    showToast("Nessun prodotto selezionato per la vendita.");
+    showToast(t("toasts.noProductSelectedSale"));
     return;
   }
 
@@ -3453,7 +3549,7 @@ async function handleBulkSaleSubmit(e) {
   const placeVal = document.getElementById("bulk-sale-place").value.trim();
 
   if (priceVal <= 0) {
-    showToast("Inserisci un prezzo di vendita valido!");
+    showToast(t("toasts.validSalePriceRequired"));
     return;
   }
 
@@ -3502,7 +3598,11 @@ async function handleBulkSaleSubmit(e) {
         pill.classList.toggle("active", pill.getAttribute("data-filter") === "active-sale");
       });
       await loadProductsFromBackend();
-      showToast(`${ids.length === 1 ? "Prodotto messo" : ids.length + " prodotti messi"} in vendita con successo!`);
+      showToast(
+        ids.length === 1
+          ? t("toasts.productPutOnSaleSingle")
+          : t("toasts.productPutOnSaleMultiple", { count: ids.length })
+      );
     } else {
       showToast(`Errore vendita: ${json.error}`);
     }
@@ -3541,9 +3641,11 @@ function openConfirmStockModal(targetIds = null) {
   if (confirmStockTargetIds.length === 1) {
     const singleId = confirmStockTargetIds[0];
     const item = inventoryData.find((p) => p.id === singleId);
-    if (titleEl) titleEl.textContent = "Conferma in Magazzino";
+    if (titleEl) titleEl.textContent = t("confirmStock.titleSingle");
     if (subtitleEl) {
-      subtitleEl.textContent = `Conferma l'arrivo dei pezzi per "${item ? item.name : "il prodotto selezionato"}" in magazzino.`;
+      subtitleEl.textContent = t("confirmStock.subtitleSingle", {
+        name: item ? item.name : t("confirmStock.defaultItem"),
+      });
     }
 
     if (item && item.quantity > 1) {
@@ -3554,7 +3656,7 @@ function openConfirmStockModal(targetIds = null) {
         for (let q = 1; q <= item.quantity; q++) {
           const opt = document.createElement("option");
           opt.value = q;
-          opt.textContent = `${q} di ${item.quantity} pz`;
+          opt.textContent = t("bulkSale.qtyOption", { current: q, total: item.quantity });
           if (q === item.quantity) opt.selected = true;
           qtySelect.appendChild(opt);
         }
@@ -3563,9 +3665,9 @@ function openConfirmStockModal(targetIds = null) {
           if (qtyHint) {
             const remaining = item.quantity - chosen;
             if (remaining > 0) {
-              qtyHint.textContent = `${chosen} pz andranno in Magazzino, ${remaining} pz rimarranno in pre-ordine.`;
+              qtyHint.textContent = t("confirmStock.qtySplitHint", { chosen, remaining });
             } else {
-              qtyHint.textContent = `Tutti i ${chosen} pz verranno spostati in magazzino.`;
+              qtyHint.textContent = t("confirmStock.qtyAllHint", { count: chosen });
             }
           }
         };
@@ -3575,18 +3677,18 @@ function openConfirmStockModal(targetIds = null) {
       if (qtyGroup) qtyGroup.style.display = "none";
       if (singleHint) {
         singleHint.style.display = "block";
-        singleHint.textContent = "Il prodotto selezionato passerà dallo stato di Pre-ordine a Disponibile in Magazzino.";
+        singleHint.textContent = t("confirmStock.singleDesc");
       }
     }
   } else {
-    if (titleEl) titleEl.textContent = `Conferma in Magazzino (${confirmStockTargetIds.length} Prodotti)`;
+    if (titleEl) titleEl.textContent = t("confirmStock.titleMultiple", { count: confirmStockTargetIds.length });
     if (subtitleEl) {
-      subtitleEl.textContent = "Stai per confermare l'arrivo in magazzino di tutti i prodotti in pre-ordine selezionati.";
+      subtitleEl.textContent = t("confirmStock.subtitleMultiple");
     }
     if (qtyGroup) qtyGroup.style.display = "none";
     if (singleHint) {
       singleHint.style.display = "block";
-      singleHint.textContent = `Tutti i ${confirmStockTargetIds.length} pre-ordini selezionati verranno spostati contemporaneamente in Magazzino.`;
+      singleHint.textContent = t("confirmStock.multipleDesc", { count: confirmStockTargetIds.length });
     }
   }
 
@@ -3610,7 +3712,7 @@ async function handleConfirmStockSubmit(e) {
   }
   const ids = confirmStockTargetIds.length > 0 ? Array.from(confirmStockTargetIds) : Array.from(selectedProductIds);
   if (ids.length === 0) {
-    showToast("Nessun prodotto selezionato per lo spostamento.");
+    showToast(t("toasts.noProductSelectedStock"));
     return;
   }
 
@@ -3657,7 +3759,13 @@ async function handleConfirmStockSubmit(e) {
         pill.classList.toggle("active", pill.getAttribute("data-filter") === "stock");
       });
       await loadProductsFromBackend();
-      showToast(`${payload.quantity_to_stock ? payload.quantity_to_stock + " pz spostati" : (ids.length === 1 ? "Prodotto spostato" : ids.length + " prodotti spostati")} in Magazzino con successo!`);
+      showToast(
+        payload.quantity_to_stock
+          ? t("toasts.qtyMovedStock", { count: payload.quantity_to_stock })
+          : (ids.length === 1
+              ? t("toasts.productMovedStockSingle")
+              : t("toasts.productMovedStockMultiple", { count: ids.length }))
+      );
     } else {
       showToast(`Errore spostamento: ${json.error}`);
     }
@@ -3959,7 +4067,7 @@ async function submitAddCustomPlace() {
   if (!input) return;
   const name = input.value.trim();
   if (!name) {
-    showToast("Inserisci il nome del canale da aggiungere.");
+    showToast(t("toasts.channelNameRequired"));
     input.focus();
     return;
   }
@@ -3973,7 +4081,7 @@ async function submitAddCustomPlace() {
     const json = await res.json();
     if (json.success) {
       input.value = "";
-      showToast(`Canale "${name}" aggiunto con successo!`);
+      showToast(t("toasts.channelAdded", { name }));
       await loadPlacesFromBackend();
     } else {
       showToast(`Errore: ${json.error || "Operazione non riuscita"}`);
@@ -3984,7 +4092,7 @@ async function submitAddCustomPlace() {
 }
 
 async function deleteCustomPlace(name) {
-  if (!confirm(`Vuoi rimuovere il canale "${name}" dai suggerimenti?`)) return;
+  if (!confirm(t("dialogs.confirmRemoveChannel", { name }))) return;
 
   try {
     const res = await callApi("/places/delete", {
@@ -3994,7 +4102,7 @@ async function deleteCustomPlace(name) {
     });
     const json = await res.json();
     if (json.success) {
-      showToast(`Canale "${name}" rimosso!`);
+      showToast(t("toasts.channelRemoved", { name }));
       await loadPlacesFromBackend();
     } else {
       showToast(`Errore: ${json.error || "Operazione non riuscita"}`);
@@ -4036,7 +4144,7 @@ function openAIModal() {
   modal.classList.add("open");
 
   document.getElementById("ai-prompt-text").value = "";
-  document.getElementById("ai-status-msg").textContent = "Scrivi o detta i prodotti da inserire.";
+  document.getElementById("ai-status-msg").textContent = t("ai.toastEnterText");
   document.getElementById("ai-results-wrap").style.display = "none";
   document.getElementById("btn-ai-save-all").style.display = "none";
   document.getElementById("btn-ai-analyze").disabled = false;
@@ -4051,7 +4159,7 @@ async function toggleVoiceRecording() {
   // Se l'utente clicca mentre c'è il countdown attivo, annulla il conto alla rovescia
   if (isVoiceCountdown) {
     resetVoiceRecordingState();
-    if (statusEl) statusEl.textContent = "Registrazione annullata.";
+    if (statusEl) statusEl.textContent = t("ai.recordingCancelled");
     try {
       await fetch(`${API_BASE}/speech/stop`, { method: "POST" });
     } catch (_) {}
@@ -4061,21 +4169,21 @@ async function toggleVoiceRecording() {
   // Se la registrazione è già attiva, il secondo clic la arresta e avvia la trascrizione con Gemini
   if (isVoiceRecording) {
     resetVoiceRecordingState();
-    if (statusEl) statusEl.textContent = "Elaborazione audio e trascrizione con Gemini in corso...";
+    if (statusEl) statusEl.textContent = t("ai.transcribingAudio");
 
     try {
       const res = await fetch(`${API_BASE}/speech/stop`, { method: "POST" });
       const json = await res.json();
       if (json.success && json.text) {
-        if (statusEl) statusEl.textContent = "Trascrizione vocale completata.";
+        if (statusEl) statusEl.textContent = t("ai.transcriptionCompleted");
         const current = promptEl.value.trim();
         promptEl.value = current ? `${current} ${json.text}` : json.text;
       } else {
-        const errMsg = json.error || "Nessun parlato rilevato";
+        const errMsg = json.error || t("ai.noSpeechDetected");
         if (statusEl) statusEl.textContent = errMsg;
       }
     } catch (err) {
-      if (statusEl) statusEl.textContent = `Errore trascrizione: ${err.message}`;
+      if (statusEl) statusEl.textContent = t("ai.transcriptionError", { error: err.message });
     }
     return;
   }
@@ -4087,30 +4195,35 @@ async function toggleVoiceRecording() {
     btn.classList.add("countdown");
   }
 
-  // Avviamo già l'acquisizione nel thread Python così i driver audio e lo stream si stabilizzano
+  // Avviamo già l'acquisizione nel thread Python passando la lingua attiva (it-IT / en-US)
   try {
-    const res = await fetch(`${API_BASE}/speech/start`, { method: "POST" });
+    const speechLang = window.currentAppLanguage === "en" ? "en-US" : "it-IT";
+    const res = await fetch(`${API_BASE}/speech/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language: speechLang }),
+    });
     const json = await res.json();
     if (!json.success) {
       throw new Error(json.error || "Impossibile attivare il microfono");
     }
   } catch (err) {
     resetVoiceRecordingState();
-    if (statusEl) statusEl.textContent = `Errore microfono: ${err.message}`;
+    if (statusEl) statusEl.textContent = t("ai.micError", { error: err.message });
     return;
   }
 
   // Countdown visivo 3... 2... 1... calmo e pulito
   let secondsLeft = 3;
   if (statusEl) {
-    statusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 11.5px;">In ascolto tra ${secondsLeft}s...</span>`;
+    statusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 11.5px;">${t("ai.listeningIn", { seconds: secondsLeft })}</span>`;
   }
 
   voiceCountdownTimer = setInterval(() => {
     secondsLeft--;
     if (secondsLeft > 0) {
       if (statusEl) {
-        statusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 11.5px;">In ascolto tra ${secondsLeft}s...</span>`;
+        statusEl.innerHTML = `<span style="color: var(--text-muted); font-size: 11.5px;">${t("ai.listeningIn", { seconds: secondsLeft })}</span>`;
       }
     } else {
       clearInterval(voiceCountdownTimer);
@@ -4122,7 +4235,7 @@ async function toggleVoiceRecording() {
         btn.classList.add("recording");
       }
       if (statusEl) {
-        statusEl.innerHTML = `<span style="color: #34d399; font-size: 11.5px;">In ascolto, puoi parlare. Clicca di nuovo sul microfono per elaborare.</span>`;
+        statusEl.innerHTML = `<span style="color: #34d399; font-size: 11.5px;">${t("ai.listeningPrompt")}</span>`;
       }
     }
   }, 1000);
@@ -4134,12 +4247,12 @@ async function handleAIAnalyze() {
   const btnAnalyze = document.getElementById("btn-ai-analyze");
 
   if (!prompt) {
-    showToast("Scrivi o detta i prodotti prima di analizzare.");
+    showToast(t("toasts.aiEnterText"));
     return;
   }
 
   btnAnalyze.disabled = true;
-  statusEl.textContent = "Analisi del testo con Gemini in corso...";
+  statusEl.textContent = t("ai.analyzingText");
 
   try {
     const res = await fetch(`${API_BASE}/ai-parse`, {
@@ -4158,22 +4271,22 @@ async function handleAIAnalyze() {
     }
 
     if (!Array.isArray(json.data) || json.data.length === 0) {
-      statusEl.textContent = "Nessun prodotto valido rilevato nel testo. Prova a specificare nome o dettagli del prodotto.";
-      showToast("Nessun prodotto valido rilevato dall'AI.");
+      statusEl.textContent = t("ai.noValidProducts");
+      showToast(t("toasts.aiNoValidProducts"));
       return;
     }
 
     aiExtractedProducts = json.data;
-    statusEl.textContent = `Rilevati ${aiExtractedProducts.length} prodotti con successo!`;
+    statusEl.textContent = `${t("ai.extractedProducts")} ${aiExtractedProducts.length}`;
 
     const tbody = document.getElementById("ai-results-body");
     tbody.innerHTML = "";
     aiExtractedProducts.forEach((p) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td style="font-weight: 600; color: #fff;">${escapeHtml(p.name || "Sconosciuto")}</td>
+        <td style="font-weight: 600; color: #fff;">${escapeHtml(p.name || t("common.unknown"))}</td>
         <td class="col-center"><span class="table-size-pill">${escapeHtml(p.size || "UNI")}</span></td>
-        <td class="col-center" style="color: var(--text-muted);">${p.quantity || 1} pz</td>
+        <td class="col-center" style="color: var(--text-muted);">${p.quantity || 1} ${t("common.pcs")}</td>
         <td class="col-center" style="font-weight: 700; color: #34d399;">${formatMoney(p.purchased_price || 0)}</td>
         <td style="color: var(--text-muted); font-size: 11px;">${escapeHtml(p.purchased_place || "-")}</td>
       `;
@@ -4210,7 +4323,7 @@ async function handleAISaveAll() {
     }
     const json = await res.json();
     if (json.success) {
-      showToast(`${json.inserted_count || aiExtractedProducts.length} prodotti salvati con successo in SQLite!`);
+      showToast(t("toasts.aiProductsSaved", { count: json.inserted_count || aiExtractedProducts.length }));
       closeModal();
       await loadProductsFromBackend();
     } else {
@@ -4235,8 +4348,8 @@ async function openEmailSyncModal() {
   if (!modal) return;
   modal.classList.add("open");
 
-  document.getElementById("email-scan-status").textContent = "Pronto per la scansione delle email.";
-  document.getElementById("email-sync-count-info").textContent = "Nessun prodotto in attesa di importazione.";
+  document.getElementById("email-scan-status").textContent = t("email.readyStatus");
+  document.getElementById("email-sync-count-info").textContent = t("email.syncCountEmpty");
   document.getElementById("btn-save-email-preorders").style.display = "none";
   emailScannedItems = [];
 
@@ -4262,7 +4375,7 @@ async function openEmailSyncModal() {
           pwdInput.value = "";
           pwdInput.dataset.hasSaved = "false";
         }
-        pwdInput.placeholder = "Inserisci password a 16 caratteri";
+        pwdInput.placeholder = t("email.pwdPlaceholder");
       }
     }
   } catch (_) {}
@@ -4299,7 +4412,7 @@ async function saveEmailCredentials() {
     });
     const json = await res.json();
     if (json.success) {
-      showToast("Credenziali email salvate con successo nel database!");
+      showToast(t("toasts.emailCredsSaved"));
       if (pwdInput) {
         pwdInput.dataset.hasSaved = "true";
         if (pwd) {
@@ -4340,7 +4453,7 @@ async function testEmailConnection() {
     const json = await res.json();
     if (json.success) {
       statusEl.textContent = "Connessione a Gmail stabilita con successo!";
-      showToast("Connessione a Gmail riuscita!");
+      showToast(t("toasts.gmailConnected"));
     } else {
       statusEl.textContent = "Errore di connessione a Gmail.";
       showToast(`Connessione fallita: ${json.error || json.message}`);
@@ -4408,9 +4521,9 @@ async function startEmailScan() {
     emailScannedItems.forEach((item) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td style="font-weight: 600; color: #fff;">${escapeHtml(item.name || "Sconosciuto")}</td>
+        <td style="font-weight: 600; color: #fff;">${escapeHtml(item.name || t("common.unknown"))}</td>
         <td class="col-center"><span class="table-size-pill">${escapeHtml(item.size || "UNI")}</span></td>
-        <td class="col-center" style="color: var(--text-muted);">${item.quantity || 1} pz</td>
+        <td class="col-center" style="color: var(--text-muted);">${item.quantity || 1} ${t("common.pcs")}</td>
         <td class="col-center" style="font-weight: 700; color: #34d399;">${formatMoney(item.price || 0)}</td>
         <td style="color: var(--text-main); font-size: 11px;">${escapeHtml(item.store || "Email")}</td>
         <td class="col-center" style="color: var(--text-muted); font-size: 11px;">${escapeHtml(item.date || "-")}</td>
@@ -4439,7 +4552,7 @@ async function saveEmailPreorders() {
     });
     const json = await res.json();
     if (json.success) {
-      showToast(`${json.saved_count} pre-ordini importati con successo dalle email!`);
+      showToast(t("toasts.emailPreordersSaved", { count: json.saved_count }));
       closeModal();
       await loadProductsFromBackend();
     } else {
@@ -4463,7 +4576,7 @@ let isApplyingUpdate = false;
 async function checkForUpdates(isUserInitiated = false) {
   try {
     if (isUserInitiated) {
-      showToast("Verifica aggiornamenti in corso...");
+      showToast(t("toasts.checkingUpdates"));
     }
     const res = await callApi("/updates/check");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -4488,7 +4601,7 @@ async function checkForUpdates(isUserInitiated = false) {
         const badge = document.getElementById("update-badge");
         if (badge) badge.style.display = "none";
         if (isUserInitiated) {
-          showToast(`RSM è già aggiornato all'ultima versione (v${currentAppVersion})!`);
+          showToast(t("toasts.appUpToDate", { version: currentAppVersion }));
         }
       }
     } else if (isUserInitiated) {
@@ -4525,15 +4638,15 @@ function openUpdateModal(updateInfo) {
 
   if (progressWrap) progressWrap.style.display = "none";
   if (progressBar) progressBar.style.width = "0%";
-  if (statusLabel) statusLabel.textContent = "Download dell'aggiornamento in corso...";
+  if (statusLabel) statusLabel.textContent = t("update.downloadInProgress");
   if (btnStart) {
     btnStart.disabled = false;
     btnStart.style.display = "inline-flex";
-    btnStart.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg><span>Aggiorna Ora</span>`;
+    btnStart.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg><span>${t("update.updateNow")}</span>`;
   }
   if (btnCancel) {
     btnCancel.disabled = false;
-    btnCancel.textContent = "Più Tardi";
+    btnCancel.textContent = t("update.later");
   }
   if (closeX) closeX.style.display = "block";
 
@@ -4543,7 +4656,7 @@ function openUpdateModal(updateInfo) {
 
 function closeUpdateModal() {
   if (isApplyingUpdate) {
-    showToast("Aggiornamento in corso, attendere il completamento...");
+    showToast(t("toasts.updateInProgress"));
     return;
   }
   const modal = document.getElementById("updateModal");
@@ -4611,7 +4724,7 @@ async function startAppUpdate() {
             }
             if (btnCancel) {
               btnCancel.disabled = false;
-              btnCancel.textContent = "Chiudi";
+              btnCancel.textContent = t("common.close");
             }
           }
         }
@@ -4630,7 +4743,7 @@ async function startAppUpdate() {
     }
     if (btnCancel) {
       btnCancel.disabled = false;
-      btnCancel.textContent = "Chiudi";
+      btnCancel.textContent = t("common.close");
     }
   }
 }
@@ -4758,13 +4871,13 @@ function openExcelPreviewModal() {
 
   excelExtractedProducts.forEach((p) => {
     const rawStatus = (p.status || "").trim();
-    let labelStatus = "Magazzino";
+    let labelStatus = t("status.stock");
     let statusClass = "stock";
     if (rawStatus === "Venduto" || rawStatus === "Vendite Attive" || rawStatus === "completed" || rawStatus === "active-sale") {
-      labelStatus = "Vendite Attive";
+      labelStatus = t("status.activeSale");
       statusClass = "active-sale";
     } else if (rawStatus === "Pre-ordine" || rawStatus === "Preordine" || rawStatus === "preorder") {
-      labelStatus = "Pre-ordine";
+      labelStatus = t("status.preorder");
       statusClass = "preorder";
     }
 
@@ -4775,7 +4888,7 @@ function openExcelPreviewModal() {
     tr.innerHTML = `
       <td style="font-weight: 600; color: #fff;">${escapeHtml(p.name || "-")}</td>
       <td class="col-center"><span class="table-size-pill">${escapeHtml(p.size || "UNI")}</span></td>
-      <td class="col-center" style="color: var(--text-muted);">${parseInt(p.quantity, 10) || 1} pz</td>
+      <td class="col-center" style="color: var(--text-muted);">${parseInt(p.quantity, 10) || 1} ${t("common.pcs")}</td>
       <td class="col-center" style="font-weight: 700; color: #34d399;">${formattedPrice}</td>
       <td style="color: var(--text-muted); font-size: 11px;">${escapeHtml(p.purchased_place || "-")}</td>
       <td style="color: var(--text-muted); font-size: 11px;">${escapeHtml(p.selling_place || "-")}</td>
@@ -4804,7 +4917,7 @@ async function saveExcelExtractedProducts() {
     });
     const json = await res.json();
     if (json.success) {
-      showToast(`${json.saved_count || excelExtractedProducts.length} prodotti importati con successo nel database!`);
+      showToast(t("toasts.excelProductsImported", { count: json.saved_count || excelExtractedProducts.length }));
       closeModal();
       excelExtractedProducts = [];
       pendingExcelFile = null;
@@ -4978,7 +5091,7 @@ async function savePacklinkApiKey() {
     });
     const json = await res.json();
     if (json.success) {
-      showToast("Chiave API Packlink PRO salvata con successo!");
+      showToast(t("toasts.packlinkKeySaved"));
       const showKeyCheckbox = document.getElementById("pk-show-key");
       if (showKeyCheckbox) showKeyCheckbox.checked = false;
       input.type = "password";
@@ -5091,7 +5204,7 @@ async function handlePacklinkAiExtract() {
       if (d.height) document.getElementById("pk-height").value = d.height;
       if (d.content) document.getElementById("pk-content").value = d.content;
 
-      showToast("Recapiti estratti e compilati con successo dall'AI!");
+      showToast(t("toasts.packlinkAddressExtracted"));
       if (hint) {
         hint.textContent = "Dati estratti e verificati con successo. Controlla e conferma.";
         hint.style.color = "#818cf8";
@@ -5114,7 +5227,7 @@ async function handlePacklinkAiExtract() {
       btn.disabled = false;
       btn.innerHTML = originalBtnHtml || `
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
-        <span>Invia a Gemini &amp; Compila Campi</span>
+        <span>${t("packlink.sendToGemini")}</span>
       `;
     }
   }
@@ -5142,7 +5255,7 @@ async function handlePacklinkSubmit(e) {
   const contentVal = document.getElementById("pk-content").value.trim() || "Abbigliamento / Calzature";
 
   if (!nameVal || !street1Val || !zipVal || !cityVal || !phoneVal) {
-    showToast("Compila tutti i campi obbligatori contrassegnati da *!");
+    showToast(t("toasts.fillRequiredFields"));
     return;
   }
 
@@ -5182,7 +5295,7 @@ async function handlePacklinkSubmit(e) {
     const json = await res.json();
     if (json.success) {
       closePacklinkModal();
-      showToast(`Bozza Packlink creata con successo! Rif: ${json.reference || json.draft_id}`);
+      showToast(t("toasts.packlinkDraftCreated", { ref: json.reference || json.draft_id }));
       if (json.web_url) {
         setTimeout(() => {
           window.open(json.web_url, "_blank");
@@ -5199,7 +5312,7 @@ async function handlePacklinkSubmit(e) {
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = "Crea Bozza Packlink";
+      submitBtn.textContent = t("packlink.createDraft");
     }
   }
 }
@@ -5310,7 +5423,7 @@ document.addEventListener("DOMContentLoaded", () => {
         filterDeadStockOnly = false;
         filterAgingBracket = null;
         const btnText = document.getElementById("btnFilterDeadStockText");
-        if (btnText) btnText.textContent = "Filtra Fermi (>60gg)";
+        if (btnText) btnText.textContent = t("filters.deadStockFilter");
         const blkNorm = document.getElementById("macroBlockNormal");
         const blkWarn = document.getElementById("macroBlockWarning");
         const blkCrit = document.getElementById("macroBlockCritical");
@@ -5354,7 +5467,7 @@ document.addEventListener("DOMContentLoaded", () => {
         filterDeadStockOnly = false;
         filterAgingBracket = null;
         const btnText = document.getElementById("btnFilterDeadStockText");
-        if (btnText) btnText.textContent = "Filtra Fermi (>60gg)";
+        if (btnText) btnText.textContent = t("filters.deadStockFilter");
         const blkNorm = document.getElementById("macroBlockNormal");
         const blkWarn = document.getElementById("macroBlockWarning");
         const blkCrit = document.getElementById("macroBlockCritical");
@@ -5452,7 +5565,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (now - lastCtrlPressTime < 320 && now - lastCtrlPressTime > 40) {
         lastCtrlPressTime = 0;
         toggleSelectionMode();
-        showToast(isSelectionModeActive ? "Modalità Selezione: Attivata" : "Modalità Selezione: Disattivata");
+        showToast(isSelectionModeActive ? t("toasts.selectionModeEnabled") : t("toasts.selectionModeDisabled"));
       } else {
         lastCtrlPressTime = now;
       }
@@ -5548,7 +5661,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(tsv).catch(() => {});
         }
-        showToast(`Copiati ${clipboardProductIds.length} prodott${clipboardProductIds.length === 1 ? "o" : "i"} negli appunti.`);
+        showToast(t("toasts.copiedToClipboard", { count: clipboardProductIds.length }));
         return;
       }
     }
@@ -5571,7 +5684,7 @@ document.addEventListener("DOMContentLoaded", () => {
               ids: json.ids,
             });
             await loadProductsFromBackend();
-            showToast(`Incollati ${json.ids.length} prodott${json.ids.length === 1 ? "o" : "i"} con successo.`);
+            showToast(t("toasts.pastedFromClipboard", { count: json.ids.length }));
           } else {
             showToast(`Errore durante l'incolla: ${json.error || "Operazione non riuscita"}`);
           }

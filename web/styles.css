@@ -758,6 +758,67 @@ body {
   background-color: var(--accent-emerald);
 }
 
+/* Riga versione e selettore lingua */
+.sidebar-version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.sidebar-version-text {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-muted);
+}
+
+/* Capsula selettore lingua IT | EN */
+.lang-switcher-capsule {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  padding: 2px 4px;
+  gap: 2px;
+}
+
+.lang-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.lang-btn:hover {
+  color: var(--text-main);
+}
+
+.lang-btn.active {
+  background: var(--accent-blue, #6366f1);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.35);
+}
+
+.lang-btn:focus-visible {
+  outline: 2px solid var(--accent-blue, #6366f1);
+  outline-offset: 1px;
+}
+
+.lang-divider {
+  font-size: 9px;
+  color: var(--border-color);
+  user-select: none;
+}
+
 /* ==========================================================================
    MAIN CONTENT AREA (FULL-SCREEN SPREAD)
    ========================================================================== */

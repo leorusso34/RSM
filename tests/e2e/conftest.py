@@ -144,11 +144,12 @@ def sandbox_server() -> Generator[SandboxServer, None, None]:
 
 
 class E2EContextManager:
-    """Crea una pagina Playwright configurata con video, screenshot e routing trasparente."""
+    """Crea una pagina Playwright configurata con video, screenshot, routing trasparente e locale configurabile."""
 
-    def __init__(self, playwright: Playwright, level_name: str) -> None:
+    def __init__(self, playwright: Playwright, level_name: str, locale: str = "it-IT") -> None:
         self.playwright = playwright
         self.level_name = level_name
+        self.locale = locale
         self.browser: Browser | None = None
         self.context: BrowserContext | None = None
         self.page: Page | None = None
@@ -166,6 +167,7 @@ class E2EContextManager:
             ],
         )
         self.context = self.browser.new_context(
+            locale=self.locale,
             viewport={"width": 1440, "height": 900},
             record_video_dir=str(self.raw_video_dir),
             record_video_size={"width": 1440, "height": 900},

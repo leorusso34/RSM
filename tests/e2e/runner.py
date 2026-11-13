@@ -3,7 +3,7 @@
 Regole operative tassative:
 1. Zero-Code-Touch: nessun file dell'applicazione viene modificato durante il test.
 2. Fail-Fast per Livello:
-   Livello 1 (Smoke) -> se verde -> Livello 2 (CRUD) -> se verde -> Livello 3 (Ciclo Vendita) -> se verde -> Livello 4 (Avanzato) -> se verde -> Livello 5 (Vendita Multipla).
+   Livello 1 (Smoke) -> se verde -> Livello 2 (CRUD) -> se verde -> Livello 3 (Ciclo Vendita) -> se verde -> Livello 4 (Avanzato) -> se verde -> Livello 5 (Vendita Multipla) -> se verde -> Livello 6 (Undo) -> se verde -> Livello 7 (Packlink) -> se verde -> Livello 8 (17TRACK) -> se verde -> Livello 9 (i18n IT/EN).
    Se un livello fallisce, il runner si arresta immediatamente e genera il report HTML.
 3. Isolamento Sandbox: server effimero su porta 28475 con DB in %TEMP%.
 4. Reportistica Multimediale: C:\\Users\\<user>\\Desktop\\E2E_REPORT_RSM.html con video e screenshot in Base64.
@@ -33,6 +33,7 @@ from tests.e2e.test_level5_bulk import run_level5_bulk_checks
 from tests.e2e.test_level6_undo_partial_sale import run_level6_undo_partial_sale_checks
 from tests.e2e.test_level7_packlink_shipping import run_level7_packlink_shipping_checks
 from tests.e2e.test_level8_17track import run_level8_17track_checks
+from tests.e2e.test_level9_i18n import run_level9_i18n_checks
 
 
 def extract_error_info(exc: Exception) -> tuple[str, str | None, int | None]:
@@ -62,8 +63,8 @@ def main() -> int:
         "--level",
         "-l",
         type=int,
-        choices=[1, 2, 3, 4, 5, 6, 7, 8],
-        help="Esegue esclusivamente il livello indicato (1: Smoke, 2: CRUD, 3: Ciclo Vendita, 4: Avanzato, 5: Vendita Multipla, 6: Undo Vendita Parziale, 7: Spedizioni Packlink, 8: Tracking 17TRACK)",
+        choices=[1, 2, 3, 4, 5, 6, 7, 8, 9],
+        help="Esegue esclusivamente il livello indicato (1: Smoke, 2: CRUD, 3: Ciclo Vendita, 4: Avanzato, 5: Vendita Multipla, 6: Undo Vendita Parziale, 7: Spedizioni Packlink, 8: Tracking 17TRACK, 9: Internazionalizzazione i18n IT/EN)",
     )
     parser.add_argument(
         "--output",
@@ -80,7 +81,7 @@ def main() -> int:
     print("================================================================================")
     print("🚀 [RSM E2E] AVVIO SUITE DI COLLAUDO AUTOMATIZZATA (CHROMIUM HEADLESS)")
     print(
-        f"📍 Modalità: {'Cascata Completa (Livelli 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7)' if not args.level else f'Livello Singolo ({args.level})'}"
+        f"📍 Modalità: {'Cascata Completa (Livelli 1 -> 9)' if not args.level else f'Livello Singolo ({args.level})'}"
     )
     print("🛡️  Regole: Zero-Code-Touch | Isolamento Sandbox :28475 | Fail-Fast per Livello")
     print(f"📄 Report Target: {report_target}")
@@ -473,7 +474,7 @@ def main() -> int:
             # LIVELLO 8: 17TRACK & SPEDIZIONI NEL SIDE-DRAWER
             # ==================================================================
             if (args.level is None or args.level == 8) and not has_failed:
-                print("▶ [8/8] Esecuzione Livello 8: Integrazione 17TRACK nel Side-Drawer...")
+                print("▶ [8/9] Esecuzione Livello 8: Integrazione 17TRACK nel Side-Drawer...")
                 start_t = time.time()
                 mgr8 = E2EContextManager(playwright, "level8_17track")
                 try:
@@ -516,6 +517,61 @@ def main() -> int:
                     LevelResult(
                         level_id=8,
                         name="Tracking 17TRACK & Side-Drawer Spedizioni",
+                        status="SKIPPED",
+                        details=[
+                            "Livello saltato automaticamente a causa del fallimento di un livello precedente (Fail-Fast)."
+                        ],
+                    )
+                )
+
+            # ==================================================================
+            # LIVELLO 9: INTERNAZIONALIZZAZIONE (i18n IT | EN)
+            # ==================================================================
+            if (args.level is None and not has_failed) or args.level == 9:
+                print("▶ [9/9] Esecuzione Livello 9: Internazionalizzazione (IT | EN)...")
+                start_t = time.time()
+                mgr9 = E2EContextManager(playwright, "level9_i18n", locale="en-US")
+                try:
+                    with mgr9 as (page, console_errors):
+                        chk9 = run_level9_i18n_checks(page, console_errors)
+
+                    elapsed = time.time() - start_t
+                    res9 = LevelResult(
+                        level_id=9,
+                        name="Internazionalizzazione (i18n IT | EN)",
+                        status="PASSED",
+                        duration=elapsed,
+                        screenshot_path=chk9.get("screenshot_path"),
+                        video_path=mgr9.final_video_path or VIDEOS_DIR / "level9_i18n.webm",
+                        details=chk9["details"],
+                    )
+                    results.append(res9)
+                    print(
+                        f"   ✅ LIVELLO 9 SUPERATO in {elapsed:.2f}s (auto-rilevamento en-US, switch live IT<->EN e persistenza validati)\n"
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    elapsed = time.time() - start_t
+                    err_msg, f_path, line_no = extract_error_info(exc)
+                    res9 = LevelResult(
+                        level_id=9,
+                        name="Internazionalizzazione (i18n IT | EN)",
+                        status="FAILED",
+                        duration=elapsed,
+                        error_message=err_msg,
+                        file_path=f_path,
+                        line_number=line_no,
+                        video_path=mgr9.final_video_path or VIDEOS_DIR / "level9_i18n.webm",
+                        details=["Fallimento durante la verifica di auto-rilevamento, switch lingua o persistenza nel Livello 9."],
+                    )
+                    results.append(res9)
+                    has_failed = True
+                    print(f"   ❌ LIVELLO 9 FALLITO in {elapsed:.2f}s:")
+                    print(f"      {err_msg}\n")
+            elif args.level is None and has_failed:
+                results.append(
+                    LevelResult(
+                        level_id=9,
+                        name="Internazionalizzazione (i18n IT | EN)",
                         status="SKIPPED",
                         details=[
                             "Livello saltato automaticamente a causa del fallimento di un livello precedente (Fail-Fast)."
