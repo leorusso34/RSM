@@ -1055,3 +1055,122 @@ def test_bridge_tracking_endpoints(tmp_path, monkeypatch):
         server.shutdown()
         server.server_close()
 
+
+def test_bridge_notifications_endpoints(tmp_path):
+    """Verifica la generazione automatica notifiche da tracking 17TRACK 'Delivered', dismiss singolo e 'Pulisci tutto'."""
+    test_db = tmp_path / "test_bridge_notifications.db"
+    db = InventoryDatabase(test_db)
+
+    prod_id_1 = db.save(
+        {
+            "name": "Jordan 4 Retro Military Blue",
+            "size": "42.5",
+            "purchased_price": Decimal("210.00"),
+            "status": "Venduto",
+            "sold_price": Decimal("290.00"),
+            "fees": Decimal("15.00"),
+        }
+    )
+    prod_id_2 = db.save(
+        {
+            "name": "Pokemon Evoluzioni Prismatiche ETB",
+            "size": "UNI",
+            "purchased_price": Decimal("55.00"),
+            "status": "Venduto",
+            "sold_price": Decimal("95.00"),
+            "fees": Decimal("5.00"),
+        }
+    )
+
+    class TestBridgeHandler(RSMBridgeHandler):
+        @property
+        def db(self) -> InventoryDatabase:
+            if not hasattr(_thread_local, "test_db") or _thread_local.test_db.path != test_db:
+                _thread_local.test_db = InventoryDatabase(test_db)
+            return _thread_local.test_db
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TestBridgeHandler)
+    port = server.server_port
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    try:
+        mock_delivered_1 = {
+            "success": True,
+            "tracking_number": "BRT111222333",
+            "carrier": "brt",
+            "carrier_name": "BRT Bartolini",
+            "status": "Delivered",
+            "status_label": "Consegnato",
+            "latest_event": {"formatted_date": "13/11/2026 09:00"},
+            "events": [],
+        }
+        mock_delivered_2 = {
+            "success": True,
+            "tracking_number": "SDA444555666",
+            "carrier": "poste",
+            "carrier_name": "Poste Italiane",
+            "status": "Delivered",
+            "status_label": "Consegnato",
+            "latest_event": {"formatted_date": "13/11/2026 09:10"},
+            "events": [],
+        }
+
+        # 1. Salva due tracking con stato Delivered
+        with patch("src.services.bridge_server.fetch_tracking_info", side_effect=[mock_delivered_1, mock_delivered_2]):
+            for pid, num, car in [
+                (prod_id_1, "BRT111222333", "brt"),
+                (prod_id_2, "SDA444555666", "poste"),
+            ]:
+                req = request.Request(
+                    f"http://127.0.0.1:{port}/api/products/{pid}/tracking",
+                    data=json.dumps({"tracking_number": num, "carrier": car}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with request.urlopen(req) as resp:
+                    assert json.loads(resp.read().decode("utf-8"))["success"] is True
+
+        # 2. GET /api/notifications deve contenere entrambe le notifiche
+        with request.urlopen(f"http://127.0.0.1:{port}/api/notifications") as resp:
+            notif_res = json.loads(resp.read().decode("utf-8"))
+            assert notif_res["success"] is True
+            assert len(notif_res["data"]) == 2
+            first_id = notif_res["data"][0]["id"]
+
+        # 3. Rimozione singola con DELETE /api/notifications/<id>
+        req_del = request.Request(f"http://127.0.0.1:{port}/api/notifications/{first_id}", method="DELETE")
+        with request.urlopen(req_del) as resp:
+            assert json.loads(resp.read().decode("utf-8"))["success"] is True
+
+        # Verifica che la notifica rimossa non venga ricreata con un refresh 17TRACK dello stesso tracking
+        with (
+            patch("src.services.bridge_server.fetch_tracking_info", return_value=mock_delivered_2),
+            request.urlopen(f"http://127.0.0.1:{port}/api/products/{prod_id_2}/tracking?refresh=1") as resp,
+        ):
+            assert json.loads(resp.read().decode("utf-8"))["success"] is True
+
+        with request.urlopen(f"http://127.0.0.1:{port}/api/notifications") as resp:
+            notif_res = json.loads(resp.read().decode("utf-8"))
+            assert len(notif_res["data"]) == 1
+            assert notif_res["data"][0]["id"] != first_id
+
+        # 4. Pulisci tutto (POST /api/notifications/clear)
+        req_clear = request.Request(
+            f"http://127.0.0.1:{port}/api/notifications/clear",
+            data=b"{}",
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req_clear) as resp:
+            clear_res = json.loads(resp.read().decode("utf-8"))
+            assert clear_res["success"] is True
+            assert clear_res["cleared_count"] == 1
+
+        with request.urlopen(f"http://127.0.0.1:{port}/api/notifications") as resp:
+            notif_res = json.loads(resp.read().decode("utf-8"))
+            assert notif_res["data"] == []
+    finally:
+        server.shutdown()
+        server.server_close()
+

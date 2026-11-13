@@ -84,6 +84,8 @@ async function loadProductsFromBackend(retries = 6, delay = 500) {
         updateDashboardMetrics();
         initCharts();
         loadPlacesFromBackend();
+        loadNotificationsFromBackend();
+        scheduleAutoTrackingCheck();
         closeBridgeOfflineModal();
         return true;
       }
@@ -2334,6 +2336,7 @@ async function saveDrawerTracking(productId) {
       currentDrawerItem = item;
       renderDrawerTrackingOrTimeline(item, false);
     }
+    loadNotificationsFromBackend();
     showToast("Tracciamento salvato ed aggiornato con successo!");
   } catch (err) {
     showToast(`Errore: ${err.message}`);
@@ -2364,6 +2367,7 @@ async function refreshDrawerTracking(productId) {
     if (!document.getElementById("drawerTrackingInput")) {
       renderTrackingCardContent(item, json.data, false);
     }
+    loadNotificationsFromBackend();
     showToast("Stato spedizione aggiornato!");
   } catch (err) {
     showToast(`Aggiornamento non riuscito: ${err.message}`);
@@ -2388,6 +2392,7 @@ async function deleteDrawerTracking(productId) {
       currentDrawerItem = item;
       renderDrawerTrackingOrTimeline(item, false);
     }
+    loadNotificationsFromBackend();
     showToast("Tracciamento rimosso con successo.");
   } catch (err) {
     showToast(`Errore: ${err.message}`);
@@ -2405,11 +2410,202 @@ async function fetchProductTrackingSilent(productId) {
         item.carrier = json.carrier || item.carrier;
         renderTrackingCardContent(item, json.data, false);
       }
+      loadNotificationsFromBackend();
     }
   } catch (e) {
     // Silenzioso
   }
 }
+
+// ==========================================================================
+// CASELLA NOTIFICHE CONSEGNE (OPZIONE C — TITLEBAR)
+// ==========================================================================
+let notificationsData = [];
+let hasScheduledAutoTrackingCheck = false;
+
+async function loadNotificationsFromBackend() {
+  try {
+    const res = await callApi("/notifications", {}, 0);
+    if (!res || !res.ok) return;
+    const json = await res.json();
+    if (json && json.success && Array.isArray(json.data)) {
+      notificationsData = json.data;
+      renderNotificationsUI();
+    }
+  } catch (_) {
+    // Non bloccare l'app se il bridge è in avvio
+  }
+}
+
+function renderNotificationsUI() {
+  const count = notificationsData.length;
+  const btn = document.getElementById("titlebarNotifBtn");
+  const badge = document.getElementById("titlebarNotifBadge");
+  const popCount = document.getElementById("notifPopoverCount");
+  const clearBtn = document.getElementById("notifClearAllBtn");
+  const listEl = document.getElementById("notifPopoverList");
+
+  if (btn) btn.classList.toggle("has-unread", count > 0);
+  if (badge) {
+    badge.textContent = String(count);
+    badge.style.display = count > 0 ? "inline-flex" : "none";
+  }
+  if (popCount) {
+    popCount.textContent = String(count);
+    popCount.style.display = count > 0 ? "inline-block" : "none";
+  }
+  if (clearBtn) {
+    clearBtn.disabled = count === 0;
+  }
+  if (!listEl) return;
+
+  if (count === 0) {
+    listEl.innerHTML = `
+      <div class="notif-empty-state">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="opacity: 0.55;">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+        </svg>
+        <span>Nessuna notifica presente</span>
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = notificationsData
+    .map((n) => {
+      const sizeText = n.product_size ? ` (${n.product_size})` : "";
+      const titleText = escapeHtml(`${n.product_name || "Prodotto"}${sizeText}`);
+      const subText = escapeHtml(n.message || "Il pacco risulta Consegnato");
+      const timeText = n.event_time ? `<div class="notif-item-time">${escapeHtml(n.event_time)}</div>` : "";
+      return `
+        <div class="notif-item" onclick="handleNotificationItemClick(${Number(n.product_id)})">
+          <div class="notif-item-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <div class="notif-item-body">
+            <div class="notif-item-title" title="${titleText}">${titleText}</div>
+            <div class="notif-item-sub">${subText}</div>
+            ${timeText}
+          </div>
+          <button type="button" class="notif-dismiss-btn" onclick="dismissNotification(${Number(n.id)}, event)" title="Rimuovi notifica" aria-label="Rimuovi notifica">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function toggleNotificationsPopover(event) {
+  if (event) event.stopPropagation();
+  const pop = document.getElementById("notifPopover");
+  const btn = document.getElementById("titlebarNotifBtn");
+  if (!pop) return;
+  const nextOpen = !pop.classList.contains("open");
+  pop.classList.toggle("open", nextOpen);
+  if (btn) btn.classList.toggle("open", nextOpen);
+  if (nextOpen) {
+    loadNotificationsFromBackend();
+  }
+}
+
+function closeNotificationsPopover() {
+  const pop = document.getElementById("notifPopover");
+  const btn = document.getElementById("titlebarNotifBtn");
+  if (pop) pop.classList.remove("open");
+  if (btn) btn.classList.remove("open");
+}
+
+function handleNotificationItemClick(productId) {
+  closeNotificationsPopover();
+  if (productId && typeof openDrawer === "function") {
+    openDrawer(productId);
+  }
+}
+
+async function dismissNotification(notifId, event) {
+  if (event) event.stopPropagation();
+  notificationsData = notificationsData.filter((n) => n.id !== notifId);
+  renderNotificationsUI();
+  try {
+    const res = await callApi(`/notifications/${notifId}`, { method: "DELETE" }, 0);
+    if (!res || !res.ok) {
+      await callApi(`/notifications/${notifId}/dismiss`, { method: "POST" }, 0);
+    }
+  } catch (_) {
+    // Rimozione ottimistica già applicata
+  }
+}
+
+async function clearAllNotifications(event) {
+  if (event) event.stopPropagation();
+  if (notificationsData.length === 0) return;
+  notificationsData = [];
+  renderNotificationsUI();
+  try {
+    await callApi("/notifications/clear", { method: "POST" }, 0);
+  } catch (_) {
+    // Pulizia ottimistica già applicata
+  }
+}
+
+function scheduleAutoTrackingCheck() {
+  if (hasScheduledAutoTrackingCheck) return;
+  hasScheduledAutoTrackingCheck = true;
+
+  setTimeout(async () => {
+    try {
+      const pendingItems = (inventoryData || [])
+        .filter((item) => {
+          if (!item || !item.tracking_number || !String(item.tracking_number).trim()) return false;
+          if (!item.tracking_cache) return true;
+          try {
+            const parsed = typeof item.tracking_cache === "string" ? JSON.parse(item.tracking_cache) : item.tracking_cache;
+            const st = String((parsed && parsed.status) || "").trim().toLowerCase();
+            return st !== "delivered";
+          } catch (_) {
+            return true;
+          }
+        })
+        .slice(0, 5);
+
+      if (pendingItems.length === 0) return;
+
+      for (const item of pendingItems) {
+        const refreshFlag = item.tracking_cache ? "1" : "0";
+        try {
+          const res = await callApi(`/products/${item.id}/tracking?refresh=${refreshFlag}`, {}, 0);
+          if (res && res.ok) {
+            const json = await res.json();
+            if (json && json.success && json.data) {
+              item.tracking_cache = json.data;
+              item.carrier = json.carrier || item.carrier;
+            }
+          }
+        } catch (_) {
+          // Continua silenziosamente con gli altri
+        }
+      }
+      loadNotificationsFromBackend();
+    } catch (_) {
+      // Silenzioso
+    }
+  }, 1800);
+}
+
+document.addEventListener("click", (e) => {
+  const wrap = document.getElementById("titlebarNotifWrap");
+  if (wrap && !wrap.contains(e.target)) {
+    closeNotificationsPopover();
+  }
+});
 
 function updateModalProfitPreview() {
   const buyEl = document.getElementById("prod-buy-price");

@@ -509,6 +509,16 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
             )
             return
 
+        # Notifiche consegne 17TRACK /api/notifications
+        if path == "/api/notifications":
+            self._send_json(
+                {
+                    "success": True,
+                    "data": self.db.list_notifications(),
+                }
+            )
+            return
+
         # Stato configurazione Packlink PRO
         if path == "/api/packlink/status":
             pk_key = self.db.get_setting("packlink_api_key", "").strip()
@@ -850,6 +860,25 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
                     self._send_error(res.get("error", "Errore sconosciuto durante la creazione della bozza Packlink."))
             except Exception as e:  # noqa: BLE001
                 self._send_error(f"Errore creazione bozza Packlink: {e}")
+            return
+
+        # Pulizia completa notifiche consegne /api/notifications/clear
+        if path == "/api/notifications/clear":
+            cleared = self.db.clear_all_notifications()
+            self._send_json(
+                {
+                    "success": True,
+                    "cleared_count": cleared,
+                }
+            )
+            return
+
+        # Rimozione singola notifica /api/notifications/<id>/dismiss
+        match_notif_dismiss = re.match(r"^/api/notifications/(\d+)/dismiss$", path)
+        if match_notif_dismiss:
+            notif_id = int(match_notif_dismiss.group(1))
+            self.db.dismiss_notification(notif_id)
+            self._send_json({"success": True, "id": notif_id})
             return
 
         # Salvataggio/Aggiornamento tracking prodotto con 17TRACK /api/products/<id>/tracking
@@ -1430,6 +1459,18 @@ class RSMBridgeHandler(BaseHTTPRequestHandler):
     # --------------------------------------------------------------------------
     def do_DELETE(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/notifications":
+            cleared = self.db.clear_all_notifications()
+            self._send_json({"success": True, "cleared_count": cleared})
+            return
+
+        match_notif_del = re.match(r"^/api/notifications/(\d+)(?:/dismiss)?$", path)
+        if match_notif_del:
+            notif_id = int(match_notif_del.group(1))
+            self.db.dismiss_notification(notif_id)
+            self._send_json({"success": True, "id": notif_id})
+            return
+
         match_prod_tracking = re.match(r"^/api/products/(\d+)/tracking$", path)
         if match_prod_tracking:
             prod_id = int(match_prod_tracking.group(1))

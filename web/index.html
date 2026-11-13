@@ -18,6 +18,38 @@
     </div>
     <div class="titlebar-drag-region" data-tauri-drag-region ondblclick="toggleMaximizeWindow()"></div>
     <div class="titlebar-controls">
+      <!-- Casella Notifiche Consegne (Opzione C) -->
+      <div class="titlebar-notif-wrap" id="titlebarNotifWrap">
+        <button type="button" class="titlebar-notif-btn" id="titlebarNotifBtn" title="Notifiche Consegne" onclick="toggleNotificationsPopover(event)" aria-label="Notifiche Consegne">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+          </svg>
+          <span class="titlebar-notif-badge" id="titlebarNotifBadge" style="display: none;">0</span>
+        </button>
+
+        <div class="notif-popover" id="notifPopover" onclick="event.stopPropagation()">
+          <div class="notif-popover-header">
+            <div class="notif-popover-title">
+              <span>Notifiche Consegne</span>
+              <span class="notif-popover-count" id="notifPopoverCount" style="display: none;">0</span>
+            </div>
+            <button type="button" class="notif-clear-all-btn" id="notifClearAllBtn" onclick="clearAllNotifications(event)" disabled>
+              Pulisci tutto
+            </button>
+          </div>
+          <div class="notif-popover-list" id="notifPopoverList">
+            <div class="notif-empty-state">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="opacity: 0.55;">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+              </svg>
+              <span>Nessuna notifica presente</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <button type="button" class="window-ctrl-btn" id="windowMinBtn" title="Riduci a icona" onclick="minimizeWindow()" aria-label="Riduci a icona">
         <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor">
           <rect width="10" height="1"/>

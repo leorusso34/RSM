@@ -148,6 +148,24 @@ class InventoryDatabase:
             """
         )
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                notif_key TEXT UNIQUE NOT NULL,
+                product_id INTEGER NOT NULL,
+                product_name TEXT NOT NULL DEFAULT '',
+                product_size TEXT NOT NULL DEFAULT '',
+                tracking_number TEXT NOT NULL DEFAULT '',
+                carrier_name TEXT NOT NULL DEFAULT '',
+                message TEXT NOT NULL DEFAULT '',
+                event_time TEXT NOT NULL DEFAULT '',
+                is_dismissed INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            """
+        )
+
         if self.connection.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='products_legacy'"
         ).fetchone():
@@ -192,6 +210,7 @@ class InventoryDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_purchased_place ON products(purchased_place)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_selling_place ON products(selling_place)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_dismissed ON notifications(is_dismissed)")
 
         self.connection.commit()
 
@@ -346,14 +365,18 @@ class InventoryDatabase:
                     f"INSERT INTO products ({', '.join(fields)}) VALUES ({placeholders})",
                     values,
                 )
-                return int(cursor.lastrowid)
+                saved_id = int(cursor.lastrowid)
+            else:
+                assignments = ", ".join(f"{field} = ?" for field in fields)
+                self.connection.execute(
+                    f"UPDATE products SET {assignments}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    values + (product_id,),
+                )
+                saved_id = product_id
 
-            assignments = ", ".join(f"{field} = ?" for field in fields)
-            self.connection.execute(
-                f"UPDATE products SET {assignments}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                values + (product_id,),
-            )
-            return product_id
+        if tracking_number and tracking_cache:
+            self._maybe_create_delivery_notification(saved_id, tracking_number, carrier, tracking_cache)
+        return saved_id
 
     def update_product_tracking(
         self,
@@ -363,6 +386,9 @@ class InventoryDatabase:
         tracking_cache: str = "",
     ) -> None:
         """Aggiorna il codice di tracciamento, il corriere e la cache di tracking di un prodotto."""
+        clean_num = str(tracking_number or "").strip()
+        clean_carrier = str(carrier or "").strip()
+        cache_str = str(tracking_cache or "")
         with self.connection:
             self.connection.execute(
                 """
@@ -370,8 +396,124 @@ class InventoryDatabase:
                 SET tracking_number = ?, carrier = ?, tracking_cache = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
-                (str(tracking_number or "").strip(), str(carrier or "").strip(), str(tracking_cache or ""), product_id),
+                (clean_num, clean_carrier, cache_str, product_id),
             )
+        if clean_num and cache_str:
+            self._maybe_create_delivery_notification(product_id, clean_num, clean_carrier, cache_str)
+
+    def _maybe_create_delivery_notification(
+        self,
+        product_id: int,
+        tracking_number: str,
+        carrier: str = "",
+        tracking_cache: str = "",
+    ) -> None:
+        """Crea una notifica persistente se il tracking 17TRACK indica 'Consegnato' (Delivered)."""
+        clean_num = str(tracking_number or "").strip()
+        cache_str = str(tracking_cache or "").strip()
+        if not clean_num or not cache_str:
+            return
+
+        try:
+            cache_obj = json.loads(cache_str)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return
+
+        if not isinstance(cache_obj, dict):
+            return
+
+        raw_status = str(cache_obj.get("status", "")).strip().lower()
+        raw_label = str(cache_obj.get("status_label", "")).strip().lower()
+        if raw_status != "delivered" and raw_label != "consegnato":
+            return
+
+        prod_row = self.connection.execute(
+            "SELECT name, size FROM products WHERE id = ?",
+            (product_id,),
+        ).fetchone()
+        if not prod_row:
+            return
+
+        product_name = str(prod_row["name"] or "").strip()
+        product_size = str(prod_row["size"] or "").strip()
+        notif_key = f"{product_id}:{clean_num}"
+        carrier_label = str(cache_obj.get("carrier_name") or carrier or "Corriere").strip()
+
+        latest_event = cache_obj.get("latest_event")
+        event_time = ""
+        if isinstance(latest_event, dict):
+            event_time = str(latest_event.get("formatted_date") or "").strip()
+
+        message = f"17TRACK ({carrier_label}): Il pacco risulta Consegnato"
+
+        with self.connection:
+            self.connection.execute(
+                """
+                INSERT OR IGNORE INTO notifications (
+                    notif_key, product_id, product_name, product_size,
+                    tracking_number, carrier_name, message, event_time, is_dismissed
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+                """,
+                (
+                    notif_key,
+                    product_id,
+                    product_name,
+                    product_size,
+                    clean_num,
+                    carrier_label,
+                    message,
+                    event_time,
+                ),
+            )
+
+    def sync_delivery_notifications(self) -> None:
+        """Allinea le notifiche di consegna dai prodotti con tracking 17TRACK già salvato in cache."""
+        rows = self.connection.execute(
+            """
+            SELECT id, tracking_number, carrier, tracking_cache
+            FROM products
+            WHERE tracking_number != '' AND tracking_cache != ''
+            """
+        ).fetchall()
+        for row in rows:
+            self._maybe_create_delivery_notification(
+                int(row["id"]),
+                str(row["tracking_number"] or ""),
+                str(row["carrier"] or ""),
+                str(row["tracking_cache"] or ""),
+            )
+
+    def list_notifications(self) -> list[dict[str, Any]]:
+        """Restituisce tutte le notifiche non rimosse ordinate dalla più recente."""
+        self.sync_delivery_notifications()
+        rows = self.connection.execute(
+            """
+            SELECT id, notif_key, product_id, product_name, product_size,
+                   tracking_number, carrier_name, message, event_time, created_at
+            FROM notifications
+            WHERE is_dismissed = 0
+            ORDER BY id DESC
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def dismiss_notification(self, notif_id: int) -> bool:
+        """Contrassegna una singola notifica come rimossa (non verrà ricreata per lo stesso tracking)."""
+        with self.connection:
+            cursor = self.connection.execute(
+                "UPDATE notifications SET is_dismissed = 1 WHERE id = ?",
+                (notif_id,),
+            )
+            return cursor.rowcount > 0
+
+    def clear_all_notifications(self) -> int:
+        """Contrassegna tutte le notifiche attive come rimosse."""
+        with self.connection:
+            cursor = self.connection.execute(
+                "UPDATE notifications SET is_dismissed = 1 WHERE is_dismissed = 0"
+            )
+            return int(cursor.rowcount)
 
     def _read_config_json(self) -> dict[str, str]:
         """Legge il file config.json esterno se presente."""
@@ -432,16 +574,18 @@ class InventoryDatabase:
         self._write_config_json(key, value)
 
     def delete(self, product_id: int) -> None:
-        """Elimina un singolo prodotto."""
+        """Elimina un singolo prodotto e le relative notifiche collegate."""
         with self.connection:
+            self.connection.execute("DELETE FROM notifications WHERE product_id = ?", (product_id,))
             self.connection.execute("DELETE FROM products WHERE id = ?", (product_id,))
 
     def delete_many(self, product_ids: list[int]) -> int:
-        """Elimina più prodotti in una sola transazione."""
+        """Elimina più prodotti in una sola transazione e le relative notifiche collegate."""
         if not product_ids:
             return 0
         placeholders = ", ".join("?" for _ in product_ids)
         with self.connection:
+            self.connection.execute(f"DELETE FROM notifications WHERE product_id IN ({placeholders})", tuple(product_ids))
             cursor = self.connection.execute(f"DELETE FROM products WHERE id IN ({placeholders})", tuple(product_ids))
             return cursor.rowcount
 
