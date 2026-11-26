@@ -16,6 +16,7 @@ Verifiche:
 7. Checkpoint visivo: screenshot level6_undo_partial_sale.png e registrazione video level6_undo_partial_sale.webm.
 """
 
+import re
 from typing import Any
 
 from playwright.sync_api import Page, expect
@@ -63,11 +64,29 @@ def run_level6_undo_partial_sale_checks(page: Page, console_errors: list[str]) -
     expect(page.locator("#bulk-sale-qty-group")).to_be_visible(timeout=3000)
     page.select_option("#bulk-sale-qty-select", "2")
     page.fill("#bulk-sale-total-price", "260.00")
-    page.fill("#bulk-sale-place", "StockX")
-    page.wait_for_timeout(400)
 
-    # Invio del form di vendita
-    page.click('#bulkSaleForm button[type="submit"]')
+    # Regress test: con tendina canale aperta, Invio NON deve inviare il form principale
+    place_input = page.locator("#bulk-sale-place")
+    place_dropdown = page.locator("#dropdown-bulk-sale-place")
+    place_input.click()
+    expect(place_dropdown).to_have_class(re.compile(r"\bopen\b"), timeout=3000)
+    page.keyboard.press("Enter")
+    expect(place_dropdown).not_to_have_class(re.compile(r"\bopen\b"), timeout=3000)
+    expect(page.locator("#bulkSaleModal")).to_have_class(re.compile(r"\bopen\b"), timeout=3000)
+
+    # Digita "Sto", verifica che il suggerimento venga selezionato con Invio senza confermare subito la modale
+    place_input.press_sequentially("Sto", delay=30)
+    expect(place_dropdown).to_have_class(re.compile(r"\bopen\b"), timeout=3000)
+    page.keyboard.press("Enter")
+    expect(place_dropdown).not_to_have_class(re.compile(r"\bopen\b"), timeout=3000)
+    expect(page.locator("#bulkSaleModal")).to_have_class(re.compile(r"\bopen\b"), timeout=3000)
+    expect(place_input).to_have_value(re.compile(r"^stockx$", re.IGNORECASE), timeout=3000)
+    page.fill("#bulk-sale-place", "StockX")
+    page.evaluate("() => document.getElementById('dropdown-bulk-sale-place')?.classList.remove('open')")
+    page.wait_for_timeout(300)
+
+    # Ora a tendina chiusa, Invio invia correttamente la vendita con "StockX"
+    page.keyboard.press("Enter")
     page.wait_for_selector("#bulkSaleModal", state="hidden", timeout=5000)
     page.wait_for_timeout(800)
     details.append("Vendita parziale confermata: 2 pz su 5 messi in vendita a € 260,00 su StockX")

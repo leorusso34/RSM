@@ -3851,17 +3851,49 @@ function setupFloatingPillAutocomplete(inputId, dropdownId, getItemsFn, typeBadg
 
   let activeIndex = -1;
 
+  function commitSelection(itemEl) {
+    if (!itemEl) return;
+    lastAutocompleteSelectionTime = Date.now();
+    const val = itemEl.getAttribute("data-val");
+    if (val) {
+      input.value = val;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    dropdown.classList.remove("open");
+    activeIndex = -1;
+  }
+
+  function updateActiveItem(items, shouldScroll = true) {
+    items.forEach((item, idx) => {
+      item.classList.toggle("active", idx === activeIndex);
+      if (idx === activeIndex && shouldScroll) {
+        item.scrollIntoView({ block: "nearest" });
+      }
+    });
+  }
+
   function renderDropdown(filterText = "") {
     const items = getItemsFn() || [];
     const q = filterText.trim().toLowerCase();
     const filtered = q
-      ? items.filter((item) => item.toLowerCase().includes(q))
+      ? items
+          .filter((item) => item.toLowerCase().includes(q))
+          .sort((a, b) => {
+            const al = a.toLowerCase();
+            const bl = b.toLowerCase();
+            const aExact = al === q ? 0 : al.startsWith(q) ? 1 : 2;
+            const bExact = bl === q ? 0 : bl.startsWith(q) ? 1 : 2;
+            return aExact - bExact;
+          })
       : items;
 
-    activeIndex = -1;
+    activeIndex = q.length > 0 && filtered.length > 0 ? 0 : -1;
 
     if (filtered.length === 0) {
       dropdown.innerHTML = `<div class="autocomplete-empty">${escapeHtml(t("managePlaces.noSuggestions"))}</div>`;
+      dropdown.style.top = "calc(100% + 4px)";
+      dropdown.style.bottom = "auto";
+      dropdown.style.maxHeight = "240px";
       dropdown.classList.add("open");
       return;
     }
@@ -3873,8 +3905,9 @@ function setupFloatingPillAutocomplete(inputId, dropdownId, getItemsFn, typeBadg
 
     dropdown.innerHTML = filtered
       .map((item, idx) => {
+        const isActive = idx === activeIndex ? " active" : "";
         return `
-          <div class="autocomplete-item" data-index="${idx}" data-val="${escapeHtml(item)}">
+          <div class="autocomplete-item${isActive}" data-index="${idx}" data-val="${escapeHtml(item)}">
             <div class="autocomplete-item-left">
               <span class="autocomplete-item-icon ${isPurchased ? "purchased" : ""}">${iconSvg}</span>
               <span>${highlightMatch(item, q)}</span>
@@ -3889,17 +3922,16 @@ function setupFloatingPillAutocomplete(inputId, dropdownId, getItemsFn, typeBadg
       const handleSelect = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        lastAutocompleteSelectionTime = Date.now();
-        const val = el.getAttribute("data-val");
-        if (val) {
-          input.value = val;
-          setTimeout(() => {
-            dropdown.classList.remove("open");
-          }, 20);
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-        }
+        commitSelection(el);
       };
 
+      el.addEventListener("mouseenter", () => {
+        const idx = parseInt(el.getAttribute("data-index"), 10);
+        if (!Number.isNaN(idx)) {
+          activeIndex = idx;
+          updateActiveItem(dropdown.querySelectorAll(".autocomplete-item"), false);
+        }
+      });
       el.addEventListener("mousedown", handleSelect);
       el.addEventListener("pointerdown", (e) => e.stopPropagation());
       el.addEventListener("click", handleSelect);
@@ -3922,46 +3954,76 @@ function setupFloatingPillAutocomplete(inputId, dropdownId, getItemsFn, typeBadg
   });
 
   input.addEventListener("keydown", (e) => {
-    if (!dropdown.classList.contains("open")) {
+    const isOpen = dropdown.classList.contains("open");
+    if (!isOpen) {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
         renderDropdown(input.value);
-        return;
+        const openedItems = dropdown.querySelectorAll(".autocomplete-item");
+        if (openedItems.length > 0 && activeIndex < 0) {
+          activeIndex = e.key === "ArrowDown" ? 0 : openedItems.length - 1;
+          updateActiveItem(openedItems);
+        }
       }
+      return;
     }
 
     const items = dropdown.querySelectorAll(".autocomplete-item");
-    if (items.length === 0) return;
 
     if (e.key === "ArrowDown") {
+      if (items.length === 0) return;
       e.preventDefault();
       activeIndex = (activeIndex + 1) % items.length;
       updateActiveItem(items);
     } else if (e.key === "ArrowUp") {
+      if (items.length === 0) return;
       e.preventDefault();
       activeIndex = (activeIndex - 1 + items.length) % items.length;
       updateActiveItem(items);
     } else if (e.key === "Enter") {
+      // Finché la tendina è aperta, Invio agisce sempre sulla tendina e MAI sul form della modale
+      e.preventDefault();
+      e.stopPropagation();
       if (activeIndex >= 0 && activeIndex < items.length) {
-        e.preventDefault();
-        const val = items[activeIndex].getAttribute("data-val");
-        if (val) {
-          input.value = val;
-          dropdown.classList.remove("open");
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-        }
+        commitSelection(items[activeIndex]);
       } else {
         dropdown.classList.remove("open");
+        activeIndex = -1;
       }
     } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
       dropdown.classList.remove("open");
+      activeIndex = -1;
     }
   });
 
-  function updateActiveItem(items) {
-    items.forEach((item, idx) => {
-      item.classList.toggle("active", idx === activeIndex);
-      if (idx === activeIndex) {
-        item.scrollIntoView({ block: "nearest" });
+  // Scudo di sicurezza a livello di form nel caso il focus sia dentro la tendina
+  const parentForm = input.closest("form");
+  if (parentForm && !parentForm.dataset.autocompleteKeyGuard) {
+    parentForm.dataset.autocompleteKeyGuard = "1";
+    parentForm.addEventListener("keydown", (e) => {
+      const openDropdown = parentForm.querySelector(".autocomplete-dropdown.open");
+      if (!openDropdown) return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        const activeItem = openDropdown.querySelector(".autocomplete-item.active");
+        const wrap = openDropdown.closest(".autocomplete-wrap");
+        const wrapInput = wrap ? wrap.querySelector("input") : null;
+        if (activeItem && wrapInput) {
+          lastAutocompleteSelectionTime = Date.now();
+          const val = activeItem.getAttribute("data-val");
+          if (val) {
+            wrapInput.value = val;
+            wrapInput.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }
+        openDropdown.classList.remove("open");
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        openDropdown.classList.remove("open");
       }
     });
   }
