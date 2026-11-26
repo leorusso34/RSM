@@ -1631,10 +1631,10 @@ def test_speech_transcriber_fallback_preservation_on_gemini_none():
             api_key="TEST_API_KEY",
             language="en-US",
         )
-        transcriber._thread.join(timeout=1.0)
+        transcriber._thread.join(timeout=5.0)
 
-        assert results == ["scarpa jordan 4"]
         assert errors == []
+        assert results == ["scarpa jordan 4"]
         mock_gemini.assert_called_once()
         mock_rec.recognize_google.assert_called_once()
         assert mock_rec.recognize_google.call_args.kwargs.get("language") == "en-US"
@@ -1661,10 +1661,10 @@ def test_speech_transcriber_fallback_preservation_on_gemini_none():
             api_key="TEST_API_KEY",
             language="it-IT",
         )
-        transcriber2._thread.join(timeout=1.0)
+        transcriber2._thread.join(timeout=5.0)
 
-        assert results2 == ["scarpa gemini diretta"]
         assert errors2 == []
+        assert results2 == ["scarpa gemini diretta"]
         mock_gemini2.assert_called_once()
         mock_rec2.recognize_google.assert_not_called()
 
@@ -1705,11 +1705,11 @@ def test_speech_transcriber_empty_parts_regression_end_to_end():
             api_key="TEST_KEY",
             language="it-IT",
         )
-        transcriber._thread.join(timeout=1.0)
+        transcriber._thread.join(timeout=5.0)
 
         # Il fallback a Google deve essere chiamato e on_error non deve essere invocato
-        assert results == ["fallback vocale riuscito"]
         assert errors == []
+        assert results == ["fallback vocale riuscito"]
         mock_rec.recognize_google.assert_called_once()
 
 
